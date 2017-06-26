@@ -89,3 +89,8 @@ ENV/
 
 # Rope project settings
 .ropeproject
+.idea/inspectionProfiles/profiles_settings.xml
+
+# Others
+.DS_Store
+.idea/
