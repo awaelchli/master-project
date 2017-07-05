@@ -18,7 +18,8 @@ class CONVLSTM(nn.LSTM):
         self.softmax = nn.LogSoftmax()
 
     def forward(self, input, hidden):
-        combined = torch.cat((input, hidden), 1)
+        combined = torch.cat((input, hidden
+                              ), 1)
         hidden = self.i2h(combined)
         output = self.i2o(combined)
         output = self.softmax(output)
@@ -26,3 +27,11 @@ class CONVLSTM(nn.LSTM):
 
     def initHidden(self):
         return Variable(torch.zeros(1, self.hidden_size))
+
+
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets
+import torchvision.models as models
+
+vgg = models.vgg19(pretrained = True)
+print(vgg)

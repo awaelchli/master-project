@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
 
-class KITTISequence(Dataset):
+class Sequence(Dataset):
     """KITTI Dataset"""
 
     def __init__(self, root_dir, pose_dir, sequence_number, eye = 0):
@@ -27,24 +27,23 @@ class KITTISequence(Dataset):
 
         string_number = '{:02d}'.format(sequence_number)
         self.images_dir = path.join(root_dir, string_number, 'image_{}'.format(eye))
-        self.pose_file = path.join(self.pose_dir, string_number, '.txt')
+        self.pose_file = path.join(self.pose_dir, '{}.txt'.format(string_number))
+        self.poses = self.read_poses()
 
     def __len__(self):
-        return len(self.__get_file_list())
+        return len(self.get_file_list())
 
     def __getitem__(self, idx):
-        img_name = self.__get_file_list()[idx]
-        image = io.imread(img_name)
+        img_name = self.get_file_list()[idx]
+        gray_image = torch.from_numpy(io.imread(img_name)).float()
 
-        self.read_poses()
+        # In case the image is grayscale
+        height = gray_image.size()[0]
+        width = gray_image.size()[1]
+        gray_image.resize_(1, height, width)
+        image = gray_image.expand(3, height, width)
 
-        landmarks = landmarks_frame.ix[idx, 1:].as_matrix().astype('float')
-        landmarks = landmarks.reshape(-1, 2)
-        sample = {'image': image, 'landmarks': landmarks}
-
-        if self.transform:
-            sample = self.transform(sample)
-
+        sample = {'image': image, 'pose': self.poses[idx]}
         return sample
 
     def get_file_list(self):
@@ -54,12 +53,9 @@ class KITTISequence(Dataset):
         with open(self.pose_file, 'r') as f:
             lines = f.readlines()
 
+        poses = []
+        for line in lines:
+            vector = torch.FloatTensor([float(s) for s in line.split()])
+            poses.append(vector.view(3, 4))
 
-
-def load_sequence(path_to_sequences, number, eye = 0):
-    string_number ='{:02d}'.format(number)
-    p = path.join(path_to_sequences, string_number, 'image_{}'.format(eye))
-
-    print(p)
-
-
+        return poses
