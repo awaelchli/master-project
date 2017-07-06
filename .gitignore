@@ -94,3 +94,4 @@ ENV/
 # Others
 .DS_Store
 .idea/
+data/
