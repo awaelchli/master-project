@@ -31,20 +31,17 @@ dataloader = KITTI.DataLoader(sequence, batch_size = 1, shuffle = True, num_work
 # Input tensor dimensions: [batch, channels, height, width]
 # Output tensor dimensions: [batch, 512, 11, 38]
 vgg = models.vgg19(pretrained=True).features
-if torch.cuda.is_available():
-    vgg.cuda()
+
 
 # Transform all images in the sequence to features for the LSTM
 sequence = []
 for i, sample in enumerate(dataloader):
+    print('looping')
     input = Variable(sample['image'])
-
-    if torch.cuda.is_available():
-        input.data.cuda()
 
     output = vgg(input)
     # Reshape output to size [batch, 1, features]
-    sequence[i] = output.view(output.size(0), 1, output.size(1) * output.size(2) * output.size(3))
+    sequence.append(output.view(output.size(0), 1, output.size(1) * output.size(2) * output.size(3)))
 
 # Concatenate sequence to one tensor of dimensions [batch, sequence, features]
 input_lstm = torch.cat(tuple(sequence), 1)
