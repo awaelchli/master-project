@@ -41,4 +41,5 @@ class VGGRNN(nn.Module):
 
     def init_hidden(self, batch_size):
         weight = next(self.parameters()).data
-        return Variable(weight.new(batch_size, self.nlayers, self.nhidden).zero_())
+        return (Variable(weight.new(self.nlayers, batch_size, self.nhidden).zero_()),
+                Variable(weight.new(self.nlayers, batch_size, self.nhidden).zero_()))
