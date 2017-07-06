@@ -28,20 +28,20 @@ dataloader = KITTI.DataLoader(sequence, batch_size = 4, shuffle = True, num_work
 #print(vggC)
 
 vggRNN = VGGRNN(nhidden=4096, nlayers=2)
-if torch.cuda.is_available():
-    vggRNN.cuda()
+#if torch.cuda.is_available():
+#    vggRNN.cuda()
 
 hidden = vggRNN.init_hidden(4)
 
 for i, sample in enumerate(dataloader):
-    input = sample['image'].cuda()
+    input = sample['image']
     print(input.size())
 
     input_var = Variable(input)
     #out = vgg(input_var)
     #print(out.size())
 
-    out, hidden = vggRNN(input, hidden)
+    out, hidden = vggRNN(input_var, hidden)
     print(out.size())
     print(hidden.size())
 
