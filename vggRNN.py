@@ -21,7 +21,7 @@ class VGGRNN(nn.Module):
         self.nlayers = nlayers
         self.dropout = dropout
 
-        self.init_weights()
+        #self.init_weights()
 
 
     def init_weights(self):
@@ -39,7 +39,6 @@ class VGGRNN(nn.Module):
 
         return output, hidden
 
-    def init_hidden(self, bsz):
+    def init_hidden(self, batch_size):
         weight = next(self.parameters()).data
-        return (Variable(weight.new(self.nlayers, bsz, self.nhidden).zero_()),
-                Variable(weight.new(self.nlayers, bsz, self.nhidden).zero_()))
+        return Variable(weight.new(batch_size, self.nlayers, self.nhidden).zero_())
