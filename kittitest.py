@@ -1,7 +1,7 @@
 from dataimport import KITTI
 
-root_dir = '~/data/KITTI odometry/grayscale/sequences'
-pose_dir = '~/data/KITTI odometry/poses/'
+root_dir = './data/KITTI odometry/grayscale/sequences'
+pose_dir = './data/KITTI odometry/poses/'
 
 sequence = KITTI.Sequence(root_dir, pose_dir, sequence_number = 2)
 
