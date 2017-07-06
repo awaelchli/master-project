@@ -1,4 +1,4 @@
-from vggRNN import VGGRNN
+from vggLSTM import VGGLSTM
 from dataimport import KITTI
 from torchvision import models
 from torch.autograd import Variable
@@ -13,7 +13,7 @@ sequence = KITTI.Sequence(root_dir, pose_dir, sequence_number = 2)
 
 #print(t)
 
-dataloader = KITTI.DataLoader(sequence, batch_size = 4, shuffle = True, num_workers = 4)
+dataloader = KITTI.DataLoader(sequence, batch_size = 1, shuffle = True, num_workers = 4)
 
 # for i, sample in enumerate(dataloader):
 #     print(sample)
@@ -27,21 +27,38 @@ dataloader = KITTI.DataLoader(sequence, batch_size = 4, shuffle = True, num_work
 #print(vgg)
 #print(vggC)
 
-vggRNN = VGGRNN(nhidden=4096, nlayers=2)
-#if torch.cuda.is_available():
-#    vggRNN.cuda()
+# VGG without classifier
+# Input tensor dimensions: [batch, channels, height, width]
+# Output tensor dimensions: [batch, 512, 11, 38]
+vgg = models.vgg19(pretrained=True).features
+if torch.cuda.is_available():
+    vgg.cuda()
 
-hidden = vggRNN.init_hidden(4)
-
+# Transform all images in the sequence to features for the LSTM
+sequence = []
 for i, sample in enumerate(dataloader):
-    input = sample['image']
-    print(input.size())
+    input = Variable(sample['image'])
 
-    input_var = Variable(input)
-    #out = vgg(input_var)
-    #print(out.size())
+    if torch.cuda.is_available():
+        input.data.cuda()
 
-    out, hidden = vggRNN(input_var, hidden)
-    print(out.size())
-    print(hidden.size())
+    output = vgg(input)
+    # Reshape output to size [batch, 1, features]
+    sequence[i] = output.view(output.size(0), 1, output.size(1) * output.size(2) * output.size(3))
+
+# Concatenate sequence to one tensor of dimensions [batch, sequence, features]
+input_lstm = torch.cat(tuple(sequence), 1)
+print('Input sequence to LSTM', input_lstm.size())
+
+
+# Feed the sequence to LSTM
+lstm = VGGLSTM(input_size=214016, nhidden=4096, nlayers=2)
+
+hidden = lstm.init_hidden(1)
+input_lstm = Variable(input_lstm)
+
+out, hidden = lstm(input_lstm, hidden)
+print(out.size())
+print(hidden.size())
+
 
