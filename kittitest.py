@@ -1,3 +1,4 @@
+from vggRNN import VGGRNN
 from dataimport import KITTI
 
 root_dir = '../data/KITTI odometry/grayscale/sequences'
@@ -19,8 +20,12 @@ dataloader = KITTI.DataLoader(sequence, batch_size = 4, shuffle = True, num_work
 from torchvision import models
 from torch.autograd import Variable
 
-vgg = models.vgg11(pretrained=True).features
-print(vgg)
+#vgg = models.vgg11(pretrained=True).features
+#vggC = models.vgg11(pretrained=True).classifier
+#print(vgg)
+#print(vggC)
+
+vggRNN = VGGRNN(nhidden=4096, nlayers=2)
 
 for i, sample in enumerate(dataloader):
     input = sample['image']
@@ -29,3 +34,8 @@ for i, sample in enumerate(dataloader):
     input_var = Variable(input)
     #out = vgg(input_var)
     #print(out.size())
+
+    out, hidden = vggRNN(input)
+    print(out.size())
+    print(hidden.size())
+    
