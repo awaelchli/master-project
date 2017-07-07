@@ -49,8 +49,8 @@ def main():
             lstm_target = Variable(poses)
 
             if use_cuda:
-                lstm_input.cuda()
-                lstm_target.cuda()
+                lstm_input = lstm_input.cuda()
+                lstm_target = lstm_target.cuda()
 
             print('Input sequence to LSTM', lstm_input.size())
             print('Target sequence to LSTM', lstm_target.size())
@@ -78,7 +78,7 @@ def apply_cnn_to_sequence(images, batch_mode=True):
     vgg = models.vgg19(pretrained=True).features
     if use_cuda:
         vgg.cuda()
-        images.cuda()
+        images = images.cuda()
 
     if batch_mode:
         print('Forward sequence using CNN in batch mode.')
