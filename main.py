@@ -78,6 +78,7 @@ def apply_cnn_to_sequence(images, batch_mode=True):
     vgg = models.vgg19(pretrained=True).features
     if use_cuda:
         vgg.cuda()
+        images.cuda()
 
     if batch_mode:
         print('Forward sequence using CNN in batch mode.')
@@ -92,9 +93,6 @@ def apply_cnn_to_sequence(images, batch_mode=True):
         target_sequence = []
         for i in range(0, batch_size):
             input = Variable(images[i, :])
-            if use_cuda:
-                input.cuda()
-
             output = vgg(input)
             input_sequence.append(output.data)
 
