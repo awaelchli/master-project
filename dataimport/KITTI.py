@@ -1,13 +1,8 @@
 import os.path as path
-import os
 import glob
 import torch
-import pandas as pd
-from skimage import io, transform
-import numpy as np
-import matplotlib.pyplot as plt
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+from skimage import io
+from torch.utils.data import Dataset
 
 
 class Sequence(Dataset):
