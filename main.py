@@ -67,8 +67,8 @@ def main():
             optimizer.step()
 
             # Print log info
-            print('Epoch [{:d}/{:d}], Step [{:d}/{d}], Loss: {:.4f}'
-                  .format(epoch, args.num_epochs, i, total_step, loss.data[0]))
+            print('Epoch [{:d}/{:d}], Step [{:d}/{:d}], Loss: {:.4f}'
+                  .format(epoch, args.num_epochs, i + 1, total_step, loss.data[0]))
 
 
 def apply_cnn_to_sequence(images, batch_mode=True):

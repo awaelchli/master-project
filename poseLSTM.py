@@ -42,4 +42,8 @@ class PoseLSTM(nn.Module):
     def init_states(self, batch_size):
         h0 = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
         c0 = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
+        if next(self.parameters()).is_cuda:
+            h0 = h0.cuda()
+            c0 = c0.cuda()
+
         return (h0, c0)
