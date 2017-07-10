@@ -1,8 +1,10 @@
 import os.path as path
 import glob
 import torch
+import numpy as np
+from dataimport.utils import matrix_to_pose_vector
 from skimage import io
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 
 class Sequence(Dataset):
@@ -38,7 +40,7 @@ class Sequence(Dataset):
         gray_image.resize_(1, height, width)
         image = gray_image.expand(3, height, width)
 
-        sample = {'image': image, 'pose': self.poses[idx]}
+        sample = (image, self.poses[idx])
         return sample
 
     def get_file_list(self):
@@ -50,7 +52,27 @@ class Sequence(Dataset):
 
         poses = []
         for line in lines:
-            vector = torch.FloatTensor([float(s) for s in line.split()])
-            poses.append(vector.view(3, 4))
+            vector = np.array([float(s) for s in line.split()])
+            matrix = vector.reshape(3, 4)
+            poses.append(matrix_to_pose_vector(matrix))
 
         return poses
+
+
+# class Sequences(Dataset):
+#     """KITTI Dataset"""
+#
+#     def __init__(self, root_dir, pose_dir, eye=0):
+#         self.root_dir = root_dir
+#         self.pose_dir = pose_dir
+#         self.eye = eye
+#
+#     def __len__(self):
+#         return len(glob.glob(path.join(self.root_dir)))
+#
+#     def __getitem__(self, idx):
+#         sequence = Sequence(self.root_dir, self.pose_dir, idx, self.eye)
+#         dataloader = DataLoader()
+#         dataloader = DataLoader(sequence, batch_size=1,
+#                                 shuffle=True, num_workers=4)
+

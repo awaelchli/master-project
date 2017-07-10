@@ -13,15 +13,13 @@ pose_dir = '../data/KITTI odometry/poses/'
 
 def main():
 
-    #sequence = KITTI.Sequence(root_dir, pose_dir, sequence_number = 2)
-    dummy = Dummy.Random(size=2, width=50, height=50)
+    kitti_sequence = KITTI.Sequence(root_dir, pose_dir, sequence_number = 2)
+    sequence_length = 10
 
-    #t = sequence.__getitem__(2)
+    #dummy = Dummy.Random(size=2, width=50, height=50)
 
-    #print(t)
-
-    dataloader = DataLoader(dummy, batch_size = 1,
-                            shuffle = True, num_workers = args.num_workers)
+    dataloader = DataLoader(kitti_sequence, batch_size = sequence_length,
+                            shuffle = False, num_workers = args.num_workers)
 
     # LSTM to predict pose sequence
     # Input size to LSTM is determined by output of pre-CNN
