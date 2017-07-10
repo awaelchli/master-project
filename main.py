@@ -8,7 +8,7 @@ import torch.nn as nn
 import argparse
 
 root_dir = '../data/KITTI odometry/grayscale/sequences'
-pose_dir = '../data/KITTI odometry/poses/'
+pose_dir = '../data/KITTI odometry/poses_converted/'
 
 
 def main():

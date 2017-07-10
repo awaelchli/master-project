@@ -1,3 +1,4 @@
+import os
 import os.path as path
 import glob
 import torch
@@ -25,7 +26,7 @@ class Sequence(Dataset):
         string_number = '{:02d}'.format(sequence_number)
         self.images_dir = path.join(root_dir, string_number, 'image_{}'.format(eye))
         self.pose_file = path.join(self.pose_dir, '{}.txt'.format(string_number))
-        self.poses = self.read_poses()
+        self.poses = read_6D_poses(self.pose_file)
 
     def __len__(self):
         return len(self.get_file_list())
@@ -46,33 +47,42 @@ class Sequence(Dataset):
     def get_file_list(self):
         return glob.glob(path.join(self.images_dir, '*.png'))
 
-    def read_poses(self):
-        with open(self.pose_file, 'r') as f:
-            lines = f.readlines()
 
-        poses = []
-        for line in lines:
-            vector = np.array([float(s) for s in line.split()])
-            matrix = vector.reshape(3, 4)
-            poses.append(matrix_to_pose_vector(matrix))
+def read_matrix_poses(pose_file):
+    with open(pose_file, 'r') as f:
+        lines = f.readlines()
 
-        return poses
+    poses = []
+    for line in lines:
+        vector = np.array([float(s) for s in line.split()])
+        matrix = vector.reshape(3, 4)
+        poses.append(matrix_to_pose_vector(matrix))
+
+    return poses
 
 
-# class Sequences(Dataset):
-#     """KITTI Dataset"""
-#
-#     def __init__(self, root_dir, pose_dir, eye=0):
-#         self.root_dir = root_dir
-#         self.pose_dir = pose_dir
-#         self.eye = eye
-#
-#     def __len__(self):
-#         return len(glob.glob(path.join(self.root_dir)))
-#
-#     def __getitem__(self, idx):
-#         sequence = Sequence(self.root_dir, self.pose_dir, idx, self.eye)
-#         dataloader = DataLoader()
-#         dataloader = DataLoader(sequence, batch_size=1,
-#                                 shuffle=True, num_workers=4)
+def read_6D_poses(pose_file):
+    with open(pose_file, 'r') as f:
+        lines = f.readlines()
+
+    poses = []
+    for line in lines:
+        vector = torch.FloatTensor([float(s) for s in line.split()]).view(1, 6)
+        poses.append(vector)
+
+    return poses
+
+
+def convert_pose_files(pose_dir, new_pose_dir):
+    file_list = glob.glob(path.join(pose_dir, '*.txt'))
+    if not os.path.isdir(new_pose_dir):
+        os.mkdir(new_pose_dir)
+
+    for file in file_list:
+        poses = read_matrix_poses(file)
+        with open(path.join(new_pose_dir, path.basename(file)), 'w') as f:
+            for pose in poses:
+                f.write(' '.join([str(e) for e in pose.view(6)]))
+                f.write('\n')
+
 
