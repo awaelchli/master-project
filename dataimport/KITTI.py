@@ -1,9 +1,6 @@
-import os
 import os.path as path
 import glob
 import torch
-import numpy as np
-from dataimport.utils import matrix_to_pose_vector
 from skimage import io
 from torch.utils.data import Dataset, DataLoader
 
@@ -48,19 +45,6 @@ class Sequence(Dataset):
         return glob.glob(path.join(self.images_dir, '*.png'))
 
 
-def read_matrix_poses(pose_file):
-    with open(pose_file, 'r') as f:
-        lines = f.readlines()
-
-    poses = []
-    for line in lines:
-        vector = np.array([float(s) for s in line.split()])
-        matrix = vector.reshape(3, 4)
-        poses.append(matrix_to_pose_vector(matrix))
-
-    return poses
-
-
 def read_6D_poses(pose_file):
     with open(pose_file, 'r') as f:
         lines = f.readlines()
@@ -71,18 +55,5 @@ def read_6D_poses(pose_file):
         poses.append(vector)
 
     return poses
-
-
-def convert_pose_files(pose_dir, new_pose_dir):
-    file_list = glob.glob(path.join(pose_dir, '*.txt'))
-    if not os.path.isdir(new_pose_dir):
-        os.mkdir(new_pose_dir)
-
-    for file in file_list:
-        poses = read_matrix_poses(file)
-        with open(path.join(new_pose_dir, path.basename(file)), 'w') as f:
-            for pose in poses:
-                f.write(' '.join([str(e) for e in pose.view(6)]))
-                f.write('\n')
 
 

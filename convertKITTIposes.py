@@ -1,11 +1,11 @@
-from dataimport import KITTI
+from dataimport import utils
 import os
 import argparse
 
 
 def main():
     print('Converting poses...')
-    KITTI.convert_pose_files(args.pose_dir, args.pose_dir.rstrip(os.sep) + '_converted')
+    utils.convert_pose_files(args.pose_dir, args.pose_dir.rstrip(os.sep) + '_converted')
     print('Done.')
 
 
