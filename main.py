@@ -42,7 +42,7 @@ def main():
             # Remove singleton batch dimension from data loader
             images.squeeze_(0)
 
-            cnn_output = apply_cnn_to_sequence(images)
+            cnn_output = apply_cnn_to_sequence(images, batch_mode=args.cnn_mode)
             lstm_input = Variable(reshape_cnn_output(cnn_output))
             lstm_target = Variable(poses)
 
@@ -90,7 +90,8 @@ def apply_cnn_to_sequence(images, batch_mode=True):
         input_sequence = []
         target_sequence = []
         for i in range(0, batch_size):
-            input = Variable(images[i, :])
+            input = Variable(images[i, :].unsqueeze(0))
+            print(input.size())
             output = vgg(input)
             input_sequence.append(output.data)
 
@@ -109,6 +110,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--cuda', action='store_true')
+
+    parser.add_argument('--cnn_mode', type=int, choices=[0, 1],
+                        help='0: Sequential mode 1: Batch mode')
 
     # Model parameters
     parser.add_argument('--hidden_size', type=int, default=4096,
