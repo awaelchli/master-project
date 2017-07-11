@@ -64,7 +64,7 @@ def main():
             # Remove singleton batch dimension from data loader
             images.squeeze_(0)
 
-            cnn_output = apply_cnn_to_sequence(images, batch_mode=args.cnn_mode)
+            cnn_output = apply_cnn_to_sequence(vgg, images, batch_mode=args.cnn_mode)
             lstm_input = Variable(reshape_cnn_output(cnn_output))
             lstm_target = Variable(poses)
 
@@ -84,7 +84,7 @@ def main():
 
             print('Output:', lstm_output)
             print('Target:', lstm_target)
-            
+
             loss = criterion(lstm_output, lstm_target)
             loss.backward()
             optimizer.step()
@@ -149,7 +149,7 @@ if __name__ == '__main__':
                         help='0: Sequential mode 1: Batch mode')
 
     # Model parameters
-    parser.add_argument('--hidden_size', type=int, default=4096,
+    parser.add_argument('--hidden_size', type=int, default=1000,
                         help='dimension of lstm hidden states')
     parser.add_argument('--num_layers', type=int, default=1,
                         help='number of layers in LSTM')
