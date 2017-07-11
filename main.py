@@ -62,7 +62,8 @@ def main():
         for i, (images, poses) in enumerate(dataloader):
 
             # Remove singleton batch dimension from data loader
-            images.squeeze_(0)
+            #images.squeeze_(0)
+            
             # Reshape target pose from [batch, 1, 6] to [1, sequence_length, 6]
             poses = poses.permute(1, 0, 2)
 
