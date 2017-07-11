@@ -3,9 +3,12 @@ from dataimport import KITTI, Dummy
 from torchvision import models, transforms
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from PIL import Image
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import argparse
+import numpy as np
 
 root_dir = '../data/KITTI odometry/grayscale/sequences'
 pose_dir = '../data/KITTI odometry/poses_converted/'
@@ -18,20 +21,31 @@ def main():
     transform = transforms.Compose([
         transforms.Scale(100),
         transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406),
-                             (0.229, 0.224, 0.225))])
+        #transforms.Normalize((0.485, 0.456, 0.406),
+                             #(0.229, 0.224, 0.225))])
+        ])
 
     kitti_sequence = KITTI.Sequence(root_dir, pose_dir, transform=transform, sequence_number = 2)
     sequence_length = 10
+    image_size = kitti_sequence[0][0].size()
+    print('Image size:', image_size)
+
+    #display_torch_image(kitti_sequence[0][0])
 
     #dummy = Dummy.Random(size=2, width=50, height=50)
 
     dataloader = DataLoader(kitti_sequence, batch_size = sequence_length,
                             shuffle = False, num_workers = args.num_workers)
 
+    # VGG without classifier
+    # Input tensor dimensions: [batch, channels, height, width]
+    # Output tensor dimensions: [batch, channels2, height2, width2]
+    vgg = models.vgg19(pretrained=True).features
+
     # LSTM to predict pose sequence
     # Input size to LSTM is determined by output of pre-CNN
-    lstm = PoseLSTM(input_size=214016, hidden_size=args.hidden_size, num_layers=args.num_layers)
+    input_size = cnn_feature_size(vgg, image_size[1], image_size[2])
+    lstm = PoseLSTM(input_size=input_size, hidden_size=args.hidden_size, num_layers=args.num_layers)
 
     if use_cuda:
         lstm.cuda()
@@ -68,6 +82,9 @@ def main():
             print('LSTM hidden size:', lstm_hidden[0].size())
             print('LSTM state size:', lstm_hidden[1].size())
 
+            print('Output:', lstm_output)
+            print('Target:', lstm_target)
+            
             loss = criterion(lstm_output, lstm_target)
             loss.backward()
             optimizer.step()
@@ -77,19 +94,16 @@ def main():
                   .format(epoch, args.num_epochs, i + 1, total_step, loss.data[0]))
 
 
-def apply_cnn_to_sequence(images, batch_mode=True):
-    # VGG without classifier
-    # Input tensor dimensions: [batch, channels, height, width]
-    # Output tensor dimensions: [batch, 512, 11, 38]
-    vgg = models.vgg19(pretrained=True).features
+def apply_cnn_to_sequence(cnn, images, batch_mode=True):
+
     if use_cuda:
-        vgg.cuda()
+        cnn.cuda()
         images = images.cuda()
 
     if batch_mode:
         print('Forward sequence using CNN in batch mode.')
         print('Input size:', images.size())
-        features = vgg(Variable(images))
+        features = cnn(Variable(images))
         return features.data
     else:
         print('Forward sequence using CNN sequentially.')
@@ -100,7 +114,7 @@ def apply_cnn_to_sequence(images, batch_mode=True):
         for i in range(0, batch_size):
             input = Variable(images[i, :].unsqueeze(0))
             print(input.size())
-            output = vgg(input)
+            output = cnn(input)
             input_sequence.append(output.data)
 
         features = torch.cat(tuple(input_sequence), 0)
@@ -112,6 +126,18 @@ def reshape_cnn_output(cnn_output):
     sequence_lenth = cnn_output.size(0)
     feature_size = cnn_output.size(1) * cnn_output.size(2) * cnn_output.size(3)
     return cnn_output.view(1, sequence_lenth, feature_size)
+
+
+def cnn_feature_size(cnn, input_height, input_width):
+    input = Variable(torch.zeros(1, 3, input_height, input_width))
+    output = cnn(input)
+    return output.size(1) * output.size(2) * output.size(3)
+
+
+def display_torch_image(img):
+    tf = transforms.ToPILImage()
+    img = tf(img)
+    img.show()
 
 
 if __name__ == '__main__':
