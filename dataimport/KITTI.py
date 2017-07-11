@@ -3,12 +3,14 @@ import glob
 import torch
 from skimage import io
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
+from PIL import Image
 
 
 class Sequence(Dataset):
     """KITTI Dataset"""
 
-    def __init__(self, root_dir, pose_dir, sequence_number, eye = 0):
+    def __init__(self, root_dir, pose_dir, sequence_number, transform = None, eye = 0):
         """
         :param root_dir: Path to 'sequences' folder
         :param pose_dir: Path to 'poses' folder
@@ -19,6 +21,7 @@ class Sequence(Dataset):
         self.root_dir = root_dir
         self.pose_dir = pose_dir
         self.sequence_number = sequence_number
+        self.transform = transform
 
         string_number = '{:02d}'.format(sequence_number)
         self.images_dir = path.join(root_dir, string_number, 'image_{}'.format(eye))
@@ -30,13 +33,21 @@ class Sequence(Dataset):
 
     def __getitem__(self, idx):
         img_name = self.get_file_list()[idx]
-        gray_image = torch.from_numpy(io.imread(img_name)).float()
+
+        image = Image.open(img_name).convert('RGB')
+        if self.transform is not None:
+            image = self.transform(image)
+
+        #image = transforms.ToTensor(image)
+
+        #gray_image = torch.from_numpy(io.imread(img_name)).float()
+        # TODO: in case of RGB image, transpose numpy image from [H, W, C] to torch image [C, H, W]
 
         # In case the image is grayscale
-        height = gray_image.size()[0]
-        width = gray_image.size()[1]
-        gray_image.resize_(1, height, width)
-        image = gray_image.expand(3, height, width)
+        # height = gray_image.size()[0]
+        # width = gray_image.size()[1]
+        # gray_image.resize_(1, height, width)
+        # image = gray_image.expand(3, height, width)
 
         sample = (image, self.poses[idx])
         return sample

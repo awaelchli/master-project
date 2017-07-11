@@ -1,6 +1,6 @@
 from poseLSTM import PoseLSTM
 from dataimport import KITTI, Dummy
-from torchvision import models
+from torchvision import models, transforms
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import torch
@@ -13,7 +13,15 @@ pose_dir = '../data/KITTI odometry/poses_converted/'
 
 def main():
 
-    kitti_sequence = KITTI.Sequence(root_dir, pose_dir, sequence_number = 2)
+    # Image preprocessing
+    # For normalization, see https://github.com/pytorch/vision#models
+    transform = transforms.Compose([
+        transforms.Scale(100),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406),
+                             (0.229, 0.224, 0.225))])
+
+    kitti_sequence = KITTI.Sequence(root_dir, pose_dir, transform=transform, sequence_number = 2)
     sequence_length = 10
 
     #dummy = Dummy.Random(size=2, width=50, height=50)
@@ -23,7 +31,7 @@ def main():
 
     # LSTM to predict pose sequence
     # Input size to LSTM is determined by output of pre-CNN
-    lstm = PoseLSTM(input_size=512, hidden_size=args.hidden_size, num_layers=args.num_layers)
+    lstm = PoseLSTM(input_size=214016, hidden_size=args.hidden_size, num_layers=args.num_layers)
 
     if use_cuda:
         lstm.cuda()
