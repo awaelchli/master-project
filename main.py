@@ -63,6 +63,8 @@ def main():
 
             # Remove singleton batch dimension from data loader
             images.squeeze_(0)
+            # Reshape target pose from [batch, 1, 6] to [1, sequence_length, 6]
+            poses = poses.permute(1, 0, 2)
 
             cnn_output = apply_cnn_to_sequence(vgg, images, batch_mode=args.cnn_mode)
             lstm_input = Variable(reshape_cnn_output(cnn_output))
