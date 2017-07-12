@@ -27,7 +27,7 @@ class Sequence(Dataset):
         self.sequence_number = sequence_number
         self.transform = transform
 
-        string_number = '{:02d}'.format(sequence_number)
+        string_number = sequence_number_to_string(sequence_number)
         self.images_dir = path.join(root_dir, string_number, 'image_{}'.format(eye))
         self.pose_file = path.join(self.pose_dir, '{}.txt'.format(string_number))
         self.poses = read_6D_poses(self.pose_file)
@@ -51,12 +51,14 @@ class Sequence(Dataset):
 
 class Subsequence(Dataset):
 
-    def __init__(self, sequence_length, sequences_dir, pose_dir, transform=None, eye=0):
+    def __init__(self, sequence_length, sequences_dir, pose_dir, transform=None,
+                 eye=0, sequence_numbers=list(range(0, 10))):
         self.sequences_dir = sequences_dir
         self.pose_dir = pose_dir
         self.transform = transform
         self.sequence_length = sequence_length
-        self.index = build_index(sequence_length, sequences_dir, pose_dir, eye)
+        self.index = build_index(sequence_length, sequences_dir, pose_dir,
+                                 sequence_numbers, eye)
 
     def __len__(self):
         return len(self.index)
@@ -91,19 +93,14 @@ def read_pose_strings(pose_file):
 #
 #     return poses
 
+def sequence_number_to_string(number):
+    return '{:02d}'.format(number)
 
-def index_sequence(chunk_size, sequences_root_dir, sequence_name, pose_dir, eye=0):
-    """ Returns a list of image sample chunks for a given KITTI sequence
-    :param chunk_size:
-    :param sequences_root_dir:
-    :param sequence_name:
-    :param pose_dir:
-    :param eye:
-    :return:
-    """
+def index_sequence(chunk_size, sequences_root_dir, sequence_number, pose_dir, eye):
+    """ Returns a list of image sample chunks for a given KITTI sequence """
 
+    sequence_name = sequence_number_to_string(sequence_number)
     search_path = path.join(sequences_root_dir, sequence_name, 'image_{:d}'.format(eye), '*.png')
-    #print(search_path)
     filenames = glob.glob(search_path)
     filenames.sort()
 
@@ -126,10 +123,10 @@ def index_sequence(chunk_size, sequences_root_dir, sequence_name, pose_dir, eye=
     return chunks
 
 
-def build_index(chunk_size, sequences_root_dir, pose_dir, eye=0):
+def build_index(chunk_size, sequences_root_dir, pose_dir, sequence_numbers, eye=0):
     chunks = []
-    for sequence_name in next(os.walk(sequences_root_dir))[1]:
-        chunks.extend(index_sequence(chunk_size, sequences_root_dir, sequence_name, pose_dir, eye))
+    for number in sequence_numbers:
+        chunks.extend(index_sequence(chunk_size, sequences_root_dir, number, pose_dir, eye))
     return chunks
 
 
