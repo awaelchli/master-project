@@ -16,7 +16,6 @@ def matrix_to_pose_vector(matrix):
     angle = torch.DoubleTensor([[angle]])
 
     pose = torch.cat((translation, orientation, angle), 1)
-
     return pose
 
 
@@ -38,17 +37,17 @@ def read_matrices(pose_file):
     return matrices
 
 
-def convert_pose_files(pose_dir, new_pose_dir):
-    file_list = glob.glob(path.join(pose_dir, '*.txt'))
-    if not os.path.isdir(new_pose_dir):
-        os.mkdir(new_pose_dir)
-
-    for file in file_list:
-        poses = read_matrix_poses(file)
-        with open(path.join(new_pose_dir, path.basename(file)), 'w') as f:
-            for pose in poses:
-                f.write(' '.join([str(e) for e in pose.view(6)]))
-                f.write('\n')
+# def convert_pose_files(pose_dir, new_pose_dir):
+#     file_list = glob.glob(path.join(pose_dir, '*.txt'))
+#     if not os.path.isdir(new_pose_dir):
+#         os.mkdir(new_pose_dir)
+#
+#     for file in file_list:
+#         poses = read_matrix_poses(file)
+#         with open(path.join(new_pose_dir, path.basename(file)), 'w') as f:
+#             for pose in poses:
+#                 f.write(' '.join([str(e) for e in pose.view(6)]))
+#                 f.write('\n')
 
 
 def to_relative_poses(matrices):

@@ -2,7 +2,7 @@ import os
 import os.path as path
 import glob
 import torch
-from dataimport.utils import read_matrices, to_relative_poses
+from dataimport.utils import read_matrices, to_relative_poses, matrix_to_pose_vector
 from skimage import io
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -49,16 +49,105 @@ class Sequence(Dataset):
         return glob.glob(path.join(self.images_dir, '*.png'))
 
 
-def read_6D_poses(pose_file):
+class Subsequence(Dataset):
+
+    def __init__(self, sequence_length, sequences_dir, pose_dir, transform=None, eye=0):
+        self.sequences_dir = sequences_dir
+        self.pose_dir = pose_dir
+        self.transform = transform
+        self.sequence_length = sequence_length
+        self.index = build_index(sequence_length, sequences_dir, pose_dir, eye)
+
+    def __len__(self):
+        return len(self.index)
+
+    def __getitem__(self, idx):
+        sequence_sample = self.index[idx]
+        images = [s.get_image(self.transform).unsqueeze_(0) for s in sequence_sample]
+
+        matrix_poses = [s.get_pose_matrix() for s in sequence_sample]
+        matrix_poses = to_relative_poses(matrix_poses)
+        poses_6d = [matrix_to_pose_vector(m) for m in matrix_poses]
+
+        image_sequence = torch.cat(tuple(images), 0)
+        pose_sequence = torch.cat(tuple(poses_6d), 0)
+        return image_sequence, pose_sequence
+
+
+def read_pose_strings(pose_file):
     with open(pose_file, 'r') as f:
         lines = f.readlines()
+    return lines
 
-    poses = []
-    for line in lines:
-        vector = torch.FloatTensor([float(s) for s in line.split()]).view(1, 6)
-        poses.append(vector)
+#
+# def read_6D_poses(pose_file):
+#     with open(pose_file, 'r') as f:
+#         lines = f.readlines()
+#
+#     poses = []
+#     for line in lines:
+#         vector = torch.FloatTensor([float(s) for s in line.split()]).view(1, 6)
+#         poses.append(vector)
+#
+#     return poses
 
-    return poses
+
+def index_sequence(chunk_size, sequences_root_dir, sequence_name, pose_dir, eye=0):
+    """ Returns a list of image sample chunks for a given KITTI sequence
+    :param chunk_size:
+    :param sequences_root_dir:
+    :param sequence_name:
+    :param pose_dir:
+    :param eye:
+    :return:
+    """
+
+    search_path = path.join(sequences_root_dir, sequence_name, 'image_{:d}'.format(eye), '*.png')
+    #print(search_path)
+    filenames = glob.glob(search_path)
+    filenames.sort()
+
+    print('{:d} files found.'.format(len(filenames)))
+
+    sequence_beginnings = range(0, len(filenames), chunk_size)
+    sequence_beginnings = sequence_beginnings[0: len(sequence_beginnings) - 1]
+
+    pose_matrices = read_matrices(path.join(pose_dir, '{}.txt'.format(sequence_name)))
+
+    chunks = []
+    for i, j in enumerate(sequence_beginnings):
+        chunk_files = filenames[j: j + chunk_size]
+        poses = pose_matrices[j: j + chunk_size]
+
+        chunk = [ImageSample(file, sequence_name, pose, eye=eye)
+                 for file, pose in zip(chunk_files, poses)]
+        chunks.append(chunk)
+
+    return chunks
+
+
+def build_index(chunk_size, sequences_root_dir, pose_dir, eye=0):
+    chunks = []
+    for sequence_name in next(os.walk(sequences_root_dir))[1]:
+        chunks.extend(index_sequence(chunk_size, sequences_root_dir, sequence_name, pose_dir, eye))
+    return chunks
+
+
+class ImageSample(object):
+
+    def __init__(self, file, sequence_label, pose_matrix, eye=0):
+        self.file = file
+        self.sequence_label = sequence_label
+        self.pose_matrix = pose_matrix
+
+    def get_image(self, transform=None):
+        image = Image.open(self.file).convert('RGB')
+        if transform is not None:
+            image = transform(image)
+        return image
+
+    def get_pose_matrix(self):
+        return self.pose_matrix
 
 
 def convert_folder(sequence_dir, pose_dir, new_root, new_sequence_length, eye=0):
@@ -103,8 +192,3 @@ def convert_folder(sequence_dir, pose_dir, new_root, new_sequence_length, eye=0)
                     f.write('\n')
 
             sequence_index += 1
-
-
-
-
-

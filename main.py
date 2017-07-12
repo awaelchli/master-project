@@ -11,11 +11,13 @@ import argparse
 import numpy as np
 
 root_dir = '../data/KITTI odometry/grayscale/sequences'
-pose_dir = '../data/KITTI odometry/poses_converted/'
+#pose_dir = '../data/KITTI odometry/poses_converted/'
+pose_dir = '../data/KITTI odometry/poses/'
 
 
 def main():
 
+    sequence_length = 10
     # Image preprocessing
     # For normalization, see https://github.com/pytorch/vision#models
     transform = transforms.Compose([
@@ -25,8 +27,9 @@ def main():
                              #(0.229, 0.224, 0.225))])
         ])
 
-    kitti_sequence = KITTI.Sequence(root_dir, pose_dir, transform=transform, sequence_number = 2)
-    sequence_length = 10
+    #kitti_sequence = KITTI.Sequence(root_dir, pose_dir, transform=transform, sequence_number = 2)
+    kitti_sequence = KITTI.Subsequence(sequence_length, root_dir, pose_dir, transform)
+
     image_size = kitti_sequence[0][0].size()
     print('Image size:', image_size)
 
@@ -34,7 +37,7 @@ def main():
 
     #dummy = Dummy.Random(size=2, width=50, height=50)
 
-    dataloader = DataLoader(kitti_sequence, batch_size = sequence_length,
+    dataloader = DataLoader(kitti_sequence, batch_size = 1,#sequence_length,
                             shuffle = False, num_workers = args.num_workers)
 
     # VGG without classifier
