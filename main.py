@@ -30,7 +30,8 @@ def main():
     #kitti_sequence = KITTI.Sequence(root_dir, pose_dir, transform=transform, sequence_number = 2)
     kitti_sequence = KITTI.Subsequence(sequence_length, root_dir, pose_dir, transform, sequence_numbers=[0, 1, 2])
 
-    image_size = kitti_sequence[0][0].size()
+    #image_size = kitti_sequence[0][0].size()
+    image_size = kitti_sequence[0][0].size()[1:4]
     print('Image size:', image_size)
 
     #display_torch_image(kitti_sequence[0][0])
@@ -151,7 +152,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--cuda', action='store_true')
 
-    parser.add_argument('--cnn_mode', type=int, choices=[0, 1],
+    parser.add_argument('--cnn_mode', type=int, choices=[0, 1], default=1,
                         help='0: Sequential mode 1: Batch mode')
 
     # Model parameters
