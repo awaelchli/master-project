@@ -20,7 +20,6 @@ class PoseLSTM(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.dropout = dropout
-
         self.init_weights()
 
     def init_weights(self):
@@ -46,4 +45,4 @@ class PoseLSTM(nn.Module):
             h0 = h0.cuda()
             c0 = c0.cuda()
 
-        return (h0, c0)
+        return h0, c0
