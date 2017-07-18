@@ -50,7 +50,7 @@ def read_matrices(pose_file):
 #                 f.write('\n')
 
 
-def to_relative_poses(matrices):
+def to_relative_poses_old(matrices):
     # Given: R(1->world), R(2->world), t1, t2
     #
     # R(1->2) = R(world->2) * R(1->world)
@@ -68,6 +68,28 @@ def to_relative_poses(matrices):
         r_inv = r.t()
         r_rel = torch.mm(r_inv, rot1)
         t_rel = torch.mv(r_inv, t1 - t)
+        rel_matrices.append(torch.cat((r_rel, t_rel), 1))
+
+    return rel_matrices
+
+
+def to_relative_poses(matrices):
+    # Given: R(1->world), R(2->world), t1, t2
+    #
+    # R(2->1) = R(world->1) * R(2->world)
+    #         = R(1->world)^(-1) * R(2->world)
+    #
+    # t(2->1) = R(1->world)^(-1) * (t2 - t1)
+    rotations = [m[:, 0 : 3] for m in matrices]
+    translations = [m[:, 3] for m in matrices]
+
+    rot1_inv = rotations[0].t() # For rotations: inverse = transpose
+    t1 = translations[0]
+
+    rel_matrices = []
+    for r, t in zip(rotations, translations):
+        r_rel = torch.mm(rot1_inv, r)
+        t_rel = torch.mv(rot1_inv, t - t1)
         rel_matrices.append(torch.cat((r_rel, t_rel), 1))
 
     return rel_matrices
