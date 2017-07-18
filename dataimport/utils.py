@@ -7,15 +7,21 @@ from transforms3d.quaternions import mat2quat, quat2axangle
 
 
 def matrix_to_pose_vector(matrix):
+    """Converts a 3x4 pose matrix of the form [R|t] to a pose vector of the form
+    (x, y, z, ax, ay, phi) composed of translation, axis orientation and rotation angle.
+
+    :param matrix: A torch tensor of size 3x4.
+    :return: A torch tensor of shape 1x6 representing the pose in a compressed vector.
+    """
     matrix = matrix.numpy()
     quaternion = mat2quat(matrix[:, 0 : 3])
     axis, angle = quat2axangle(quaternion)
 
-    translation = torch.from_numpy(matrix[:, 3]).contiguous().view(1, 3)
-    orientation = torch.from_numpy(axis[[0, 1]]).view(1, 2)
-    angle = torch.FloatTensor([[angle]])
+    translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
+    orientation = torch.from_numpy(axis[[0, 1]]).float().view(1, 2)
+    angle = torch.Tensor([[angle]])
 
-    pose = torch.cat((translation.float(), orientation.float(), angle), 1)
+    pose = torch.cat((translation, orientation, angle), 1)
     return pose
 
 
@@ -30,7 +36,7 @@ def read_matrices(pose_file):
 
     matrices = []
     for line in lines:
-        vector = torch.FloatTensor([float(s) for s in line.split()])
+        vector = torch.Tensor([float(s) for s in line.split()])
         matrix = vector.view(3, 4)
         matrices.append(matrix)
 
@@ -50,17 +56,46 @@ def read_matrices(pose_file):
 #                 f.write('\n')
 
 
-def to_relative_poses(matrices):
+def to_relative_poses_old(matrices):
+    # Given: R(1->world), R(2->world), t1, t2
+    #
+    # R(1->2) = R(world->2) * R(1->world)
+    #         = R(2->world)^(-1) * R(1->world)
+    #
+    # t(1->2) = R(2->world)^(-1) * (t1 - t2)
     rotations = [m[:, 0 : 3] for m in matrices]
     translations = [m[:, 3] for m in matrices]
 
-    rot1_inv = rotations[0].inverse()
+    rot1 = rotations[0]
+    t1 = translations[0]
+
+    rel_matrices = []
+    for r, t in zip(rotations, translations):
+        r_inv = r.t()
+        r_rel = torch.mm(r_inv, rot1)
+        t_rel = torch.mv(r_inv, t1 - t)
+        rel_matrices.append(torch.cat((r_rel, t_rel), 1))
+
+    return rel_matrices
+
+
+def to_relative_poses(matrices):
+    # Given: R(1->world), R(2->world), t1, t2
+    #
+    # R(2->1) = R(world->1) * R(2->world)
+    #         = R(1->world)^(-1) * R(2->world)
+    #
+    # t(2->1) = R(1->world)^(-1) * (t2 - t1)
+    rotations = [m[:, 0 : 3] for m in matrices]
+    translations = [m[:, 3] for m in matrices]
+
+    rot1_inv = rotations[0].t() # For rotations: inverse = transpose
     t1 = translations[0]
 
     rel_matrices = []
     for r, t in zip(rotations, translations):
         r_rel = torch.mm(rot1_inv, r)
         t_rel = torch.mv(rot1_inv, t - t1)
-        rel_matrices.append( torch.cat((r_rel, t_rel), 1))
+        rel_matrices.append(torch.cat((r_rel, t_rel), 1))
 
     return rel_matrices
