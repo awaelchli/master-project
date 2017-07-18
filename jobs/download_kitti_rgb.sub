@@ -13,4 +13,5 @@
 
 #$ -v DISPLAY
 
-wget -O ~/data/KITTI\ odometry/ http://kitti.is.tue.mpg.de/kitti/data_odometry_color.zip
+wget -O ~/data/KITTI\ odometry/rgb.zip http://kitti.is.tue.mpg.de/kitti/data_odometry_color.zip
+unzip ~/data/KITTI\ odometry/rgb.zip
