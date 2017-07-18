@@ -179,6 +179,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
+    if torch.cuda.is_available():
+        print('CUDA is available on this machine.')
+
     use_cuda = torch.cuda.is_available() and args.cuda
 
     main()
