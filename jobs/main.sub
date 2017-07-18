@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#$ -N train_pose_lstm
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+python main.py --cuda --epochs 50

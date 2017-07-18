@@ -67,6 +67,7 @@ def main():
     # Train the Models
     total_step = len(dataloader)
     for epoch in range(args.num_epochs):
+        epoch_loss = 0
         for i, (images, poses) in enumerate(dataloader):
 
             # Remove singleton batch dimension from data loader
@@ -93,8 +94,8 @@ def main():
             print('LSTM hidden size:', lstm_hidden[0].size())
             print('LSTM state size:', lstm_hidden[1].size())
 
-            print('Output:', lstm_output)
-            print('Target:', lstm_target)
+            #print('Output:', lstm_output)
+            #print('Target:', lstm_target)
 
             loss = criterion(lstm_output, lstm_target)
             loss.backward()
@@ -104,9 +105,14 @@ def main():
             print('Epoch [{:d}/{:d}], Step [{:d}/{:d}], Loss: {:.4f}'
                   .format(epoch, args.num_epochs, i + 1, total_step, loss.data[0]))
 
+            epoch_loss += loss
+
+        epoch_loss /= len(dataloader)
+        with open('loss.txt', 'a') as f:
+            f.write('{}\n'.format(epoch_loss))
+
 
 def apply_cnn_to_sequence(cnn, images, batch_mode=True):
-
     if use_cuda:
         cnn.cuda()
         images = images.cuda()
