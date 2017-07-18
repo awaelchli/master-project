@@ -10,9 +10,10 @@ import torch.nn as nn
 import argparse
 import numpy as np
 
-root_dir = '../data/KITTI odometry/grayscale/sequences'
+#root_dir = '../data/KITTI/grayscale/sequences'
+root_dir = '../data/KITTI/color/sequences'
 #pose_dir = '../data/KITTI odometry/poses_converted/'
-pose_dir = '../data/KITTI odometry/poses/'
+pose_dir = '../data/KITTI/poses/'
 
 
 def main():
@@ -28,7 +29,10 @@ def main():
         ])
 
     #kitti_sequence = KITTI.Sequence(root_dir, pose_dir, transform=transform, sequence_number = 2)
-    kitti_sequence = KITTI.Subsequence(sequence_length, root_dir, pose_dir, transform, sequence_numbers=[0, 1, 2])
+    kitti_sequence = KITTI.Subsequence(sequence_length, root_dir,
+                                       pose_dir, transform,
+                                       sequence_numbers=[0, 1, 2],
+                                       eye=2)
 
     #image_size = kitti_sequence[0][0].size()
     image_size = kitti_sequence[0][0].size()[1:4]
