@@ -43,7 +43,7 @@ def main():
     #dummy = Dummy.Random(size=2, width=50, height=50)
 
     dataloader = DataLoader(kitti_sequence, batch_size = 1,#sequence_length,
-                            shuffle = False, num_workers = args.num_workers)
+                            shuffle = False, num_workers = args.workers)
 
     # VGG without classifier
     # Input tensor dimensions: [batch, channels, height, width]
@@ -53,7 +53,7 @@ def main():
     # LSTM to predict pose sequence
     # Input size to LSTM is determined by output of pre-CNN
     input_size = cnn_feature_size(vgg, image_size[1], image_size[2])
-    lstm = PoseLSTM(input_size=input_size, hidden_size=args.hidden_size, num_layers=args.num_layers)
+    lstm = PoseLSTM(input_size=input_size, hidden_size=args.hidden_size, num_layers=args.layers)
 
     if use_cuda:
         lstm.cuda()
@@ -66,7 +66,7 @@ def main():
 
     # Train the Models
     total_step = len(dataloader)
-    for epoch in range(args.num_epochs):
+    for epoch in range(args.epochs):
         epoch_loss = 0
         for i, (images, poses) in enumerate(dataloader):
 
@@ -103,7 +103,7 @@ def main():
 
             # Print log info
             print('Epoch [{:d}/{:d}], Step [{:d}/{:d}], Loss: {:.4f}'
-                  .format(epoch, args.num_epochs, i + 1, total_step, loss.data[0]))
+                  .format(epoch, args.epochs, i + 1, total_step, loss.data[0]))
 
             epoch_loss += loss
 
