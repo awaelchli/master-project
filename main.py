@@ -181,6 +181,8 @@ if __name__ == '__main__':
 
     if torch.cuda.is_available():
         print('CUDA is available on this machine.')
+    else:
+        print('CUDA is not available on this machine.')
 
     use_cuda = torch.cuda.is_available() and args.cuda
 
