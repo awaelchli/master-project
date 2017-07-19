@@ -13,4 +13,5 @@
 
 #$ -v DISPLAY
 
+module load anaconda
 python main.py --cuda --epochs 50
