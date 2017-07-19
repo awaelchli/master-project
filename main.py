@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import argparse
 import os
+import plots
 import shutil
 import numpy as np
 
@@ -17,7 +18,8 @@ root_dir = '../data/KITTI/color/sequences'
 pose_dir = '../data/KITTI/poses/'
 out_folder = 'out'
 loss_file = os.path.join(out_folder, 'loss.txt')
-save_name = os.path.join(out_folder, 'checkpoint.pth.tar')
+save_loss_plot = os.path.join(out_folder, 'loss.pdf')
+save_model_name = os.path.join(out_folder, 'checkpoint.pth.tar')
 
 
 def setup_environment():
@@ -98,6 +100,9 @@ def main():
     # Evaluate model on testset
     test_loss = test(vgg, lstm, criterion, dataloader_test)
     print('Loss on testset: {:.4f}'.format(test_loss))
+
+    # Produce plots
+    plots.plot_loss_from_file(loss_file, save=save_loss_plot)
 
 
 def train(pre_cnn, lstm, criterion, optimizer, dataloader, epoch):
@@ -210,7 +215,7 @@ def display_torch_image(img):
     img.show()
 
 
-def save_checkpoint(state, filename=save_name):
+def save_checkpoint(state, filename=save_model_name):
     torch.save(state, filename)
 
 
