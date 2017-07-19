@@ -10,6 +10,7 @@ import torch.nn as nn
 import argparse
 import os
 import plots
+import time
 import shutil
 import numpy as np
 
@@ -83,6 +84,8 @@ def main():
     optimizer = torch.optim.Adam(params=lstm.get_parameters(), lr=args.learning_rate)
 
     # Train the model
+    print('Training...')
+    start_time = time.time()
     for epoch in range(args.epochs):
 
         # Train for one epoch
@@ -96,6 +99,9 @@ def main():
             'state_dict': lstm.state_dict(),
             'optimizer': optimizer.state_dict(),
         })
+
+    elapsed_time = time.time() - start_time
+    print('Elapsed time is {:f} hours.'.format(elapsed_time / 3600))
 
     # Evaluate model on testset
     test_loss = test(vgg, lstm, criterion, dataloader_test)
