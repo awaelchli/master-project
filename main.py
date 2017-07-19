@@ -55,6 +55,8 @@ def main():
     # Input tensor dimensions: [batch, channels, height, width]
     # Output tensor dimensions: [batch, channels2, height2, width2]
     vgg = models.vgg19(pretrained=True).features
+    if use_cuda:
+        vgg.cuda()
 
     # LSTM to predict pose sequence
     # Input size to LSTM is determined by output of pre-CNN
@@ -152,9 +154,6 @@ def test(pre_cnn, lstm, criterion, dataloader):
 
 
 def apply_cnn_to_sequence(cnn, images, batch_mode=True):
-    if use_cuda:
-        cnn.cuda()
-        images = images.cuda()
 
     if batch_mode:
         print('Forward sequence using CNN in batch mode.')
