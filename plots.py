@@ -1,7 +1,9 @@
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 
-def plot_loss_from_file(file, save=None, show=False):
+def plot_loss_from_file(file, save=None):
     losses = read_loss_from_file(file)
     epochs = list(range(1, len(losses) + 1))
     plt.plot(epochs, losses)
@@ -11,9 +13,6 @@ def plot_loss_from_file(file, save=None, show=False):
     if save:
         plt.savefig(save, bbox_inches='tight')
 
-    if show:
-        plt.show()
-
 
 def read_loss_from_file(file):
     with open(file, 'r') as f:
@@ -22,4 +21,4 @@ def read_loss_from_file(file):
     return losses
 
 
-#plot_loss_from_file('out/loss.txt', save='out/loss.pdf', show=False)
+plot_loss_from_file('out/loss.txt', save='out/loss.pdf')
