@@ -134,7 +134,7 @@ def train(pre_cnn, lstm, criterion, optimizer, dataloader, epoch):
         optimizer.step()
 
         # Print log info
-        if i % args.print_freq == 0:
+        if (i + 1) % args.print_freq == 0:
             print('Epoch [{:d}/{:d}], Sample [{:d}/{:d}], Loss: {:.4f}'
                   .format(epoch + 1, args.epochs, i + 1, num_train_samples, loss.data[0]))
 
