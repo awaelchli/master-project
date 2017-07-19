@@ -55,11 +55,12 @@ def main():
     input_size = cnn_feature_size(vgg, image_size[1], image_size[2])
     lstm = PoseLSTM(input_size=input_size, hidden_size=args.hidden_size, num_layers=args.layers)
 
-    if use_cuda:
-        lstm.cuda()
-
     # Loss and Optimizer
     criterion = nn.MSELoss()
+
+    if use_cuda:
+        lstm.cuda()
+        criterion.cuda()
 
     params = list(lstm.lstm.parameters()) + list(lstm.fc.parameters())
     optimizer = torch.optim.Adam(params, lr=args.learning_rate)
@@ -103,7 +104,7 @@ def main():
 
             # Print log info
             print('Epoch [{:d}/{:d}], Step [{:d}/{:d}], Loss: {:.4f}'
-                  .format(epoch, args.epochs, i + 1, total_step, loss.data[0]))
+                  .format(epoch + 1, args.epochs, i + 1, total_step, loss.data[0]))
 
             epoch_loss += loss.data[0]
 
