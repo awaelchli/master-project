@@ -46,3 +46,6 @@ class PoseLSTM(nn.Module):
             c0 = c0.cuda()
 
         return h0, c0
+
+    def get_parameters(self):
+        return list(self.lstm.parameters()) + list(self.fc.parameters())
