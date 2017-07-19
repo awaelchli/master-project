@@ -13,8 +13,8 @@
 
 #$ -v DISPLAY
 
-mkdir ~/data/Cambridge/KingsCollege
-wget -O ~/data/Cambridge/KingsCollege/dataset.zip https://www.repository.cam.ac.uk/bitstream/handle/1810/251342/KingsCollege.zip?sequence=4&isAllowed=y
+mkdir -p ~/data/Cambridge/KingsCollege
+wget -O ~/data/Cambridge/KingsCollege/dataset.zip "https://www.repository.cam.ac.uk/bitstream/handle/1810/251342/KingsCollege.zip?sequence=4&isAllowed=y"
 unzip ~/data/Cambridge/KingsCollege/dataset.zip -d ~/data/Cambridge/KingsCollege
 
 
