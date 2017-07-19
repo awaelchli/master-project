@@ -95,3 +95,7 @@ ENV/
 .DS_Store
 .idea/
 data/
+out/
+
+# Models
+.pth.tar

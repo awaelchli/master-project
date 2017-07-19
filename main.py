@@ -8,14 +8,22 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import argparse
+import os
 import shutil
 import numpy as np
 
 #root_dir = '../data/KITTI/grayscale/sequences'
 root_dir = '../data/KITTI/color/sequences'
 pose_dir = '../data/KITTI/poses/'
-loss_file = 'loss.txt'
-save_name = 'checkpoint.pth.tar'
+out_folder = 'out'
+loss_file = os.path.join(out_folder, 'loss.txt')
+save_name = os.path.join(out_folder, 'checkpoint.pth.tar')
+
+
+def setup_environment():
+    if not os.path.isdir(out_folder):
+        os.makedirs(out_folder)
+
 
 def main():
     sequence_length = args.sequence
@@ -156,16 +164,16 @@ def test(pre_cnn, lstm, criterion, dataloader):
 def apply_cnn_to_sequence(cnn, images, batch_mode=True):
 
     if batch_mode:
-        print('Forward sequence using CNN in batch mode.')
-        print('Input size:', images.size())
+        #print('Forward sequence using CNN in batch mode.')
+        #print('Input size:', images.size())
         features = cnn(to_variable(images, volatile=True))
         return features.data
     else:
-        print('Forward sequence using CNN sequentially.')
+        #print('Forward sequence using CNN sequentially.')
+
         # Transform all images in the sequence to features for the LSTM
         batch_size = images.size(0)
         input_sequence = []
-        target_sequence = []
         for i in range(0, batch_size):
             input = to_variable(images[i, :].unsqueeze(0), volatile=True)
             print(input.size())
@@ -240,4 +248,5 @@ if __name__ == '__main__':
 
     use_cuda = torch.cuda.is_available() and args.cuda
 
+    setup_environment()
     main()
