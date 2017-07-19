@@ -105,7 +105,7 @@ def main():
             print('Epoch [{:d}/{:d}], Step [{:d}/{:d}], Loss: {:.4f}'
                   .format(epoch, args.epochs, i + 1, total_step, loss.data[0]))
 
-            epoch_loss += loss
+            epoch_loss += loss.data[0]
 
         epoch_loss /= len(dataloader)
         with open('loss.txt', 'a') as f:
