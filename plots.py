@@ -21,4 +21,4 @@ def read_loss_from_file(file):
     return losses
 
 
-plot_loss_from_file('out/loss.txt', save='out/loss.pdf')
+#plot_loss_from_file('out/loss.txt', save='out/loss.pdf')
