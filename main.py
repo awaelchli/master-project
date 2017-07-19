@@ -4,7 +4,6 @@ from torchvision import models, transforms
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from PIL import Image
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import argparse
