@@ -8,6 +8,7 @@ plt.switch_backend('agg') # For machines without display (e.g. cluster)
 def plot_loss_from_file(file, save=None):
     losses = read_loss_from_file(file)
     epochs = list(range(1, len(losses) + 1))
+    plt.clf()
     plt.plot(epochs, losses)
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
@@ -25,6 +26,7 @@ def read_loss_from_file(file):
 
 def plot_epoch_loss(train_loss, validation_loss=None, save='loss.pdf'):
     epochs = list(range(1, len(train_loss) + 1))
+    plt.clf()
     plt.plot(epochs, train_loss, 'b', label='Training')
     if validation_loss is not None:
         plt.plot(epochs, validation_loss, 'g', label='Validation')
