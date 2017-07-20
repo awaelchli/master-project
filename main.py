@@ -35,20 +35,14 @@ def main():
                              std=[0.229, 0.224, 0.225])
     ])
 
-    kitti_train = KITTI.Subsequence(sequence_length, root_dir,
-                                    pose_dir, transform,
-                                    sequence_numbers=[0, 1, 2, 3, 4, 5, 6, 7],
-                                    eye=2)
+    kitti_train = KITTI.Subsequence(sequence_length, transform, args.grayscale,
+                                    sequence_numbers=[0, 1, 2, 3, 4, 5, 6, 7])
 
-    kitti_val = KITTI.Subsequence(sequence_length, root_dir,
-                                  pose_dir, transform,
-                                  sequence_numbers=[8],
-                                  eye=2)
+    kitti_val = KITTI.Subsequence(sequence_length, transform, args.grayscale,
+                                  sequence_numbers=[8])
 
-    kitti_test = KITTI.Subsequence(sequence_length, root_dir,
-                                   pose_dir, transform,
-                                   sequence_numbers=[9, 10],
-                                   eye=2)
+    kitti_test = KITTI.Subsequence(sequence_length, transform, args.grayscale,
+                                   sequence_numbers=[9, 10])
 
     image_size = kitti_train[0][0].size()[1:4]
     print('Image size:', image_size)
@@ -67,6 +61,7 @@ def main():
     # Output tensor dimensions: [batch, channels2, height2, width2]
     vgg = models.vgg19(pretrained=True).features
     if use_cuda:
+        print('Moving CNN to GPU ...')
         vgg.cuda()
 
     # LSTM to predict pose sequence
@@ -122,9 +117,6 @@ def main():
     print('Testing ...')
     test_loss = test(vgg, lstm, criterion, dataloader_test)
     print('Done. Loss on testset: {:.4f}'.format(test_loss))
-
-    # Produce plots
-    #plots.plot_loss_from_file(loss_file, save=save_loss_plot)
 
 
 def train(pre_cnn, lstm, criterion, optimizer, dataloader, epoch):
@@ -264,19 +256,24 @@ if __name__ == '__main__':
                         help='dimension of lstm hidden states')
     parser.add_argument('--layers', type=int, default=1,
                         help='number of layers in LSTM')
+
+    # Data loading parameters
     parser.add_argument('--sequence', type=int, default=10,
                         help='Sequence length')
 
-    parser.add_argument('--epochs', type=int, default=5)
+    parser.add_argument('--grayscale', action='store_true',
+                        help='Convert images to grayscale.')
+
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--workers', type=int, default=2)
+
+    # Training parameters
+    parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--learning_rate', type=float, default=0.001)
 
     args = parser.parse_args()
     print(args)
 
-    root_dir = '../data/KITTI/color/sequences'
-    pose_dir = '../data/KITTI/poses/'
     out_base_folder = 'out'
     out_folder = os.path.join(out_base_folder, args.experiment)
     loss_file = os.path.join(out_folder, 'loss.txt')
@@ -292,3 +289,4 @@ if __name__ == '__main__':
 
     setup_environment()
     main()
+    
