@@ -1,6 +1,5 @@
-import matplotlib
-matplotlib.use('agg')
 import matplotlib.pyplot as plt
+plt.switch_backend('agg') # For machines without display (e.g. cluster)
 
 
 def plot_loss_from_file(file, save=None):
