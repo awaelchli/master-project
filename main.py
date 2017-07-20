@@ -44,6 +44,11 @@ def main():
                                     sequence_numbers=[0, 1, 2, 3, 4, 5, 6, 7],
                                     eye=2)
 
+    kitti_val = KITTI.Subsequence(sequence_length, root_dir,
+                                  pose_dir, transform,
+                                  sequence_numbers=[8],
+                                  eye=2)
+
     kitti_test = KITTI.Subsequence(sequence_length, root_dir,
                                    pose_dir, transform,
                                    sequence_numbers=[9, 10],
@@ -54,6 +59,9 @@ def main():
 
     dataloader_train = DataLoader(kitti_train, batch_size=1,
                                   shuffle=True, num_workers=args.workers)
+
+    dataloader_val = DataLoader(kitti_val, batch_size=1,
+                                shuffle=False, num_workers=args.workers)
 
     dataloader_test = DataLoader(kitti_test, batch_size=1,
                                  shuffle=False, num_workers=args.workers)
@@ -81,20 +89,35 @@ def main():
 
     # Train the model
     print('Training ...')
+
     start_time = time.time()
+    train_loss = []
+    validation_loss = []
+
     for epoch in range(args.epochs):
 
         # Train for one epoch
         epoch_loss = train(vgg, lstm, criterion, optimizer, dataloader_train, epoch)
+        train_loss.append(epoch_loss)
 
+        # Validate after each epoch
+        epoch_loss = validate(vgg, lstm, criterion, dataloader_val)
+        validation_loss.append(epoch_loss)
+
+        # TODO: write validation loss
         with open(loss_file, 'a') as f:
             f.write('{}\n'.format(epoch_loss))
 
+        # TODO: save loses
         save_checkpoint({
             'epoch': epoch + 1,
+            'train_loss': None,
+            'validation_loss': None,
             'state_dict': lstm.state_dict(),
             'optimizer': optimizer.state_dict(),
         })
+
+        plots.plot_epoch_loss(train_loss, validation_loss, save=save_loss_plot)
 
     elapsed_time = time.time() - start_time
     print('Done. Elapsed time: {:.4f} hours.'.format(elapsed_time / 3600))
@@ -105,7 +128,7 @@ def main():
     print('Done. Loss on testset: {:.4f}'.format(test_loss))
 
     # Produce plots
-    plots.plot_loss_from_file(loss_file, save=save_loss_plot)
+    #plots.plot_loss_from_file(loss_file, save=save_loss_plot)
 
 
 def train(pre_cnn, lstm, criterion, optimizer, dataloader, epoch):
@@ -150,6 +173,10 @@ def train(pre_cnn, lstm, criterion, optimizer, dataloader, epoch):
 
     epoch_loss /= num_train_samples
     return epoch_loss
+
+
+def validate(pre_cnn, lstm, criterion, dataloader):
+    return test(pre_cnn, lstm, criterion, dataloader)
 
 
 def test(pre_cnn, lstm, criterion, dataloader):
