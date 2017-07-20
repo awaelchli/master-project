@@ -14,4 +14,4 @@
 #$ -v DISPLAY
 
 module load anaconda
-python main.py --cuda --epochs 100 --hidden_size 1000 --layers 1 --sequence 10 --learning_rate 0.001 --workers 4
+python main.py --cuda --experiment runtests --epochs 100 --hidden_size 1000 --layers 1 --sequence 10 --learning_rate 0.001 --workers 4 --print_freq 1

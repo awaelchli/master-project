@@ -13,18 +13,14 @@ import time
 import shutil
 import numpy as np
 
-#root_dir = '../data/KITTI/grayscale/sequences'
-root_dir = '../data/KITTI/color/sequences'
-pose_dir = '../data/KITTI/poses/'
-out_folder = 'out'
-loss_file = os.path.join(out_folder, 'loss.txt')
-save_loss_plot = os.path.join(out_folder, 'loss.pdf')
-save_model_name = os.path.join(out_folder, 'checkpoint.pth.tar')
-
 
 def setup_environment():
-    if not os.path.isdir(out_folder):
-        os.makedirs(out_folder)
+    os.makedirs(out_base_folder, exist_ok=True)
+    # Wipe all existing data
+    if os.path.isdir(out_folder):
+        shutil.rmtree(out_folder)
+
+    os.makedirs(out_folder)
 
 
 def main():
@@ -115,7 +111,7 @@ def main():
             'validation_loss': None,
             'state_dict': lstm.state_dict(),
             'optimizer': optimizer.state_dict(),
-        })
+        }, save_model_name)
 
         plots.plot_epoch_loss(train_loss, validation_loss, save=save_loss_plot)
 
@@ -245,7 +241,7 @@ def display_torch_image(img):
     img.show()
 
 
-def save_checkpoint(state, filename=save_model_name):
+def save_checkpoint(state, filename):
     torch.save(state, filename)
 
 
@@ -259,6 +255,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--print_freq', type=int, default=100,
                         help='Frequency of printed information during training')
+
+    parser.add_argument('--experiment', type=str, default='unnamed',
+                        help='Name of the experiment. Output files will be stored in this folder.')
 
     # Model parameters
     parser.add_argument('--hidden_size', type=int, default=1000,
@@ -276,12 +275,20 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
+    root_dir = '../data/KITTI/color/sequences'
+    pose_dir = '../data/KITTI/poses/'
+    out_base_folder = 'out'
+    out_folder = os.path.join(out_base_folder, args.experiment)
+    loss_file = os.path.join(out_folder, 'loss.txt')
+    save_loss_plot = os.path.join(out_folder, 'loss.pdf')
+    save_model_name = os.path.join(out_folder, 'checkpoint.pth.tar')
+
+    use_cuda = torch.cuda.is_available() and args.cuda
+
     if torch.cuda.is_available():
         print('CUDA is available on this machine.')
     else:
         print('CUDA is not available on this machine.')
-
-    use_cuda = torch.cuda.is_available() and args.cuda
 
     setup_environment()
     main()
