@@ -24,10 +24,10 @@ def read_loss_from_file(file):
 
 
 def plot_epoch_loss(train_loss, validation_loss=None, save='loss.pdf'):
-    epochs = list(range(1, train_loss.numel() + 1))
-    plt.plot(epochs, train_loss.numpy(), 'b', label='Training')
+    epochs = list(range(1, len(train_loss) + 1))
+    plt.plot(epochs, train_loss, 'b', label='Training')
     if validation_loss is not None:
-        plt.plot(epochs, validation_loss.numpy(), 'g', label='Validation')
+        plt.plot(epochs, validation_loss, 'g', label='Validation')
 
     plt.legend()
 
@@ -49,3 +49,4 @@ def plot_epoch_loss(train_loss, validation_loss=None, save='loss.pdf'):
 
 #plot_loss_from_file('out/loss.txt', save='out/loss.pdf')
 #plot_train_data(torch.Tensor([0.1, 0.2, 0.3]), torch.Tensor([0.3, 0.5, 0.8]), save='t.pdf')
+#plot_epoch_loss([0.1, 0.2, 0.3], [0.3, 0.5, 0.8], save='t.pdf')
