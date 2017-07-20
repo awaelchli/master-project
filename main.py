@@ -30,14 +30,14 @@ def setup_environment():
 def main():
     sequence_length = args.sequence
 
-    # Image preprocessing
+    # Image pre-processing
     # For normalization, see https://github.com/pytorch/vision#models
     transform = transforms.Compose([
         transforms.Scale(100),
         transforms.ToTensor(),
-        #transforms.Normalize((0.485, 0.456, 0.406),
-                             #(0.229, 0.224, 0.225))])
-        ])
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
 
     kitti_train = KITTI.Subsequence(sequence_length, root_dir,
                                     pose_dir, transform,
@@ -51,9 +51,6 @@ def main():
 
     image_size = kitti_train[0][0].size()[1:4]
     print('Image size:', image_size)
-
-    #display_torch_image(kitti_sequence[0][0])
-    #dummy = Dummy.Random(size=2, width=50, height=50)
 
     dataloader_train = DataLoader(kitti_train, batch_size=1,
                                   shuffle=True, num_workers=args.workers)
@@ -83,7 +80,7 @@ def main():
     optimizer = torch.optim.Adam(params=lstm.get_parameters(), lr=args.learning_rate)
 
     # Train the model
-    print('Training...')
+    print('Training ...')
     start_time = time.time()
     for epoch in range(args.epochs):
 
@@ -100,11 +97,12 @@ def main():
         })
 
     elapsed_time = time.time() - start_time
-    print('Elapsed time is {:f} hours.'.format(elapsed_time / 3600))
+    print('Done. Elapsed time: {:.4f} hours.'.format(elapsed_time / 3600))
 
     # Evaluate model on testset
+    print('Testing ...')
     test_loss = test(vgg, lstm, criterion, dataloader_test)
-    print('Loss on testset: {:.4f}'.format(test_loss))
+    print('Done. Loss on testset: {:.4f}'.format(test_loss))
 
     # Produce plots
     plots.plot_loss_from_file(loss_file, save=save_loss_plot)
