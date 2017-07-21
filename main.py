@@ -54,6 +54,10 @@ def main():
     # Input tensor dimensions: [batch, channels, height, width]
     # Output tensor dimensions: [batch, channels2, height2, width2]
     vgg = models.vgg19(pretrained=True).features
+    # Freeze params, no gradient computation required
+    for param in vgg.parameters():
+        param.requires_grad = False
+        
     if use_cuda:
         print('Moving CNN to GPU ...')
         vgg.cuda()
