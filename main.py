@@ -57,7 +57,7 @@ def main():
     # Freeze params, no gradient computation required
     for param in vgg.parameters():
         param.requires_grad = False
-        
+
     if use_cuda:
         print('Moving CNN to GPU ...')
         vgg.cuda()
