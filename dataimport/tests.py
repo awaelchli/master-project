@@ -84,5 +84,6 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(tensor_equals(r1, torch.eye(3, 4)))
         self.assertTrue(tensor_equals(r2, m21))
 
+
 if __name__ == '__main__':
     unittest.main()
