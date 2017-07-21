@@ -27,22 +27,16 @@ def main():
     sequence_length = args.sequence
 
     # Image pre-processing
-    # For normalization, see https://github.com/pytorch/vision#models
-    transform = transforms.Compose([
-        transforms.Scale(100),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])
-    ])
+    transform = get_transform(normalize=False)
 
     kitti_train = KITTI.Subsequence(sequence_length, transform, args.grayscale,
-                                    sequence_numbers=[0, 1, 2, 3, 4, 5, 6, 7])
+                                    sequence_numbers=KITTI.sequences['training'])
 
     kitti_val = KITTI.Subsequence(sequence_length, transform, args.grayscale,
-                                  sequence_numbers=[8])
+                                  sequence_numbers=KITTI.sequences['validation'])
 
     kitti_test = KITTI.Subsequence(sequence_length, transform, args.grayscale,
-                                   sequence_numbers=[9, 10])
+                                   sequence_numbers=KITTI.sequences['test'])
 
     image_size = kitti_train[0][0].size()[1:4]
     print('Image size:', image_size)
@@ -237,6 +231,21 @@ def save_checkpoint(state, filename):
     torch.save(state, filename)
 
 
+def get_transform(normalize=False):
+    transform_list = []
+    # Image resize
+    if args.image_size:
+        transform_list.append(transforms.Scale(args.image_size))
+    # Converts image to tensor with values in range [0, 1]
+    transform_list.append(transforms.ToTensor())
+    # For normalization, see https://github.com/pytorch/vision#models
+    if normalize:
+        transform_list.append(transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                   std=[0.229, 0.224, 0.225]))
+
+    return transforms.Compose(transform_list)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
@@ -260,6 +269,9 @@ if __name__ == '__main__':
     # Data loading parameters
     parser.add_argument('--sequence', type=int, default=10,
                         help='Sequence length')
+
+    parser.add_argument('--image_size', type=int, default=None,
+                        help='Input images will be scaled such that the shorter side is equal to the given value.')
 
     parser.add_argument('--grayscale', action='store_true',
                         help='Convert images to grayscale.')

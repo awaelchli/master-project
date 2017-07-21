@@ -23,6 +23,12 @@ folders = {
     }
 }
 
+sequences = {
+    'training': [0, 1, 2, 5, 6, 7, 9, 9],
+    'validation': [4],
+    'test': [3, 10]
+}
+
 image_extension = 'png'
 pose_file_extension = 'txt'
 
