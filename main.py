@@ -67,6 +67,7 @@ def main():
     criterion = nn.MSELoss()
 
     if use_cuda:
+        print('Moving LSTM to GPU ...')
         lstm.cuda()
         criterion.cuda()
 
