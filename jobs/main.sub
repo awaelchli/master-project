@@ -14,4 +14,10 @@
 #$ -v DISPLAY
 
 module load anaconda
-python main.py --cuda --experiment more_layers_large_img --epochs 100 --hidden_size 1000 --layers 2 --sequence 10 --image_size 200 --learning_rate 0.001 --workers 4 --print_freq 1
+
+#vgg19
+#python main.py --cuda --experiment more_layers_large_img --epochs 100 --hidden_size 1000 --layers 2 --sequence 10 --image_size 200 --learning_rate 0.001 --workers 4 --print_freq 1
+
+#vgg11
+python main.py --cuda --experiment vgg11_2layers --epochs 100 --hidden_size 500 --layers 2 --sequence 10 --image_size 100 --learning_rate 0.001 --workers 4 --print_freq 1
+

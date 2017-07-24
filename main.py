@@ -64,6 +64,7 @@ def main():
 
     # LSTM to predict pose sequence
     # Input size to LSTM is determined by output of pre-CNN
+    print('Determine output size of CNN ...')
     input_size = cnn_feature_size(vgg, image_size[1], image_size[2])
     lstm = PoseLSTM(input_size=input_size, hidden_size=args.hidden_size, num_layers=args.layers)
 
