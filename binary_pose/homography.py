@@ -57,6 +57,7 @@ def homography_roty(angle, w, h, z=1):
 def rotate_image(image, angle):
     h, w = image.shape[:2]
     hom = homography_roty(angle, w, h)
+    #warp_corners(hom, w, h)
     return apply_homography(image, hom)
 
 
