@@ -21,7 +21,6 @@ def setup_environment():
 
 
 def main():
-    sequence_length = args.sequence
 
     datadir = '../../data/ImageNet/ILSVRC2012'
     traindir = os.path.join(datadir, 'train')
