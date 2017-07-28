@@ -56,7 +56,7 @@ def main():
 
     train_set = ImageNet.PoseImageNet(traindir, max_angle=angle, z_plane=z, transform1=transform1, transform2=transform3)
     val_set = ImageNet.PoseImageNet(valdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
-    test_set = ImageNet.PoseImageNet(valdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
+    test_set = ImageNet.PoseImageNet(testdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
 
     dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
                                   shuffle=True, num_workers=args.workers)
@@ -64,7 +64,7 @@ def main():
     dataloader_val = DataLoader(val_set, batch_size=args.batch_size,
                                 shuffle=False, num_workers=args.workers)
 
-    dataloader_test = DataLoader(val_set, batch_size=args.batch_size,
+    dataloader_test = DataLoader(test_set, batch_size=args.batch_size,
                                  shuffle=False, num_workers=args.workers)
 
     # Model for binary classification
