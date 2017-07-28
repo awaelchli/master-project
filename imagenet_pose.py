@@ -98,7 +98,7 @@ def main():
         train_loss.append(epoch_loss)
 
         # Validate after each epoch
-        epoch_loss = validate(model, criterion, dataloader_val)
+        epoch_loss, _ = validate(model, criterion, dataloader_val)
         validation_loss.append(epoch_loss)
 
         # # TODO: write validation loss
@@ -121,8 +121,8 @@ def main():
 
     # Evaluate model on testset
     print('Testing ...')
-    test_loss = test(model, criterion, dataloader_val)
-    print('Done. Loss on testset: {:.4f}'.format(test_loss))
+    test_loss, accuracy = test(model, criterion, dataloader_val)
+    print('Done. Accuracy on testset: {:.4f}'.format(accuracy))
 
 
 def train(model, criterion, optimizer, dataloader, epoch):
@@ -136,8 +136,8 @@ def train(model, criterion, optimizer, dataloader, epoch):
 
         # Reshape target pose from [batch, 1, 6] to [1, sequence_length, 6]
         # poses = poses.permute(1, 0, 2)
-        image_size = image.size()[1:4]
-        print('Image size:', image_size)
+        #image_size = image.size()[1:4]
+        #print('Image size:', image_size)
 
         input = to_variable(image)
         target = to_variable(pose)
@@ -150,7 +150,7 @@ def train(model, criterion, optimizer, dataloader, epoch):
 
         loss = criterion(output, target)
         #print(criterion.forward(input, target))
-        print(loss)
+        #print(loss)
         loss.backward()
         optimizer.step()
 
