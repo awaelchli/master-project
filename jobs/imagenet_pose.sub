@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N train_pose_lstm
+#$ -N train_imagenet_pose
 #$ -S /bin/bash
 #$ -cwd
 #$ -j y
@@ -15,4 +15,4 @@
 
 module load anaconda
 
-python main.py --cuda --experiment imagenetpose1 --epochs 100 --batch_size 10 --learning_rate 0.001 --workers 4 --print_freq 100
+python imagenet_pose.py --cuda --experiment imagenetpose1 --epochs 100 --batch_size 10 --learning_rate 0.001 --workers 4 --print_freq 100
