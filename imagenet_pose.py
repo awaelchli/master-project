@@ -1,9 +1,7 @@
-from poseLSTM import PoseLSTM
-from dataimport import KITTI, Dummy, ImageNet
+from dataimport import ImageNet
 from torchvision import models, transforms
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from PIL import Image
 import torch
 import torch.nn as nn
 import argparse
@@ -11,7 +9,6 @@ import os
 import plots
 import time
 import shutil
-import numpy as np
 
 
 def setup_environment():
@@ -28,7 +25,8 @@ def main():
 
     datadir = '../../data/ImageNet/ILSVRC2012'
     traindir = os.path.join(datadir, 'train')
-    valdir = os.path.join(datadir, 'train')
+    valdir = os.path.join(datadir, 'val')
+    testdir = os.path.join(datadir, 'test')
 
     angle = 45
     z = 0.7
@@ -59,12 +57,16 @@ def main():
 
     train_set = ImageNet.PoseImageNet(traindir, max_angle=angle, z_plane=z, transform1=transform1, transform2=transform3)
     val_set = ImageNet.PoseImageNet(valdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
+    test_set = ImageNet.PoseImageNet(valdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
 
-    dataloader_train = DataLoader(train_set, batch_size=1,
+    dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
                                   shuffle=True, num_workers=args.workers)
 
-    dataloader_val = DataLoader(val_set, batch_size=1,
+    dataloader_val = DataLoader(val_set, batch_size=args.batch_size,
                                 shuffle=False, num_workers=args.workers)
+
+    dataloader_test = DataLoader(val_set, batch_size=args.batch_size,
+                                 shuffle=False, num_workers=args.workers)
 
     # Model for binary classification
     model = models.resnet18(pretrained=False)
@@ -121,7 +123,7 @@ def main():
 
     # Evaluate model on testset
     print('Testing ...')
-    test_loss, accuracy = test(model, criterion, dataloader_val)
+    test_loss, accuracy = test(model, criterion, dataloader_test)
     print('Done. Accuracy on testset: {:.4f}'.format(accuracy))
 
 
@@ -216,30 +218,18 @@ if __name__ == '__main__':
 
     parser.add_argument('--cuda', action='store_true')
 
-    parser.add_argument('--cnn_mode', type=int, choices=[0, 1], default=1,
-                        help='0: Sequential mode 1: Batch mode')
-
     parser.add_argument('--print_freq', type=int, default=100,
                         help='Frequency of printed information during training')
 
     parser.add_argument('--experiment', type=str, default='unnamed',
                         help='Name of the experiment. Output files will be stored in this folder.')
 
-    # Model parameters
-    parser.add_argument('--hidden_size', type=int, default=1000,
-                        help='dimension of lstm hidden states')
-    parser.add_argument('--layers', type=int, default=1,
-                        help='number of layers in LSTM')
-
     # Data loading parameters
-    parser.add_argument('--sequence', type=int, default=10,
-                        help='Sequence length')
-
     parser.add_argument('--image_size', type=int, default=None,
                         help='Input images will be scaled such that the shorter side is equal to the given value.')
 
-    parser.add_argument('--grayscale', action='store_true',
-                        help='Convert images to grayscale.')
+    # parser.add_argument('--grayscale', action='store_true',
+    #                     help='Convert images to grayscale.')
 
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--workers', type=int, default=2)

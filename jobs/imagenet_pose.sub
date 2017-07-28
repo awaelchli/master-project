@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#$ -N train_pose_lstm
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+python main.py --cuda --experiment imagenetpose1 --epochs 100 --batch_size 10 --learning_rate 0.001 --workers 4 --print_freq 100
