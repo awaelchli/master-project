@@ -30,13 +30,13 @@ def main():
     transform = get_transform(normalize=False)
 
     kitti_train = KITTI.Subsequence(sequence_length, transform, args.grayscale,
-                                    sequence_numbers=KITTI.sequences['training'])
+                                    sequence_numbers=KITTI.SEQUENCES['training'])
 
     kitti_val = KITTI.Subsequence(sequence_length, transform, args.grayscale,
-                                  sequence_numbers=KITTI.sequences['validation'])
+                                  sequence_numbers=KITTI.SEQUENCES['validation'])
 
     kitti_test = KITTI.Subsequence(sequence_length, transform, args.grayscale,
-                                   sequence_numbers=KITTI.sequences['test'])
+                                   sequence_numbers=KITTI.SEQUENCES['test'])
 
     image_size = kitti_train[0][0].size()[1:4]
     print('Image size:', image_size)

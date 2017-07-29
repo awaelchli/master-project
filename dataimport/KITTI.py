@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 from dataimport.utils import read_matrices, to_relative_poses, matrix_to_pose_vector
 
-folders = {
+FOLDERS = {
     'color': '../data/KITTI/color/sequences',
     'grayscale': '../data/KITTI/grayscale/sequences',
     'poses':  '../data/KITTI/poses/',
@@ -23,29 +23,29 @@ folders = {
     }
 }
 
-sequences = {
+SEQUENCES = {
     'training': [0, 1, 2, 5, 6, 7, 9, 9],
     'validation': [4],
     'test': [3, 10]
 }
 
-image_extension = 'png'
-pose_file_extension = 'txt'
+IMAGE_EXTENSION = 'png'
+FILE_POSE_EXTENSION = 'txt'
 
 
 def get_root_folder(grayscale=False):
     if grayscale:
-        return folders['grayscale']
+        return FOLDERS['grayscale']
     else:
-        return folders['color']
+        return FOLDERS['color']
 
 
 def get_pose_folder():
-    return folders['poses']
+    return FOLDERS['poses']
 
 
 def get_stereo_subfolder(grayscale=False, eye=0):
-    stereo = folders['stereo_subfolder']
+    stereo = FOLDERS['stereo_subfolder']
     if grayscale:
         return stereo['grayscale'][eye]
     else:
@@ -89,13 +89,13 @@ def sequence_number_to_string(number):
 
 def get_image_search_path(sequence_name, is_grayscale, eye):
     image_subfolder = get_stereo_subfolder(is_grayscale, eye)
-    search = '*.{}'.format(image_extension)
+    search = '*.{}'.format(IMAGE_EXTENSION)
     search_path = path.join(get_root_folder(is_grayscale), sequence_name, image_subfolder, search)
     return search_path
 
 
 def get_pose_filename(sequence_name):
-    return path.join(get_pose_folder(), '{}.{}'.format(sequence_name, pose_file_extension))
+    return path.join(get_pose_folder(), '{}.{}'.format(sequence_name, FILE_POSE_EXTENSION))
 
 
 def index_sequence(chunk_size, sequence_number, is_grayscale, eye):
