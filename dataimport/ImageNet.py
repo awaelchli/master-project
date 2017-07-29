@@ -1,12 +1,51 @@
 from torchvision.datasets import ImageFolder
+from torch.utils.data import Dataset
 import numpy as np
 import random
+import os.path as path
+import glob
 from PIL import Image
 from skimage.transform import ProjectiveTransform, rescale
 from math import cos, sin, radians, floor
 
 
 INTERPOLATION = [Image.NEAREST, Image.BILINEAR, Image.BICUBIC]
+EXTENSION = 'JPEG'
+
+
+class PoseImageNet2(Dataset):
+
+    def __init__(self, root, max_angle=45.0, z_plane=1.0, transform1=None, transform2=None):
+        self.root = root
+        self.max_angle = max_angle
+        self.z_plane = z_plane
+        self.transform1 = transform1
+        self.transform2 = transform2
+        self.filenames = glob.glob(path.join(root, '*.{}'.format(EXTENSION)), recursive=True)
+
+    def __getitem__(self, index):
+        image = Image.open(self.filenames[index])
+        if self.transform1:
+            image = self.transform1(image)
+
+        w, h = image.width, image.height
+
+        angle, target = random_pose(self.max_angle)
+
+        # Homography that rotates the image at a given depth
+        hom = homography_roty(angle, w, h, self.z_plane)
+        image = apply_homography(image, hom)
+
+        # Rescale image such that no pixel is scaled up
+        # image = compensate_homography_scale(image, hom)
+
+        if self.transform2:
+            image = self.transform2(image)
+
+        return image, target
+
+    def __len__(self):
+        return len(self.filenames)
 
 
 class PoseImageNet(ImageFolder):
