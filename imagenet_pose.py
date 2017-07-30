@@ -22,7 +22,7 @@ def setup_environment():
 
 def main():
 
-    datadir = '../../data/ImageNet/ILSVRC2012'
+    datadir = '../data/ImageNet/ILSVRC2012'
     traindir = os.path.join(datadir, 'train')
     valdir = os.path.join(datadir, 'val')
     testdir = os.path.join(datadir, 'test')
@@ -53,10 +53,9 @@ def main():
                              std=[0.229, 0.224, 0.225])
     ])
 
-
-    train_set = ImageNet.PoseImageNet(traindir, max_angle=angle, z_plane=z, transform1=transform1, transform2=transform3)
-    val_set = ImageNet.PoseImageNet(valdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
-    test_set = ImageNet.PoseImageNet(testdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
+    train_set = ImageNet.PoseGenerator(traindir, max_angle=angle, z_plane=z, transform1=transform1, transform2=transform3)
+    val_set = ImageNet.PoseGenerator(valdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
+    test_set = ImageNet.PoseGenerator(testdir, max_angle=angle, z_plane=z, transform1=transform2, transform2=transform3)
 
     dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
                                   shuffle=True, num_workers=args.workers)
