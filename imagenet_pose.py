@@ -184,7 +184,7 @@ def test(model, criterion, dataloader):
         _, ind = torch.max(output.data, 1)
 
         # Correct predictions in the batch
-        accuracy += torch.sum(torch.eq(ind, pose))
+        accuracy += torch.sum(torch.eq(ind, target.data))
 
         loss = criterion(output, target)
         avg_loss += loss.data[0]
