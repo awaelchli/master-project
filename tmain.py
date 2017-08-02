@@ -43,7 +43,7 @@ def print_elapsed_hours(elapsed):
 
 if __name__ == '__main__':
     ARCHS = {
-        'cnnlstm': BaseExperiment,
+        #'cnnlstm': BaseExperiment,
         'binarypose': BinaryPoseCNN,
     }
 
@@ -63,17 +63,25 @@ if __name__ == '__main__':
 
     print_cuda_status()
 
+    start_epoch = 1
     checkpoint = None
     if args.resume:
         print('Loading checkpoint ...')
         checkpoint = experiment.load_checkpoint()
+        start_epoch = checkpoint['epoch'] + 1
 
     if args.train:
-        # TODO: Move loop over epochs to here
         print('Training for {} epochs ...'.format(args.epochs))
         start_time = time.time()
-        experiment.train(args.epochs, checkpoint)
+
+        for epoch in range(start_epoch, start_epoch + args.epochs):
+            print('Epoch [{:d}/{:d}]'.format(epoch, start_epoch + args.epochs - 1))
+            # Train for one epoch
+            experiment.train(checkpoint)
+
         print(print_elapsed_hours(time.time() - start_time))
+        # TODO: plotting
+        #plots.plot_epoch_loss(train_loss, validation_loss, save=self.save_loss_plot)
 
     if args.test:
         print('Testing ...')

@@ -21,12 +21,14 @@ class BinaryPoseCNN(BaseExperiment):
 
         super(BinaryPoseCNN, self).__init__(args)
 
-
-
         # Model for binary classification
         self.model = models.resnet18(pretrained=False)
         self.model.fc = nn.Linear(512, 2)
         self.criterion = nn.CrossEntropyLoss()
+        self.optimizer = torch.optim.SGD(self.model.parameters(), self.lr,
+                                    # momentum=args.momentum,
+                                    # weight_decay=args.weight_decay)
+                                    )
 
         if self.use_cuda:
             print('Moving CNN to GPU ...')
@@ -34,6 +36,9 @@ class BinaryPoseCNN(BaseExperiment):
             self.criterion.cuda()
 
         self.print_freq = args.print_freq
+
+        self.training_loss = []
+        self.validation_loss = []
 
     def load_dataset(self, args):
         traindir = ImageNet.FOLDERS['training']
@@ -81,71 +86,52 @@ class BinaryPoseCNN(BaseExperiment):
 
         return dataloader_train, dataloader_val, dataloader_test
 
-    def train(self, epochs, checkpoint=None):
-        start_epoch = 1
-        train_loss = []
-        validation_loss = []
-
-        optimizer = torch.optim.SGD(self.model.parameters(), self.lr,
-                                    # momentum=args.momentum,
-                                    # weight_decay=args.weight_decay)
-                                    )
-
+    def train(self, checkpoint=None):
         if checkpoint:
-            start_epoch = checkpoint['epoch'] + 1
             self.model.load_state_dict(checkpoint['model'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
 
-        for epoch in range(start_epoch, start_epoch + epochs):
-            print('Epoch [{:d}/{:d}]'.format(epoch, start_epoch + epochs - 1))
+        training_loss = 0
+        num_train_samples = len(self.trainingset)
 
-            # Train for one epoch
-            epoch_loss = self.__train_one_epoch(self.model, self.criterion, optimizer, self.trainingset)
-            train_loss.append(epoch_loss)
-
-            # TODO: save losses
-            checkpoint = {
-                'epoch': epoch,
-                'train_loss': None,
-                'validation_loss': None,
-                'model': self.model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-            }
-            self.save_checkpoint(checkpoint)
-
-            # Validate after each epoch
-            epoch_loss, _ = self.test(checkpoint, dataloader=self.validationset)
-            validation_loss.append(epoch_loss)
-
-            plots.plot_epoch_loss(train_loss, validation_loss, save=self.save_loss_plot)
-
-    def __train_one_epoch(self, model, criterion, optimizer, dataloader):
-        epoch_loss = 0
-        num_train_samples = len(dataloader)
-
-        for i, (image, pose) in enumerate(dataloader):
+        for i, (image, pose) in enumerate(self.trainingset):
 
             input = self.to_variable(image)
             target = self.to_variable(pose)
 
-            model.zero_grad()
-            output = model(input)
+            self.model.zero_grad()
+            output = self.model(input)
 
-            loss = criterion(output, target)
+            loss = self.criterion(output, target)
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
                 print('Sample [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_train_samples, loss.data[0]))
 
-            epoch_loss += loss.data[0]
+            training_loss += loss.data[0]
 
-        epoch_loss /= num_train_samples
-        return epoch_loss
+        training_loss /= num_train_samples
+        self.training_loss.append(training_loss)
 
-    def test(self, checkpoint, dataloader=None):
-        self.model.load_state_dict(checkpoint['model'])
+        # Validate after each epoch
+        validation_loss, _ = self.test(dataloader=self.validationset)
+        self.validation_loss.append(validation_loss)
+
+        # TODO: save losses
+        checkpoint = {
+            'epoch': len(self.training_loss),
+            'training_loss': self.training_loss,
+            'validation_loss': self.validation_loss,
+            'model': self.model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+        }
+        self.save_checkpoint(checkpoint)
+
+    def test(self, checkpoint=None, dataloader=None):
+        if checkpoint:
+            self.model.load_state_dict(checkpoint['model'])
 
         if not dataloader:
             dataloader = self.testset

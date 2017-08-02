@@ -33,10 +33,10 @@ class BaseExperiment:
     def validationset(self):
         return self._validationset
 
-    def train(self, epochs, checkpoint=None):
+    def train(self, checkpoint=None):
         pass
 
-    def test(self, checkpoint):
+    def test(self, checkpoint=None):
         pass
 
     def load_dataset(self, args):
