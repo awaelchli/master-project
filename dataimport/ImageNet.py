@@ -7,6 +7,7 @@ import re
 from PIL import Image
 from skimage.transform import ProjectiveTransform, rescale
 from math import cos, sin, radians, floor
+from random import shuffle
 
 FOLDERS = {
     'training': '../data/ImageNet/ILSVRC2012/train',
@@ -20,13 +21,16 @@ EXTENSIONS = ['jpeg', 'jpg', 'png']
 
 class PoseGenerator(Dataset):
 
-    def __init__(self, root, max_angle=45.0, z_plane=1.0, transform1=None, transform2=None):
+    def __init__(self, root, max_angle=45.0, z_plane=1.0, transform1=None, transform2=None, max_size=None):
         self.root = root
         self.max_angle = max_angle
         self.z_plane = z_plane
         self.transform1 = transform1
         self.transform2 = transform2
         self.filenames = find_images(root)
+        if max_size and max_size < len(self.filenames):
+            shuffle(self.filenames)
+            self.filenames = self.filenames[:max_size]
 
     def __getitem__(self, index):
         image = Image.open(self.filenames[index]).convert('RGB')

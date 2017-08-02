@@ -76,7 +76,7 @@ if __name__ == '__main__':
     print(args)
 
     experiment_folder = os.path.join(OUT_ROOT_FOLDER, args.name)
-    if not args.resume:
+    if args.train and not args.resume:
         reset_folder(experiment_folder)
 
     experiment = args.create(experiment_folder, args)
@@ -86,6 +86,7 @@ if __name__ == '__main__':
     if args.resume:
         print('Loading checkpoint ...')
         checkpoint = experiment.load_checkpoint()
+        experiment.restore_from_checkpoint(checkpoint)
         start_epoch = checkpoint['epoch'] + 1
 
     if args.train:
@@ -93,15 +94,18 @@ if __name__ == '__main__':
         start_time = time.time()
 
         for epoch in range(start_epoch, start_epoch + args.epochs):
-            print('Epoch [{:d}/{:d}]'.format(epoch, start_epoch + args.epochs - 1))
             # Train for one epoch
-            experiment.train(checkpoint)
+            print('Epoch [{:d}/{:d}]'.format(epoch, start_epoch + args.epochs - 1))
+            experiment.train()
+            experiment.save_checkpoint(experiment.make_checkpoint())
 
+        experiment.plot_performance()
         print(print_elapsed_hours(time.time() - start_time))
 
     if args.test:
         print('Testing ...')
         start_time = time.time()
         checkpoint = experiment.load_checkpoint()
-        experiment.test(checkpoint)
+        experiment.restore_from_checkpoint(checkpoint)
+        experiment.test()
         print(print_elapsed_hours(time.time() - start_time))

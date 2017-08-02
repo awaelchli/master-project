@@ -35,10 +35,10 @@ class BaseExperiment:
     def validationset(self):
         return self._validationset
 
-    def train(self, checkpoint=None):
+    def train(self):
         pass
 
-    def test(self, checkpoint=None):
+    def test(self):
         pass
 
     def load_dataset(self, args):
@@ -55,6 +55,12 @@ class BaseExperiment:
     def save_checkpoint(self, state):
         print('Saving checkpoint ...')
         torch.save(state, self.save_model_name)
+
+    def make_checkpoint(self):
+        return None
+
+    def restore_from_checkpoint(self, checkpoint):
+        pass
 
     def plot_performance(self):
         pass

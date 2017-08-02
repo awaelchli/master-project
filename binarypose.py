@@ -1,5 +1,5 @@
 from base import BaseExperiment, AverageMeter
-from dataimport import ImageNet
+from dataimport.ImageNet import PoseGenerator, FOLDERS
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
 import torch
@@ -17,6 +17,8 @@ class BinaryPoseCNN(BaseExperiment):
                             help='Location of the image in front of the camera (along Z-axis).')
         parser.add_argument('--image_size', type=int, default=None,
                             help='Input images will be scaled such that the shorter side is equal to the given value.')
+        parser.add_argument('--max_size', type=int, default=None,
+                            help='Clips the training dataset at the given size.')
 
     def __init__(self, folder, args):
         super(BinaryPoseCNN, self).__init__(folder, args)
@@ -41,9 +43,9 @@ class BinaryPoseCNN(BaseExperiment):
         self.validation_loss = []
 
     def load_dataset(self, args):
-        traindir = ImageNet.FOLDERS['training']
-        valdir = ImageNet.FOLDERS['validation']
-        testdir = ImageNet.FOLDERS['test']
+        traindir = FOLDERS['training']
+        valdir = FOLDERS['validation']
+        testdir = FOLDERS['test']
 
         # Image pre-processing
         # For training set
@@ -68,12 +70,12 @@ class BinaryPoseCNN(BaseExperiment):
                                  std=[0.229, 0.224, 0.225])
         ])
 
-        train_set = ImageNet.PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
-                                           transform2=transform3)
-        val_set = ImageNet.PoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                         transform2=transform3)
-        test_set = ImageNet.PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                          transform2=transform3)
+        train_set = PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
+                                  transform2=transform3, max_size=args.max_size)
+        val_set = PoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
+                                transform2=transform3)
+        test_set = PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
+                                 transform2=transform3)
 
         dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
                                       shuffle=True, num_workers=args.workers)
@@ -86,11 +88,7 @@ class BinaryPoseCNN(BaseExperiment):
 
         return dataloader_train, dataloader_val, dataloader_test
 
-    def train(self, checkpoint=None):
-        if checkpoint:
-            self.model.load_state_dict(checkpoint['model'])
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
-
+    def train(self):
         training_loss = AverageMeter()
         num_train_samples = len(self.trainingset)
 
@@ -119,20 +117,7 @@ class BinaryPoseCNN(BaseExperiment):
         validation_loss, _ = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
 
-        # TODO: save losses
-        checkpoint = {
-            'epoch': len(self.training_loss),
-            'training_loss': self.training_loss,
-            'validation_loss': self.validation_loss,
-            'model': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-        }
-        self.save_checkpoint(checkpoint)
-
-    def test(self, checkpoint=None, dataloader=None):
-        if checkpoint:
-            self.model.load_state_dict(checkpoint['model'])
-
+    def test(self, dataloader=None):
         if not dataloader:
             dataloader = self.testset
 
@@ -157,8 +142,24 @@ class BinaryPoseCNN(BaseExperiment):
         avg_loss = avg_loss.average
         accuracy = accuracy.average
 
-        print('Accuracy on testset: {:.4f}'.format(accuracy))
+        print('Accuracy: {:.4f}'.format(accuracy))
         return avg_loss, accuracy
+
+    def make_checkpoint(self):
+        checkpoint = {
+            'epoch': len(self.training_loss),
+            'training_loss': self.training_loss,
+            'validation_loss': self.validation_loss,
+            'model': self.model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+        }
+        return checkpoint
+
+    def restore_from_checkpoint(self, checkpoint):
+        self.training_loss = checkpoint['training_loss']
+        self.validation_loss = checkpoint['validation_loss']
+        self.model.load_state_dict(checkpoint['model'])
+        self.optimizer.load_state_dict(checkpoint['optimizer'])
 
     def plot_performance(self):
         checkpoint = self.load_checkpoint()
