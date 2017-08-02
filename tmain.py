@@ -1,105 +1,83 @@
 import argparse
-import torch
 import os
-import shutil
+import torch
+import time
+from base import BaseExperiment, OUT_ROOT_FOLDER
+from binarypose import BinaryPoseCNN
 
 
-class BaseExperiment:
+def get_main_parser():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--train', action='store_true')
+    parser.add_argument('--test', action='store_true')
+    parser.add_argument('--resume', action='store_true')
 
-    def __init__(self, args):
-        self.use_cuda = args.cuda
-        self.epochs = args.epochs
-        self.lr = args.learning_rate
-        self.workers = args.workers
-        self.batch_size = args.batch_size
+    parser.add_argument('--cuda', action='store_true')
 
-        self.out_folder = os.path.join(OUT_BASE_FOLDER, args.experiment)
-        self.loss_file = os.path.join(self.out_folder, 'loss.txt')
-        self.save_loss_plot = os.path.join(self.out_folder, 'loss.pdf')
-        self.save_model_name = os.path.join(self.out_folder, 'checkpoint.pth.tar')
+    parser.add_argument('--print_freq', type=int, default=100,
+                        help='Frequency of printed information during training')
 
-        self.train_loader, self.test_loader, self.val_loader = self.load_dataset()
+    parser.add_argument('--name', type=str, default='unnamed',
+                        help='Name of the experiment. Output files will be stored in this folder.')
 
-    def train(self):
-        pass
+    parser.add_argument('--batch_size', type=int, default=1)
+    parser.add_argument('--workers', type=int, default=2)
 
-    def test(self):
-        pass
-
-    def load_dataset(self):
-        pass
-
-    def load_checkpoint(self):
-        if os.path.isfile(args.resume):
-            print('Loading checkpoint ...')
-            checkpoint = torch.load(self.save_model_name)
-            #args.start_epoch = checkpoint['epoch']
-            #best_prec1 = checkpoint['best_prec1']
-            #model.load_state_dict(checkpoint['state_dict'])
-            #optimizer.load_state_dict(checkpoint['optimizer'])
-        else:
-            print('No checkpoint found at {}'.format(self.save_model_name))
-        return checkpoint
-
-    def save_checkpoint(self, filename):
-        #torch.save(state, filename)
-        pass
-
-    def setup_environment(self):
-        # Wipe all existing data
-        if os.path.isdir(self.out_folder):
-            shutil.rmtree(self.out_folder)
-        os.makedirs(self.out_folder)
-
-    @staticmethod
-    def submit_arguments(parse):
-        parse.add_argument('--train', action='store_true')
-        parse.add_argument('--test', action='store_true')
-        parse.add_argument('--resume', action='store_true')
-
-        parse.add_argument('--cuda', action='store_true')
-
-        parse.add_argument('--print_freq', type=int, default=100,
-                           help='Frequency of printed information during training')
-
-        parse.add_argument('--name', type=str, default='unnamed',
-                           help='Name of the experiment. Output files will be stored in this folder.')
-
-        parse.add_argument('--batch_size', type=int, default=1)
-        parse.add_argument('--workers', type=int, default=2)
-
-        # Training parameters
-        parse.add_argument('--epochs', type=int, default=1)
-        parse.add_argument('--learning_rate', type=float, default=0.001)
+    # Training parameters
+    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--lr', type=float, default=0.001,
+                        help='Learning rate')
+    return parser
 
 
-
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--arch', type=str, required=True)
-
-    BaseExperiment.submit_arguments(parser)
-
-    args = parser.parse_args()
-    print(args)
-
-    OUT_BASE_FOLDER = 'out'
-    os.makedirs(OUT_BASE_FOLDER, exist_ok=True)
-    USE_CUDA = torch.cuda.is_available() and args.cuda
-
-    ARCHS = {
-        'poselstm': BaseExperiment
-    }
-
-    e = BaseExperiment(args)
-    print(e)
-    e.setup_environment()
-
+def print_cuda_status():
     if torch.cuda.is_available():
         print('CUDA is available on this machine.')
     else:
         print('CUDA is not available on this machine.')
 
 
+def print_elapsed_hours(elapsed):
+    print('Elapsed time: {:.4f} hours.'.format(elapsed / 3600))
+
+
+if __name__ == '__main__':
+    ARCHS = {
+        'cnnlstm': BaseExperiment,
+        'binarypose': BinaryPoseCNN,
+    }
+
+    os.makedirs(OUT_ROOT_FOLDER, exist_ok=True)
+
+    main_parser = get_main_parser()
+    subparsers = main_parser.add_subparsers()
+
+    for name, c in ARCHS.items():
+        sub = subparsers.add_parser(name, parents=[main_parser])
+        c.submit_arguments(sub)
+        sub.set_defaults(create=c)
+
+    args = main_parser.parse_args()
+    print(args)
+    experiment = args.create(args)
+
+    print_cuda_status()
+
+    checkpoint = None
+    if args.resume:
+        print('Loading checkpoint ...')
+        checkpoint = experiment.load_checkpoint()
+
+    if args.train:
+        # TODO: Move loop over epochs to here
+        print('Training for {} epochs ...'.format(args.epochs))
+        start_time = time.time()
+        experiment.train(args.epochs, checkpoint)
+        print(print_elapsed_hours(time.time() - start_time))
+
+    if args.test:
+        print('Testing ...')
+        start_time = time.time()
+        checkpoint = experiment.load_checkpoint()
+        experiment.test(checkpoint)
+        print(print_elapsed_hours(time.time() - start_time))
