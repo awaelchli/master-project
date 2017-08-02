@@ -1,4 +1,4 @@
-from base import BaseExperiment
+from base import BaseExperiment, AverageMeter
 
 from dataimport import ImageNet
 from torchvision import models, transforms
@@ -91,7 +91,7 @@ class BinaryPoseCNN(BaseExperiment):
             self.model.load_state_dict(checkpoint['model'])
             self.optimizer.load_state_dict(checkpoint['optimizer'])
 
-        training_loss = 0
+        training_loss = AverageMeter()
         num_train_samples = len(self.trainingset)
 
         for i, (image, pose) in enumerate(self.trainingset):
@@ -110,9 +110,9 @@ class BinaryPoseCNN(BaseExperiment):
             if (i + 1) % self.print_freq == 0:
                 print('Sample [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_train_samples, loss.data[0]))
 
-            training_loss += loss.data[0]
+            training_loss.update(loss.data[0])
 
-        training_loss /= num_train_samples
+        training_loss = training_loss.average
         self.training_loss.append(training_loss)
 
         # Validate after each epoch
@@ -136,8 +136,8 @@ class BinaryPoseCNN(BaseExperiment):
         if not dataloader:
             dataloader = self.testset
 
-        accuracy = 0
-        avg_loss = 0
+        accuracy = AverageMeter()
+        avg_loss = AverageMeter()
         for i, (image, pose) in enumerate(dataloader):
             input = self.to_variable(image, volatile=True)
             target = self.to_variable(pose, volatile=True)
@@ -149,13 +149,14 @@ class BinaryPoseCNN(BaseExperiment):
             _, ind = torch.max(output.data, 1)
 
             # Correct predictions in the batch
-            accuracy += torch.sum(torch.eq(ind, target.data))
+            accuracy.update(torch.sum(torch.eq(ind, target.data)))
 
             loss = self.criterion(output, target)
-            avg_loss += loss.data[0]
+            avg_loss.update(loss.data[0])
 
-        avg_loss /= len(dataloader)
-        accuracy /= len(dataloader)
+        avg_loss = avg_loss.average
+        accuracy = accuracy.average
+
         print('Accuracy on testset: {:.4f}'.format(accuracy))
         return avg_loss, accuracy
 
