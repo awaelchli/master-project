@@ -1,5 +1,4 @@
 from base import BaseExperiment, AverageMeter
-
 from dataimport import ImageNet
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
@@ -12,13 +11,14 @@ class BinaryPoseCNN(BaseExperiment):
 
     @staticmethod
     def submit_arguments(parser):
+        parser.add_argument('--angle', type=float, default=10,
+                            help='The maximum range of rotation of the images.')
+        parser.add_argument('--zplane', type=float, default=1,
+                            help='Location of the image in front of the camera (along Z-axis).')
         parser.add_argument('--image_size', type=int, default=None,
                             help='Input images will be scaled such that the shorter side is equal to the given value.')
 
     def __init__(self, folder, args):
-        self.angle = 45
-        self.z = 0.7
-
         super(BinaryPoseCNN, self).__init__(folder, args)
 
         # Model for binary classification
@@ -68,11 +68,11 @@ class BinaryPoseCNN(BaseExperiment):
                                  std=[0.229, 0.224, 0.225])
         ])
 
-        train_set = ImageNet.PoseGenerator(traindir, max_angle=self.angle, z_plane=self.z, transform1=transform1,
+        train_set = ImageNet.PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
                                            transform2=transform3)
-        val_set = ImageNet.PoseGenerator(valdir, max_angle=self.angle, z_plane=self.z, transform1=transform2,
+        val_set = ImageNet.PoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
                                          transform2=transform3)
-        test_set = ImageNet.PoseGenerator(testdir, max_angle=self.angle, z_plane=self.z, transform1=transform2,
+        test_set = ImageNet.PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
                                           transform2=transform3)
 
         dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
