@@ -2,8 +2,27 @@ import argparse
 import os
 import torch
 import time
-from base import BaseExperiment, OUT_ROOT_FOLDER
+import shutil
+from base import BaseExperiment
 from binarypose import BinaryPoseCNN
+
+
+OUT_ROOT_FOLDER = 'out'
+ARCHS = {
+    # 'cnnlstm': BaseExperiment,
+    'binarypose': BinaryPoseCNN,
+}
+
+
+def setup_environment():
+    os.makedirs(OUT_ROOT_FOLDER, exist_ok=True)
+
+
+def reset_folder(folder):
+    # Wipe all existing data
+    if os.path.isdir(folder):
+        shutil.rmtree(folder)
+    os.makedirs(folder)
 
 
 def get_main_parser():
@@ -42,12 +61,8 @@ def print_elapsed_hours(elapsed):
 
 
 if __name__ == '__main__':
-    ARCHS = {
-        #'cnnlstm': BaseExperiment,
-        'binarypose': BinaryPoseCNN,
-    }
-
-    os.makedirs(OUT_ROOT_FOLDER, exist_ok=True)
+    print_cuda_status()
+    setup_environment()
 
     main_parser = get_main_parser()
     subparsers = main_parser.add_subparsers()
@@ -59,9 +74,12 @@ if __name__ == '__main__':
 
     args = main_parser.parse_args()
     print(args)
-    experiment = args.create(args)
 
-    print_cuda_status()
+    experiment_folder = os.path.join(OUT_ROOT_FOLDER, args.name)
+    if not args.resume:
+        reset_folder(experiment_folder)
+
+    experiment = args.create(experiment_folder, args)
 
     start_epoch = 1
     checkpoint = None
@@ -80,8 +98,6 @@ if __name__ == '__main__':
             experiment.train(checkpoint)
 
         print(print_elapsed_hours(time.time() - start_time))
-        # TODO: plotting
-        #plots.plot_epoch_loss(train_loss, validation_loss, save=self.save_loss_plot)
 
     if args.test:
         print('Testing ...')

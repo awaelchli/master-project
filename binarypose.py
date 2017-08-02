@@ -15,11 +15,11 @@ class BinaryPoseCNN(BaseExperiment):
         parser.add_argument('--image_size', type=int, default=None,
                             help='Input images will be scaled such that the shorter side is equal to the given value.')
 
-    def __init__(self, args):
+    def __init__(self, folder, args):
         self.angle = 45
         self.z = 0.7
 
-        super(BinaryPoseCNN, self).__init__(args)
+        super(BinaryPoseCNN, self).__init__(folder, args)
 
         # Model for binary classification
         self.model = models.resnet18(pretrained=False)
@@ -159,4 +159,8 @@ class BinaryPoseCNN(BaseExperiment):
 
         print('Accuracy on testset: {:.4f}'.format(accuracy))
         return avg_loss, accuracy
+
+    def plot_performance(self):
+        checkpoint = self.load_checkpoint()
+        plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
 

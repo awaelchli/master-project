@@ -1,23 +1,25 @@
 import os
 import shutil
 import torch
+import plots
 from torch.autograd import Variable
 
-OUT_ROOT_FOLDER = 'out'
+
+CHECKPOINT_FILENAME = 'checkpoint.pth.tar'
 
 
 class BaseExperiment:
 
-    def __init__(self, args):
+    def __init__(self, folder, args):
         self.use_cuda = torch.cuda.is_available() and args.cuda
         self.lr = args.lr
         self.workers = args.workers
         self.batch_size = args.batch_size
 
-        self.out_folder = os.path.join(OUT_ROOT_FOLDER, args.name)
+        self.out_folder = folder
         self.loss_file = os.path.join(self.out_folder, 'loss.txt')
         self.save_loss_plot = os.path.join(self.out_folder, 'loss.pdf')
-        self.save_model_name = os.path.join(self.out_folder, 'checkpoint.pth.tar')
+        self.save_model_name = os.path.join(self.out_folder, CHECKPOINT_FILENAME)
 
         self._trainingset, self._validationset, self._testset = self.load_dataset(args)
 
@@ -54,11 +56,8 @@ class BaseExperiment:
         print('Saving checkpoint ...')
         torch.save(state, self.save_model_name)
 
-    def setup_environment(self):
-        # Wipe all existing data
-        if os.path.isdir(self.out_folder):
-            shutil.rmtree(self.out_folder)
-        os.makedirs(self.out_folder)
+    def plot_performance(self):
+        pass
 
     def to_variable(self, data, volatile=False):
         var = Variable(data, volatile=volatile)
