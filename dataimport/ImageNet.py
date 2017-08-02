@@ -8,6 +8,11 @@ from PIL import Image
 from skimage.transform import ProjectiveTransform, rescale
 from math import cos, sin, radians, floor
 
+FOLDERS = {
+    'training': '../data/ImageNet/ILSVRC2012/train',
+    'validation': '../data/ImageNet/ILSVRC2012/val',
+    'test': '../data/ImageNet/ILSVRC2012/test',
+}
 
 INTERPOLATION = [Image.NEAREST, Image.BILINEAR, Image.BICUBIC]
 EXTENSIONS = ['jpeg', 'jpg', 'png']

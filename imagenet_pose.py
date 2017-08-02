@@ -22,10 +22,9 @@ def setup_environment():
 
 def main():
 
-    datadir = '../data/ImageNet/ILSVRC2012'
-    traindir = os.path.join(datadir, 'train')
-    valdir = os.path.join(datadir, 'val')
-    testdir = os.path.join(datadir, 'test')
+    traindir = ImageNet.FOLDERS['training']
+    valdir = ImageNet.FOLDERS['validation']
+    testdir = ImageNet.FOLDERS['test']
 
     angle = 45
     z = 0.7
