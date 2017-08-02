@@ -15,4 +15,6 @@
 
 module load anaconda
 
-python imagenet_pose.py --cuda --experiment imagenetpose1 --epochs 100 --batch_size 50 --learning_rate 0.001 --workers 4 --print_freq 100
+#python imagenet_pose.py --cuda --experiment imagenetpose1 --epochs 100 --batch_size 50 --learning_rate 0.001 --workers 4 --print_freq 100
+
+python main.py binarypose --cuda --name imagenetpose2 --train --epochs 3 --angle 40 --zplane 0.7 --batch_size 10 --lr 0.001 --workers 4 --print_freq 50 --max_size 2500
