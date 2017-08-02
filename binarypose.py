@@ -77,20 +77,20 @@ class BinaryPoseCNN(BaseExperiment):
         test_set = PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
                                  transform2=transform3)
 
-        dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
+        dataloader_train = DataLoader(train_set, batch_size=args.batch_size, drop_last=True,
                                       shuffle=True, num_workers=args.workers)
 
-        dataloader_val = DataLoader(val_set, batch_size=args.batch_size,
+        dataloader_val = DataLoader(val_set, batch_size=args.batch_size, drop_last=True,
                                     shuffle=False, num_workers=args.workers)
 
-        dataloader_test = DataLoader(test_set, batch_size=args.batch_size,
+        dataloader_test = DataLoader(test_set, batch_size=args.batch_size, drop_last=True,
                                      shuffle=False, num_workers=args.workers)
 
         return dataloader_train, dataloader_val, dataloader_test
 
     def train(self):
         training_loss = AverageMeter()
-        num_train_samples = len(self.trainingset)
+        num_batches = len(self.trainingset)
 
         for i, (image, pose) in enumerate(self.trainingset):
 
@@ -106,7 +106,7 @@ class BinaryPoseCNN(BaseExperiment):
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
-                print('Sample [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_train_samples, loss.data[0]))
+                print('Batch [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
 
             training_loss.update(loss.data[0])
 
@@ -121,7 +121,8 @@ class BinaryPoseCNN(BaseExperiment):
         if not dataloader:
             dataloader = self.testset
 
-        accuracy = AverageMeter()
+        num_samples = len(dataloader) * dataloader.batch_size
+        accuracy = 0
         avg_loss = AverageMeter()
         for i, (image, pose) in enumerate(dataloader):
             input = self.to_variable(image, volatile=True)
@@ -134,13 +135,13 @@ class BinaryPoseCNN(BaseExperiment):
             _, ind = torch.max(output.data, 1)
 
             # Correct predictions in the batch
-            accuracy.update(torch.sum(torch.eq(ind, target.data)))
+            accuracy += torch.sum(torch.eq(ind, target.data))
 
             loss = self.criterion(output, target)
             avg_loss.update(loss.data[0])
 
+        accuracy /= num_samples
         avg_loss = avg_loss.average
-        accuracy = accuracy.average
 
         print('Accuracy: {:.4f}'.format(accuracy))
         return avg_loss, accuracy
