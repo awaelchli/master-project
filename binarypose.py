@@ -2,9 +2,12 @@ from base import BaseExperiment, AverageMeter
 from dataimport.ImageNet import PoseGenerator, FOLDERS
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
+import os
 import torch
 import torch.nn as nn
 import plots
+import time
+import random
 
 
 class BinaryPoseCNN(BaseExperiment):
@@ -94,6 +97,8 @@ class BinaryPoseCNN(BaseExperiment):
 
         for i, (image, pose) in enumerate(self.trainingset):
 
+            self.randomly_save_image(image, 0.05)
+
             input = self.to_variable(image)
             target = self.to_variable(pose)
 
@@ -162,7 +167,23 @@ class BinaryPoseCNN(BaseExperiment):
         self.model.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
 
+    def adjust_learning_rate(self, epoch):
+        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+        lr = self.lr * (0.1 ** (epoch // 30))
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr
+
     def plot_performance(self):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
+
+    def randomly_save_image(self, batch, prob=0.5):
+        if random.uniform(0, 1) < prob:
+            # Randomly select image from batch
+            i = random.randrange(0, batch.size(0))
+            image = batch[i].squeeze(0)
+            tf = transforms.ToPILImage()
+            image = tf(image)
+            fname = time.strftime('%Y%m%d-%H%M%S.png')
+            image.save(os.path.join(self.out_folder, fname))
 

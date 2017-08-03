@@ -62,6 +62,9 @@ class BaseExperiment:
     def restore_from_checkpoint(self, checkpoint):
         pass
 
+    def adjust_learning_rate(self, epoch):
+        pass
+
     def plot_performance(self):
         pass
 
