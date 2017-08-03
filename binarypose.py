@@ -98,6 +98,8 @@ class BinaryPoseCNN(BaseExperiment):
         epoch = len(self.training_loss) + 1
         self.adjust_learning_rate(epoch)
 
+        best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
+
         for i, (image, pose) in enumerate(self.trainingset):
 
             self.randomly_save_image(image, 0.05)
@@ -125,8 +127,10 @@ class BinaryPoseCNN(BaseExperiment):
         validation_loss, _ = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
 
-        # TODO: Save extra checkpoint for best validation loss
-        #self.save_checkpoint(self.make_checkpoint())
+        # Save extra checkpoint for best validation loss
+        if validation_loss < best_validation_loss:
+            best_validation_loss = validation_loss
+            torch.save(self.make_checkpoint(), self.make_output_filename(CHECKPOINT_BEST_FILENAME))
 
     def test(self, dataloader=None):
         if not dataloader:

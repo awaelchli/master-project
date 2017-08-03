@@ -1,7 +1,5 @@
 import os
-import shutil
 import torch
-import plots
 from torch.autograd import Variable
 
 
@@ -74,6 +72,9 @@ class BaseExperiment:
         if self.use_cuda:
             var = var.cuda()
         return var
+
+    def make_output_filename(self, filename):
+        return os.path.join(self.out_folder, filename)
 
     @staticmethod
     def submit_arguments(parser):
