@@ -16,9 +16,9 @@ class BaseExperiment:
         self.batch_size = args.batch_size
 
         self.out_folder = folder
-        self.loss_file = os.path.join(self.out_folder, 'loss.txt')
-        self.save_loss_plot = os.path.join(self.out_folder, 'loss.pdf')
-        self.checkpoint_file = os.path.join(self.out_folder, args.checkpoint)
+        self.loss_file = self.make_output_filename('loss.txt')
+        self.save_loss_plot = self.make_output_filename('loss.pdf')
+        self.checkpoint_file = self.make_output_filename(args.checkpoint)
 
         self._trainingset, self._validationset, self._testset = self.load_dataset(args)
 

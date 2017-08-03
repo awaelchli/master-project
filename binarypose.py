@@ -195,5 +195,5 @@ class BinaryPoseCNN(BaseExperiment):
             tf = transforms.ToPILImage()
             image = tf(image)
             fname = time.strftime('%Y%m%d-%H%M%S.png')
-            image.save(os.path.join(self.out_folder, fname))
+            image.save(self.make_output_filename(fname))
 
