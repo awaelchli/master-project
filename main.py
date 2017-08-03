@@ -5,6 +5,7 @@ import time
 import shutil
 from base import BaseExperiment
 from binarypose import BinaryPoseCNN
+from base import CHECKPOINT_FILENAME
 
 
 OUT_ROOT_FOLDER = 'out'
@@ -41,6 +42,9 @@ def get_main_parser():
 
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--workers', type=int, default=2)
+
+    parser.add_argument('--checkpoint', type=str, default=CHECKPOINT_FILENAME,
+                        help='The filename of the checkpoint. Only the name of the file must be given, not the path.')
 
     # Training parameters
     parser.add_argument('--epochs', type=int, default=1)

@@ -6,6 +6,7 @@ from torch.autograd import Variable
 
 
 CHECKPOINT_FILENAME = 'checkpoint.pth.tar'
+CHECKPOINT_BEST_FILENAME = 'checkpoint-best.pth.tar'
 
 
 class BaseExperiment:
@@ -19,7 +20,7 @@ class BaseExperiment:
         self.out_folder = folder
         self.loss_file = os.path.join(self.out_folder, 'loss.txt')
         self.save_loss_plot = os.path.join(self.out_folder, 'loss.pdf')
-        self.save_model_name = os.path.join(self.out_folder, CHECKPOINT_FILENAME)
+        self.checkpoint_file = os.path.join(self.out_folder, args.checkpoint)
 
         self._trainingset, self._validationset, self._testset = self.load_dataset(args)
 
@@ -46,15 +47,15 @@ class BaseExperiment:
 
     def load_checkpoint(self):
         checkpoint = None
-        if os.path.isfile(self.save_model_name):
-            checkpoint = torch.load(self.save_model_name)
+        if os.path.isfile(self.checkpoint_file):
+            checkpoint = torch.load(self.checkpoint_file)
         else:
-            print('No checkpoint found at {}'.format(self.save_model_name))
+            print('No checkpoint found at {}'.format(self.checkpoint_file))
         return checkpoint
 
     def save_checkpoint(self, state):
         print('Saving checkpoint ...')
-        torch.save(state, self.save_model_name)
+        torch.save(state, self.checkpoint_file)
 
     def make_checkpoint(self):
         return None

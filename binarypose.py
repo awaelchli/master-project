@@ -1,4 +1,4 @@
-from base import BaseExperiment, AverageMeter
+from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
 from dataimport.ImageNet import PoseGenerator, FOLDERS
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
@@ -21,7 +21,7 @@ class BinaryPoseCNN(BaseExperiment):
         parser.add_argument('--image_size', type=int, default=None,
                             help='Input images will be scaled such that the shorter side is equal to the given value.')
         parser.add_argument('--max_size', type=int, default=None,
-                            help='Clips the training dataset at the given size.')
+                            help='Clips all datasets (training, validation, test) at the given size.')
 
     def __init__(self, folder, args):
         super(BinaryPoseCNN, self).__init__(folder, args)
@@ -76,9 +76,9 @@ class BinaryPoseCNN(BaseExperiment):
         train_set = PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
                                   transform2=transform3, max_size=args.max_size)
         val_set = PoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                transform2=transform3)
+                                transform2=transform3, max_size=args.max_size)
         test_set = PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                 transform2=transform3)
+                                 transform2=transform3, max_size=args.max_size)
 
         dataloader_train = DataLoader(train_set, batch_size=args.batch_size, drop_last=True,
                                       shuffle=True, num_workers=args.workers)
@@ -94,6 +94,9 @@ class BinaryPoseCNN(BaseExperiment):
     def train(self):
         training_loss = AverageMeter()
         num_batches = len(self.trainingset)
+
+        epoch = len(self.training_loss) + 1
+        self.adjust_learning_rate(epoch)
 
         for i, (image, pose) in enumerate(self.trainingset):
 
@@ -121,6 +124,9 @@ class BinaryPoseCNN(BaseExperiment):
         # Validate after each epoch
         validation_loss, _ = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
+
+        # TODO: Save extra checkpoint for best validation loss
+        #self.save_checkpoint(self.make_checkpoint())
 
     def test(self, dataloader=None):
         if not dataloader:
