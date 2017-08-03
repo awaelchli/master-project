@@ -1,4 +1,3 @@
-from torchvision.datasets import ImageFolder
 from torch.utils.data import Dataset
 import numpy as np
 import random
@@ -55,33 +54,6 @@ class PoseGenerator(Dataset):
 
     def __len__(self):
         return len(self.filenames)
-
-
-# class PoseImageNet(ImageFolder):
-#
-#     def __init__(self, root, max_angle=45.0, z_plane=1.0, transform1=None, transform2=None):
-#         super().__init__(root, transform=transform1)
-#         self.max_angle = max_angle
-#         self.z_plane = z_plane
-#         self.transform2 = transform2
-#
-#     def __getitem__(self, index):
-#         image, _ = super().__getitem__(index)
-#         w, h = image.width, image.height
-#
-#         angle, target = random_pose(self.max_angle)
-#
-#         # Homography that rotates the image at a given depth
-#         hom = homography_roty(angle, w, h, self.z_plane)
-#         image = apply_homography(image, hom)
-#
-#         # Rescale image such that no pixel is scaled up
-#         #image = compensate_homography_scale(image, hom)
-#
-#         if self.transform2:
-#             image = self.transform2(image)
-#
-#         return image, target
 
 
 def find_images(rootdir):
