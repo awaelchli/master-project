@@ -18,8 +18,6 @@ class BinaryPoseCNN(BaseExperiment):
                             help='The maximum range of rotation of the images.')
         parser.add_argument('--zplane', type=float, default=1,
                             help='Location of the image in front of the camera (along Z-axis).')
-        #parser.add_argument('--image_size', type=int, default=None,
-        #                    help='Input images will be scaled such that the shorter side is equal to the given value.')
         parser.add_argument('--max_size', type=int, default=None,
                             help='Clips all datasets (training, validation, test) at the given size.')
 
@@ -52,9 +50,7 @@ class BinaryPoseCNN(BaseExperiment):
 
         # Image pre-processing
         # For training set
-        transform1 = None
-        if not args.image_size:
-            transform1 = transforms.Compose([
+        transform1 = transforms.Compose([
                 #transforms.RandomSizedCrop(224),
                 #transforms.RandomHorizontalFlip(),
             ])
