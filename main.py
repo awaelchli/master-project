@@ -102,8 +102,8 @@ if __name__ == '__main__':
             print('Epoch [{:d}/{:d}]'.format(epoch, start_epoch + args.epochs - 1))
             experiment.train()
             experiment.save_checkpoint(experiment.make_checkpoint())
+            experiment.plot_performance()
 
-        experiment.plot_performance()
         print(print_elapsed_hours(time.time() - start_time))
 
     if args.test:
