@@ -1,4 +1,5 @@
 from torch.utils.data import Dataset
+from torchvision import transforms
 import numpy as np
 import random
 import os
@@ -31,19 +32,16 @@ class PoseGenerator(Dataset):
             shuffle(self.filenames)
             self.filenames = self.filenames[:max_size]
 
+    def __len__(self):
+        return len(self.filenames)
+
     def __getitem__(self, index):
         image = Image.open(self.filenames[index]).convert('RGB')
         if self.transform1:
             image = self.transform1(image)
 
-        w, h = image.width, image.height
-
         angle, target = random_pose(self.max_angle)
-
-        # Homography that rotates the image at a given depth
-        hom = homography_roty(angle, w, h, self.z_plane)
-        image = apply_homography(image, hom)
-
+        image, hom = self.homography_transform(image, angle)
         # Rescale image such that no pixel is scaled up
         image = compensate_homography_scale(image, hom)
 
@@ -52,8 +50,44 @@ class PoseGenerator(Dataset):
 
         return image, target
 
-    def __len__(self):
-        return len(self.filenames)
+    def homography_transform(self, image, angle):
+        w, h = image.width, image.height
+        # Homography that rotates the image at a given depth
+        hom = homography_roty(angle, w, h, self.z_plane)
+        image = apply_homography(image, hom)
+        return image, hom
+
+    def visualize_sample_transforms(self, index, output_folder):
+        image = Image.open(self.filenames[index]).convert('RGB')
+        if self.transform1:
+            image = self.transform1(image)
+
+        save_image(image, '{}-original'.format(index), 0, 1, output_folder)
+
+        angle, target = random_pose(self.max_angle)
+        image, hom = self.homography_transform(image, angle)
+        image = compensate_homography_scale(image, hom)
+
+        save_image(image, '{}-homography'.format(index), angle, target, output_folder)
+
+        image = compensate_homography_scale(image, hom)
+
+        save_image(image, '{}-rescale'.format(index), angle, target, output_folder)
+
+        if self.transform2:
+            image = self.transform2(image)
+
+        save_image(image, '{}-post-transform'.format(index), angle, target, output_folder, is_torch_tensor=True)
+
+
+def save_image(image, basename, angle, label, output_folder, is_torch_tensor=False):
+    fname = '{}-angle={:.2f}-label={}.png'.format(basename, angle, label)
+
+    if is_torch_tensor:
+        tf = transforms.ToPILImage()
+        image = tf(image)
+
+    image.save(os.path.join(output_folder, fname))
 
 
 def find_images(rootdir):
@@ -68,9 +102,16 @@ def find_images(rootdir):
     return file_list
 
 
-def random_pose(max_angle):
-    angle = random_angle(max_angle)
-    pose = int(angle > 0)
+def random_pose(angle):
+    left = random.uniform(0, 1) < 0.5
+    angle = -angle if left else angle
+    pose = 0 if left else 1
+    return angle, pose
+
+
+def random_pose_range(total_angle):
+    angle = random_angle(total_angle)
+    pose = 0 if angle < 0 else 1
     return angle, pose
 
 

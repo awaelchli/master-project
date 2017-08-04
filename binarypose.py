@@ -52,7 +52,7 @@ class BinaryPoseCNN(BaseExperiment):
         # For training set
         transform1 = transforms.Compose([
                 #transforms.RandomSizedCrop(224),
-                #transforms.RandomHorizontalFlip(),
+                transforms.RandomHorizontalFlip(),
             ])
 
         # For validation set
@@ -63,7 +63,6 @@ class BinaryPoseCNN(BaseExperiment):
 
         # After homography is applied to image
         transform3 = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
             transforms.Scale(256),
             transforms.RandomSizedCrop(224),
             transforms.ToTensor(),
@@ -78,6 +77,11 @@ class BinaryPoseCNN(BaseExperiment):
                                 transform2=transform3, max_size=args.max_size)
         test_set = PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
                                  transform2=transform3, max_size=args.max_size)
+
+        # Export some examples from the generated dataset
+        for x in range(10):
+            i = random.randint(0, len(train_set) - 1)
+            train_set.visualize_sample_transforms(i, self.out_folder)
 
         dataloader_train = DataLoader(train_set, batch_size=args.batch_size, drop_last=True,
                                       shuffle=True, num_workers=args.workers)
@@ -100,8 +104,6 @@ class BinaryPoseCNN(BaseExperiment):
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
         for i, (image, pose) in enumerate(self.trainingset):
-
-            self.randomly_save_image(image, 0.05)
 
             input = self.to_variable(image)
             target = self.to_variable(pose)
