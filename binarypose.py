@@ -18,8 +18,8 @@ class BinaryPoseCNN(BaseExperiment):
                             help='The maximum range of rotation of the images.')
         parser.add_argument('--zplane', type=float, default=1,
                             help='Location of the image in front of the camera (along Z-axis).')
-        parser.add_argument('--image_size', type=int, default=None,
-                            help='Input images will be scaled such that the shorter side is equal to the given value.')
+        #parser.add_argument('--image_size', type=int, default=None,
+        #                    help='Input images will be scaled such that the shorter side is equal to the given value.')
         parser.add_argument('--max_size', type=int, default=None,
                             help='Clips all datasets (training, validation, test) at the given size.')
 
@@ -55,18 +55,21 @@ class BinaryPoseCNN(BaseExperiment):
         transform1 = None
         if not args.image_size:
             transform1 = transforms.Compose([
-                transforms.RandomSizedCrop(224),
-                transforms.RandomHorizontalFlip(),
+                #transforms.RandomSizedCrop(224),
+                #transforms.RandomHorizontalFlip(),
             ])
 
         # For validation set
         transform2 = transforms.Compose([
-            transforms.Scale(256),
-            transforms.CenterCrop(224),
+            #transforms.Scale(256),
+            #transforms.CenterCrop(224),
         ])
 
         # After homography is applied to image
         transform3 = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.Scale(256),
+            transforms.RandomSizedCrop(224),
             transforms.ToTensor(),
             # For normalization, see https://github.com/pytorch/vision#models
             transforms.Normalize(mean=[0.485, 0.456, 0.406],

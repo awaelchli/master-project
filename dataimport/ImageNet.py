@@ -45,7 +45,7 @@ class PoseGenerator(Dataset):
         image = apply_homography(image, hom)
 
         # Rescale image such that no pixel is scaled up
-        # image = compensate_homography_scale(image, hom)
+        image = compensate_homography_scale(image, hom)
 
         if self.transform2:
             image = self.transform2(image)
