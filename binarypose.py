@@ -18,8 +18,9 @@ class BinaryPoseCNN(BaseExperiment):
                             help='The maximum range of rotation of the images.')
         parser.add_argument('--zplane', type=float, default=1,
                             help='Location of the image in front of the camera (along Z-axis).')
-        parser.add_argument('--max_size', type=int, default=None,
-                            help='Clips all datasets (training, validation, test) at the given size.')
+        parser.add_argument('--max_size', type=int, nargs=3, default=[0, 0, 0],
+                            help="""Clips training-, validation-, and testset at the given size. 
+                            A zero signalizes that the whole dataset should be used.""")
 
     def __init__(self, folder, args):
         super(BinaryPoseCNN, self).__init__(folder, args)
@@ -72,11 +73,11 @@ class BinaryPoseCNN(BaseExperiment):
         ])
 
         train_set = PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
-                                  transform2=transform3, max_size=args.max_size)
+                                  transform2=transform3, max_size=args.max_size[0])
         val_set = PoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                transform2=transform3, max_size=args.max_size)
+                                transform2=transform3, max_size=args.max_size[1])
         test_set = PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                 transform2=transform3, max_size=args.max_size)
+                                 transform2=transform3, max_size=args.max_size[2])
 
         # Export some examples from the generated dataset
         for x in range(10):
@@ -144,7 +145,6 @@ class BinaryPoseCNN(BaseExperiment):
             input = self.to_variable(image, volatile=True)
             target = self.to_variable(pose, volatile=True)
 
-            self.model.zero_grad()
             output = self.model(input)
 
             # argmax = predicted class
