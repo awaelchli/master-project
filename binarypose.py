@@ -188,13 +188,13 @@ class BinaryPoseCNN(BaseExperiment):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
 
-    def randomly_save_image(self, batch, prob=0.5):
-        if random.uniform(0, 1) < prob:
-            # Randomly select image from batch
-            i = random.randrange(0, batch.size(0))
-            image = batch[i].squeeze(0)
-            tf = transforms.ToPILImage()
-            image = tf(image)
-            fname = time.strftime('%Y%m%d-%H%M%S.png')
-            image.save(self.make_output_filename(fname))
+    # def randomly_save_image(self, batch, prob=0.5):
+    #     if random.uniform(0, 1) < prob:
+    #         # Randomly select image from batch
+    #         i = random.randrange(0, batch.size(0))
+    #         image = batch[i].squeeze(0)
+    #         tf = transforms.ToPILImage()
+    #         image = tf(image)
+    #         fname = time.strftime('%Y%m%d-%H%M%S.png')
+    #         image.save(self.make_output_filename(fname))
 
