@@ -94,6 +94,8 @@ if __name__ == '__main__':
         start_epoch = checkpoint['epoch'] + 1
 
     if args.train:
+        print('Trainingset: {} samples'.format(experiment.trainingset_size))
+        print('Validationset: {} samples'.format(experiment.validationset_size))
         print('Training for {} epochs ...'.format(args.epochs))
         start_time = time.time()
 
@@ -107,6 +109,7 @@ if __name__ == '__main__':
         print(print_elapsed_hours(time.time() - start_time))
 
     if args.test:
+        print('Testset: {} samples'.format(experiment.testset_size))
         print('Testing ...')
         start_time = time.time()
         checkpoint = experiment.load_checkpoint()

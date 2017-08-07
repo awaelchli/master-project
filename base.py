@@ -34,6 +34,18 @@ class BaseExperiment:
     def validationset(self):
         return self._validationset
 
+    @property
+    def trainingset_size(self):
+        return len(self.trainingset) * self.trainingset.batch_size
+
+    @property
+    def testset_size(self):
+        return len(self.testset) * self.testset.batch_size
+
+    @property
+    def validationset_size(self):
+        return len(self.validationset) * self.validationset.batch_size
+
     def train(self):
         pass
 
