@@ -66,7 +66,6 @@ class PoseGenerator(Dataset):
 
         angle, target = random_pose(self.max_angle)
         image, hom = self.homography_transform(image, angle)
-        image = compensate_homography_scale(image, hom)
 
         save_image(image, '{}-homography'.format(index), angle, target, output_folder)
 
