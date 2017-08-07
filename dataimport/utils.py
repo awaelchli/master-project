@@ -3,7 +3,7 @@ import os.path as path
 import torch
 import numpy as np
 import glob
-from transforms3d.quaternions import mat2quat, quat2axangle
+from transforms3d.quaternions import mat2quat, quat2axangle, axangle2quat
 
 
 def matrix_to_pose_vector(matrix):
@@ -22,6 +22,15 @@ def matrix_to_pose_vector(matrix):
     angle = torch.Tensor([[angle]])
 
     pose = torch.cat((translation, orientation, angle), 1)
+    return pose
+
+
+# TODO: test this function
+def matrix_to_quaternion_pose_vector(matrix):
+    matrix = matrix.numpy()
+    quaternion = torch.from_numpy(mat2quat(matrix[:, 0 : 3])).float().view(1, 4)
+    translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
+    pose = torch.cat((translation, quaternion), 1)
     return pose
 
 

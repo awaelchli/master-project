@@ -141,12 +141,18 @@ def train(pre_cnn, lstm, criterion, optimizer, dataloader, epoch):
         lstm.zero_grad()
         lstm_output, lstm_hidden = lstm(lstm_input)
 
-        #print('LSTM output size:', lstm_output.size())
-        #print('LSTM hidden size:', lstm_hidden[0].size())
-        #print('LSTM state size:', lstm_hidden[1].size())
+        sequence_length = poses.size(1)
 
-        # print('Output:', lstm_output)
-        # print('Target:', lstm_target)
+        # Output vector: [x, y, z, ax, ay, phi]
+        # az = sqrt(1 - ax - ay)
+        ax = lstm_output[1, :, 3]
+        ay = lstm_output[1, :, 4]
+        az = torch.sqrt(1 - ax - ay)
+        phi = lstm_output[1, :, 5]
+        axis = torch.cat((ax, ay, az), 2)
+
+        # Elements of quaternion
+        q = torch.cat((torch.cos(phi / 2), torch.sin(phi / 2) * axis), 2)
 
         loss = criterion(lstm_output, lstm_target)
         loss.backward()
