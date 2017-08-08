@@ -16,4 +16,4 @@
 module load anaconda
 
 # Training
-python main.py kitticonvlstm --cuda --name kitticonv1 --train --grayscale --epochs 1 --batch_size 10 --lr 0.02 --workers 4 --print_freq 1
+python main.py kitticonvlstm --cuda --name kitticonv1 --train --grayscale --epochs 1 --image_size 100 --batch_size 10 --lr 0.02 --workers 4 --print_freq 1

@@ -31,7 +31,8 @@ class PoseConvLSTM(nn.Module):
         hidden = None
         outputs = []
         for i in range(input.size(0)):
-            output, hidden = self.clstm.forward(input[i, :, :, :], hidden)
+            x = input[i, :, :, :].unsqueeze(0)
+            output, hidden = self.clstm.forward(x, hidden)
             outputs.append(output.view(1, -1))
 
         # Using batchmode of fc layer to transform entire sequence
@@ -91,6 +92,8 @@ class KITTIPoseConvLSTM(BaseExperiment):
         print('Determine output size of CNN ...')
         channels, height, width = self.cnn_feature_size(self.image_size[1], self.image_size[2])
         self.model = PoseConvLSTM((height, width), channels, [64, 64, 32, 32], 3)
+
+        print('Size of fc layer: {} x {}'.format(self.model.fc.in_features, self.model.fc.out_features))
 
         # Loss and Optimizer
         # TODO: check if needed
@@ -160,19 +163,20 @@ class KITTIPoseConvLSTM(BaseExperiment):
 
             # Remove singleton batch dimension from data loader
             image.squeeze_(0)
-
-            # Reshape target pose from [batch, 1, 6] to [1, sequence_length, 6]
-            # poses = poses.permute(1, 0, 2)
+            pose.squeeze_(0)
 
             cnn_output = self.apply_cnn_to_sequence(image, batch_mode=self.cnn_mode)
-            lstm_input = self.to_variable(self.reshape_cnn_output(cnn_output))
+            lstm_input = self.to_variable(cnn_output)
             lstm_target = self.to_variable(pose)
 
-            # print('Input sequence to LSTM', lstm_input.size())
+            print('Input sequence to LSTM', lstm_input.size())
             # print('Target sequence to LSTM', lstm_target.size())
 
             self.model.zero_grad()
             lstm_output, lstm_hidden = self.model(lstm_input)
+
+            # Output dimensions: [sequence_length, 6]
+            print('LSTM output', lstm_output.size())
 
             # TODO continue
             #loss = self.criterion(lstm_output, lstm_target)
@@ -182,7 +186,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
-                print('Batch [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
+                print('Sequence [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
 
             training_loss.update(loss.data[0])
 
@@ -205,28 +209,33 @@ class KITTIPoseConvLSTM(BaseExperiment):
         avg_loss = AverageMeter()
         for i, (images, poses) in enumerate(dataloader):
             images.squeeze_(0)
+            poses.squeeze_(0)
+
             cnn_output = self.apply_cnn_to_sequence(images, batch_mode=self.cnn_mode)
-            lstm_input = self.to_variable(self.reshape_cnn_output(cnn_output), volatile=True)
+            lstm_input = self.to_variable(cnn_output, volatile=True)
             lstm_target = self.to_variable(poses, volatile=True)
 
             self.model.zero_grad()
             lstm_output, lstm_hidden = self.model(lstm_input)
-            loss = self.criterion(lstm_output, lstm_target)
+            loss = self.loss_function(lstm_output, lstm_target)
             avg_loss.update(loss.data[0])
 
         return avg_loss
 
     def loss_function(self, output, target):
-        # Dimensions: [1, sequence_length, 6]
+        # Dimensions: [sequence_length, 6]
         sequence_length = output.size(1)
-
-        t1 = output[:, :, 0:3]
-        t2 = target[:, :, 0:3]
+        print(output)
+        print(target)
+        t1 = output[:, 0:3]
+        t2 = target[:, 0:3]
         q1 = self.get_quaternion_pose(output)
         q2 = self.get_quaternion_pose(target)
 
+        print(q1)
+        print(q2)
         # Loss for rotation, dot product between quaternions
-        q1dotq2 = torch.abs((q1 * q2).sum(2))
+        q1dotq2 = torch.abs((q1 * q2).sum(1))
         loss1 = torch.sum(q1dotq2) / sequence_length
 
         # Loss for translation
@@ -241,14 +250,17 @@ class KITTIPoseConvLSTM(BaseExperiment):
     def get_quaternion_pose(self, pose):
         # Output vector: [x, y, z, ax, ay, phi]
         # az = sqrt(1 - ax - ay)
-        ax = pose[1, :, 3]
-        ay = pose[1, :, 4]
+        ax = pose[:, 3].contiguous().view(-1, 1)
+        ay = pose[:, 4].contiguous().view(-1, 1)
         az = torch.sqrt(torch.abs(1 - ax - ay))
-        phi = pose[1, :, 5]
-        axis = torch.cat((ax, ay, az), 2)
+
+        phi = pose[:, 5].contiguous().view(-1, 1)
+        phi_repl = phi.expand(phi.size(0), 3)
+
+        axis = torch.cat((ax, ay, az), 1)
 
         # Elements of quaternion
-        q = torch.cat((torch.cos(phi / 2), torch.sin(phi / 2) * axis), 2)
+        q = torch.cat((torch.cos(phi / 2), torch.sin(phi_repl / 2) * axis), 1)
         return q
 
     def apply_cnn_to_sequence(self, images, batch_mode=True):
@@ -273,10 +285,10 @@ class KITTIPoseConvLSTM(BaseExperiment):
             # Shape: [sequence length, channels, height, width]
             return features
 
-    def reshape_cnn_output(self, cnn_output):
-        sequence_lenth = cnn_output.size(0)
-        feature_size = cnn_output.size(1) * cnn_output.size(2) * cnn_output.size(3)
-        return cnn_output.view(1, sequence_lenth, feature_size)
+    # def reshape_cnn_output(self, cnn_output):
+    #     sequence_lenth = cnn_output.size(0)
+    #     feature_size = cnn_output.size(1) * cnn_output.size(2) * cnn_output.size(3)
+    #     return cnn_output.view(1, sequence_lenth, feature_size)
 
     def cnn_feature_size(self, input_height, input_width):
         input = self.to_variable(torch.zeros(1, 3, input_height, input_width), volatile=True)
