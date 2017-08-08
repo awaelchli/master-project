@@ -14,16 +14,15 @@ class ConvLSTMCell(nn.Module):
         self.bias = bias
         self.kernel_size = kernel_size
         self.num_features = 4
-
-        self.padding = (kernel_size - 1) / 2
-        self.conv = nn.Conv2d(self.input_channels + self.hidden_channels, 4 * self.hidden_channels, self.kernel_size, 1,
-                              self.padding)
+        self.padding = int((kernel_size - 1) / 2)
+        self.conv = nn.Conv2d(self.input_channels + hidden_channels, 4 * hidden_channels, kernel_size, 1,
+                              self.padding, bias=bias)
 
     def forward(self, input, h, c):
-
-        combined = torch.cat((input, h), dim=1)
-        A = self.conv(combined)
-        (ai, af, ao, ag) = torch.split(A, A.size()[1] / self.num_features, dim=1)
+        combined = torch.cat((input, h), 1)
+        a = self.conv(combined)
+        split_size = int(a.size()[1] / self.num_features)
+        (ai, af, ao, ag) = torch.split(a, split_size, dim=1)
         i = torch.sigmoid(ai)
         f = torch.sigmoid(af)
         o = torch.sigmoid(ao)
@@ -35,13 +34,12 @@ class ConvLSTMCell(nn.Module):
 
     @staticmethod
     def init_hidden(batch_size, hidden_c, shape):
-        return (Variable(torch.zeros(batch_size, hidden_c, shape[0], shape[1])).cuda(),
-                Variable(torch.zeros(batch_size, hidden_c, shape[0], shape[1])).cuda())
+        return (Variable(torch.zeros(batch_size, hidden_c, shape[0], shape[1])),
+                Variable(torch.zeros(batch_size, hidden_c, shape[0], shape[1])))
 
 
 class ConvLSTM(nn.Module):
-    # input_channels corresponds to the first input feature map
-    # hidden state is a list of succeeding lstm layers.
+
     def __init__(self, input_channels, hidden_channels, kernel_size, bias=True):
         super(ConvLSTM, self).__init__()
         self.input_channels = [input_channels] + hidden_channels
@@ -49,6 +47,7 @@ class ConvLSTM(nn.Module):
         self.kernel_size = kernel_size
         self.num_layers = len(hidden_channels)
         self.bias = bias
+
         self._all_layers = []
         for i in range(self.num_layers):
             name = 'cell{}'.format(i)
@@ -74,7 +73,6 @@ class ConvLSTM(nn.Module):
         for i in range(self.num_layers):
             name = 'cell{}'.format(i)
             (h, c) = internal_state[i]
-
             x, new_c = getattr(self, name)(x, h, c)
             internal_state[i] = (x, new_c)
 
