@@ -194,7 +194,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
         self.training_loss.append(training_loss)
 
         # Validate after each epoch
-        validation_loss, _ = self.test(dataloader=self.validationset)
+        validation_loss = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
 
         # Save extra checkpoint for best validation loss
@@ -220,7 +220,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
             loss = self.loss_function(lstm_output, lstm_target)
             avg_loss.update(loss.data[0])
 
-        return avg_loss
+        return avg_loss.average
 
     def loss_function(self, output, target):
         # Dimensions: [sequence_length, 6]
