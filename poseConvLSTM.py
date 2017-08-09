@@ -225,25 +225,26 @@ class KITTIPoseConvLSTM(BaseExperiment):
     def loss_function(self, output, target):
         # Dimensions: [sequence_length, 6]
         sequence_length = output.size(1)
-        print(output)
-        print(target)
+        #print(output)
+        #print(target)
         t1 = output[:, 0:3]
         t2 = target[:, 0:3]
         q1 = self.get_quaternion_pose(output)
         q2 = self.get_quaternion_pose(target)
 
-        print(q1)
-        print(q2)
+        #print(q1)
+        #print(q2)
         # Loss for rotation, dot product between quaternions
-        quat_dist = torch.acos(torch.clamp(torch.abs((q1 * q2).sum(1)), -1, 1))
-        loss1 = torch.sum(quat_dist) / sequence_length
+        loss1 = 1 - torch.abs((q1 * q2).sum(1))
+        loss1 = loss1.sum() / sequence_length
 
         # Loss for translation
         eps = 0.001
 
         #self.criterion(t1, t2)
-        #t_diff = torch.pow(t1 - t2, 2).sum(2)
-        loss2 = torch.log(eps + self.criterion(t1, t2))
+        t_diff = torch.pow(t1 - t2, 2).sum(1)
+        loss2 = torch.log(eps + t_diff)
+        loss2 = loss2.sum() / sequence_length
 
         return loss1 + loss2
 
