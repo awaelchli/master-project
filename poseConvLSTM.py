@@ -248,16 +248,26 @@ class KITTIPoseConvLSTM(BaseExperiment):
         return loss1 + loss2
 
     def get_quaternion_pose(self, pose):
-        # Output vector: [x, y, z, ax, ay, phi]
-        # az = sqrt(1 - ax - ay)
-        ax = pose[:, 3].contiguous().view(-1, 1)
-        ay = pose[:, 4].contiguous().view(-1, 1)
-        az = torch.sqrt(torch.abs(1 - ax - ay))
+        # Output vector: [x, y, z, ax, ay, az]
+        # phi = norm(a)
 
-        phi = pose[:, 5].contiguous().view(-1, 1)
-        phi_repl = phi.expand(phi.size(0), 3)
+        #ax = pose[:, 3].contiguous().view(-1, 1)
+        #ay = pose[:, 4].contiguous().view(-1, 1)
+        #az = torch.sqrt(torch.abs(1 - (ax ** 2) - (ay ** 2)))
 
-        axis = torch.cat((ax, ay, az), 1)
+        # Norm of axis = rotation angle + 1
+        axis = pose[:, 3:6].contiguous().view(-1, 3)
+        norm = torch.sqrt((axis ** 2).sum(1))
+        norm_repl = norm.expand(norm.size(0), 3)
+        axis = axis / norm_repl
+
+        phi = norm - 1
+        phi_repl = norm_repl - 1
+
+        #phi = pose[:, 5].contiguous().view(-1, 1)
+
+
+        #axis = torch.cat((ax, ay, az), 1)
 
         # Elements of quaternion
         q = torch.cat((torch.cos(phi / 2), torch.sin(phi_repl / 2) * axis), 1)

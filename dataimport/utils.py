@@ -6,22 +6,42 @@ import glob
 from transforms3d.quaternions import mat2quat, quat2axangle, axangle2quat
 
 
+# def matrix_to_pose_vector(matrix):
+#     """Converts a 3x4 pose matrix of the form [R|t] to a pose vector of the form
+#     (x, y, z, ax, ay, phi) composed of translation, axis orientation and rotation angle.
+#
+#     :param matrix: A torch tensor of size 3x4.
+#     :return: A torch tensor of shape 1x6 representing the pose in a compressed vector.
+#     """
+#     matrix = matrix.numpy()
+#     quaternion = mat2quat(matrix[:, 0 : 3])
+#     axis, angle = quat2axangle(quaternion)
+#
+#     translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
+#     orientation = torch.from_numpy(axis[[0, 1]]).float().view(1, 2)
+#     angle = torch.Tensor([[angle]])
+#
+#     pose = torch.cat((translation, orientation, angle), 1)
+#     return pose
+
+
 def matrix_to_pose_vector(matrix):
     """Converts a 3x4 pose matrix of the form [R|t] to a pose vector of the form
-    (x, y, z, ax, ay, phi) composed of translation, axis orientation and rotation angle.
+    (x, y, z, ax, ay, az) composed of translation, axis orientation and rotation angle.
+    The magnitude of the axis encodes the rotation angle. The magnitude is given by axis + 1
+    to account for a zero angle that would produce a zero length vector.
 
     :param matrix: A torch tensor of size 3x4.
-    :return: A torch tensor of shape 1x6 representing the pose in a compressed vector.
+    :return: A torch tensor of shape 1x6 representing the compressed pose in a 6D vector.
     """
     matrix = matrix.numpy()
     quaternion = mat2quat(matrix[:, 0 : 3])
     axis, angle = quat2axangle(quaternion)
 
     translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
-    orientation = torch.from_numpy(axis[[0, 1]]).float().view(1, 2)
-    angle = torch.Tensor([[angle]])
+    axisangle = (1 + angle) * torch.from_numpy(axis).float().view(1, 3)
 
-    pose = torch.cat((translation, orientation, angle), 1)
+    pose = torch.cat((translation, axisangle), 1)
     return pose
 
 
