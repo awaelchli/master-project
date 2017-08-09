@@ -235,7 +235,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
         print(q1)
         print(q2)
         # Loss for rotation, dot product between quaternions
-        quat_dist = torch.acos(torch.abs((q1 * q2).sum(1)))
+        quat_dist = torch.acos(torch.clamp(torch.abs((q1 * q2).sum(1)), -1, 1))
         loss1 = torch.sum(quat_dist) / sequence_length
 
         # Loss for translation
