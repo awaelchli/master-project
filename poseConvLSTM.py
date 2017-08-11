@@ -171,14 +171,14 @@ class KITTIPoseConvLSTM(BaseExperiment):
             lstm_input = self.to_variable(cnn_output)
             lstm_target = self.to_variable(pose)
 
-            print('Input sequence to LSTM', lstm_input.size())
+            #print('Input sequence to LSTM', lstm_input.size())
             # print('Target sequence to LSTM', lstm_target.size())
 
             self.model.zero_grad()
             lstm_output, lstm_hidden = self.model(lstm_input)
 
             # Output dimensions: [sequence_length, 6]
-            print('LSTM output', lstm_output.size())
+            #print('LSTM output', lstm_output.size())
 
             # TODO continue
             #loss = self.criterion(lstm_output, lstm_target)
