@@ -199,6 +199,8 @@ class KITTIPoseConvLSTM(BaseExperiment):
         validation_loss = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
 
+        print('Loss on validation set: {}'.format(validation_loss))
+
         # Save extra checkpoint for best validation loss
         if validation_loss < best_validation_loss:
             best_validation_loss = validation_loss
