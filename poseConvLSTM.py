@@ -76,7 +76,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
         # Output tensor dimensions: [batch, channels2, height2, width2]
         layers = models.vgg19(pretrained=True).features
         self.pre_cnn = nn.Sequential()
-        for i in range(20):
+        for i in range(17):
             self.pre_cnn.add_module('{}'.format(i), layers[i])
 
         # Freeze params, no gradient computation required
@@ -91,9 +91,11 @@ class KITTIPoseConvLSTM(BaseExperiment):
         # Input size to LSTM is determined by output of pre-CNN
         print('Determine output size of CNN ...')
         channels, height, width = self.cnn_feature_size(self.image_size[1], self.image_size[2])
-        self.model = PoseConvLSTM((height, width), channels, [64, 64, 32, 32], 3)
+        print('Output size of CNN: {} x {} x {}'.format(channels, height, width))
 
-        print('Size of fc layer: {} x {}'.format(self.model.fc.in_features, self.model.fc.out_features))
+        self.model = PoseConvLSTM((height, width), channels, [128, 64, 64, 32, 32, 16, 16], 3)
+
+        print('Size of final fc layer: {} x {}'.format(self.model.fc.in_features, self.model.fc.out_features))
 
         # Loss and Optimizer
         # TODO: check if needed
