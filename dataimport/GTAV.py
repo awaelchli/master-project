@@ -54,7 +54,7 @@ def read_from_text_file(file):
     return times, poses
 
 
-def get_translations(pose_array):
+def get_positions(pose_array):
     return pose_array[:, 0:3]
 
 
@@ -75,14 +75,8 @@ def to_relative_pose_quat(translations, quaternions):
     t1 = translations[0]
     q1_inv = qinverse(quaternions[0])
 
-    rel_translations = []
-    rel_quaternions = []
-    for t, q in zip(translations, quaternions):
-        t_rel = rotate_vector(t - t1, q1_inv)
-        q_rel = qmult(q1_inv, q)
-
-        rel_translations.append(t_rel)
-        rel_quaternions.append(q_rel)
+    rel_translations = [rotate_vector(t - t1, q1_inv) for  t in translations]
+    rel_quaternions = [qmult(q1_inv, q) for q in quaternions]
 
     return np.array(rel_translations), np.array(rel_quaternions)
 
@@ -92,26 +86,22 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
     step = 1 / resolution
 
     _, poses = read_from_text_file(file)
-    translations = get_translations(poses)[::step]
+    positions = get_positions(poses)[::step]
     quaternions = get_quaternions(poses)[::step]
 
     # Convert to relative pose
-    translations, quaternions = to_relative_pose_quat(translations, quaternions)
+    positions, quaternions = to_relative_pose_quat(positions, quaternions)
 
-    x, y, z = translations[:, 0], translations[:, 1], translations[:, 2]
+    x, y, z = positions[:, 0], positions[:, 1], positions[:, 2]
     plt.plot(x, y)
 
     if show_rot:
         y_axes = get_camera_optical_axes(quaternions)
-
         u, v, w = y_axes[:, 0], y_axes[:, 1], y_axes[:, 2]
 
-        norm2d = np.sqrt(u ** 2 + v ** 2)
-        u = u / norm2d
-        v = v / norm2d
+        plt.quiver(x, y, u, v, units='xy', scale_units='xy', scale=0.5, width=0.05)
 
-        plt.quiver(x, y, u, v, units='xy', scale_units='xy', scale=0.3, width=0.05)
-
+    plt.axis('equal')
     plt.show()
 
 s = r'E:\Rockstar Games\Grand Theft Auto V\08.12.2017 - 18.04.57.txt'
