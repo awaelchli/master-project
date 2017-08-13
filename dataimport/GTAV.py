@@ -27,8 +27,8 @@ def build_index(root_folder, ground_truth_folder):
 
 def build_index_for_sequence(sequence_dir, pose_file):
     all_times, all_poses = read_from_text_file(pose_file)
-    interpolator = interpolate.interp1d(all_times, all_poses, kind='nearest', axis=0, copy=True, bounds_error=True,
-                                        assume_sorted=True)
+    interpolator = interpolate.interp1d(all_times, all_poses, kind='nearest', axis=0, copy=True,
+                                        fill_value='extrapolate', assume_sorted=True)
 
     # Sort filenames according to time given in filename
     filenames = [path.join(sequence_dir, f) for f in os.listdir(sequence_dir)]
@@ -39,7 +39,7 @@ def build_index_for_sequence(sequence_dir, pose_file):
     query_times = [time_from_filename(f) for f in filenames]
     poses_interpolated = [interpolator(t) for t in query_times]
 
-    return filenames, poses_interpolated
+    return filenames, np.array(poses_interpolated)
 
 
 def read_from_text_file(file):
@@ -104,8 +104,11 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
     plt.axis('equal')
     plt.show()
 
-s = r'E:\Rockstar Games\Grand Theft Auto V\08.12.2017 - 18.04.57.txt'
-plot_camera_path_2D(s, 0.07)
+#s = r'E:\Rockstar Games\Grand Theft Auto V\08.12.2017 - 18.04.57.txt'
+#plot_camera_path_2D(s, 0.07)
+
+#index = build_index(r'D:/ShadowPlay/Grand Theft Auto V/GTAV Dataset/data', r'D:/ShadowPlay/Grand Theft Auto V/GTAV Dataset/poses')
+#print(index[14][1])
 
 # 3D plot:
 #fig = plt.figure()
