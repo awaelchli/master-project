@@ -32,7 +32,12 @@ def extract_frames(videofile, fps=30, new_height=None):
     timestamps = [int(1000 * duration * (i / nframes)) for i in indices]
 
     for index, time in zip(indices, timestamps):
-        array = video.get_data(index)
+        try:
+            array = video.get_data(index)
+        except RuntimeError:
+            print('Could not extract frame {}/{}. Skipping ...'.format(index, nframes))
+            continue
+
         fname = '{}.jpg'.format(time)
         image = Image.fromarray(array)
 
