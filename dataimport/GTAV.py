@@ -8,9 +8,10 @@ import numpy as np
 import torch
 from PIL import Image
 from scipy import interpolate
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from transforms3d.euler import euler2quat, quat2axangle
 from transforms3d.quaternions import rotate_vector, qinverse, qmult
+from torchvision import transforms
 
 # TODO: choose correct path
 FOLDERS = {
@@ -63,7 +64,6 @@ class Subsequence(Dataset):
         return image
 
 
-
 def build_subsequence_index(root_folder, ground_truth_folder, sequence_length):
     # Makes small chunks out of the large sequences
     index = build_folder_index(root_folder, ground_truth_folder)
@@ -80,7 +80,7 @@ def build_folder_index(root_folder, ground_truth_folder):
     sequence_dirs = [path.join(root_folder, d) for d in os.listdir(root_folder)
                      if path.isdir(path.join(root_folder, d))]
 
-    pose_files = glob.glob(os.path.join(ground_truth_folder, '*.txt'))
+    pose_files = glob.glob(os.path.join(ground_truth_folder, '*.{}'.format(POSE_FILE_EXTENSION)))
 
     sequence_dirs.sort()
     pose_files.sort()
@@ -112,14 +112,13 @@ def encode_poses(positions, quaternions):
     # positions: n x 3 array
     # quaternions: n x 4 array
     vectors = [encode_pose(p, q) for p, q in zip(positions, quaternions)]
-    return np.concatenate(vectors, axis=1)
+    return np.concatenate(vectors)
 
 
 def encode_pose(position, quaternion):
-    axis, angle = quat2axangle(quaternion.reshape(-1))
-    axis = axis.reshape(1, -1)
+    axis, angle = quat2axangle(quaternion)
     e = axis * (1 + angle)
-    return np.concatenate((position, e), axis=1)
+    return np.concatenate((position, e)).reshape(1, -1)
 
 
 def read_from_text_file(file):
@@ -194,3 +193,14 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
 #fig = plt.figure()
     #ax = fig.add_subplot(111, projection='3d')
     # ax.plot_wireframe(x, y, z)
+
+
+# Dataset class
+# transform = transforms.Compose([
+#     transforms.Scale(200),
+#     transforms.ToTensor(),
+#     #transforms.Normalize()
+# ])
+# trainset = Subsequence('../' + FOLDERS['training']['data'], '../' + FOLDERS['training']['pose'], 10, transform)
+#
+# print(trainset[0])
