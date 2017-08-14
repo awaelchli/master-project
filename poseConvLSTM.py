@@ -75,9 +75,10 @@ class KITTIPoseConvLSTM(BaseExperiment):
         # Input tensor dimensions: [batch, channels, height, width]
         # Output tensor dimensions: [batch, channels2, height2, width2]
         layers = models.vgg19(pretrained=True).features
-        self.pre_cnn = nn.Sequential()
-        for i in range(17):
-            self.pre_cnn.add_module('{}'.format(i), layers[i])
+        self.pre_cnn = layers
+        #self.pre_cnn = nn.Sequential()
+        #for i in range(17):
+            #self.pre_cnn.add_module('{}'.format(i), layers[i])
 
         # Freeze params, no gradient computation required
         for param in self.pre_cnn.parameters():
@@ -95,7 +96,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
 
         hidden_channels = [128, 64, 64, 32, 32, 16, 16]
         hidden_channels.reverse()
-        
+
         self.model = PoseConvLSTM((height, width), channels, hidden_channels, 3)
 
         print('Size of final fc layer: {} x {}'.format(self.model.fc.in_features, self.model.fc.out_features))
