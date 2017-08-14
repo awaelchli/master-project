@@ -70,7 +70,6 @@ class KITTIPoseConvLSTM(BaseExperiment):
 
     def __init__(self, folder, args):
         super(KITTIPoseConvLSTM, self).__init__(folder, args)
-
         # VGG without classifier, up to a certain amount of layers
         # Input tensor dimensions: [batch, channels, height, width]
         # Output tensor dimensions: [batch, channels2, height2, width2]
@@ -96,6 +95,8 @@ class KITTIPoseConvLSTM(BaseExperiment):
 
         hidden_channels = [128, 64, 64, 32, 32, 16, 16]
         hidden_channels.reverse()
+
+        channels, height, width = self.image_size[0], self.image_size[1], self.image_size[2]
 
         self.model = PoseConvLSTM((height, width), channels, hidden_channels, 3)
 
@@ -171,8 +172,9 @@ class KITTIPoseConvLSTM(BaseExperiment):
             image.squeeze_(0)
             pose.squeeze_(0)
 
-            cnn_output = self.apply_cnn_to_sequence(image, batch_mode=self.cnn_mode)
-            lstm_input = self.to_variable(cnn_output)
+            #cnn_output = self.apply_cnn_to_sequence(image, batch_mode=self.cnn_mode)
+            lstm_input = self.to_variable(image)
+            #lstm_input = self.to_variable(cnn_output)
             lstm_target = self.to_variable(pose)
 
             #print('Input sequence to LSTM', lstm_input.size())
@@ -184,9 +186,9 @@ class KITTIPoseConvLSTM(BaseExperiment):
             # Output dimensions: [sequence_length, 6]
             #print('LSTM output', lstm_output.size())
 
-            # TODO continue
-            #loss = self.criterion(lstm_output, lstm_target)
-            loss = self.loss_function(lstm_output, lstm_target)
+            # TODO use new loss function
+            #loss = self.loss_function(lstm_output, lstm_target)
+            loss = self.criterion(lstm_output, lstm_target)
             loss.backward()
             self.optimizer.step()
 
@@ -203,6 +205,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
         validation_loss = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
 
+        print('Loss on training set: {}'.format(training_loss))
         print('Loss on validation set: {}'.format(validation_loss))
 
         # Save extra checkpoint for best validation loss
@@ -255,7 +258,7 @@ class KITTIPoseConvLSTM(BaseExperiment):
         loss2 = loss2.sum() / sequence_length
 
         #return loss1 + loss2
-        return self.criterion(output, target)
+        return loss1 + loss2
 
     def get_quaternion_pose(self, pose):
         # Output vector: [x, y, z, ax, ay, az]
