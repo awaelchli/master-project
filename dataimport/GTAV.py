@@ -1,16 +1,82 @@
-from transforms3d.euler import euler2axangle, euler2quat
+from transforms3d.euler import euler2axangle, euler2quat, quat2axangle
 from transforms3d.quaternions import rotate_vector, qinverse, qmult
 from math import radians
 from scipy import interpolate
 import numpy as np
 import os
+import torch
 from os import path
 import glob
 import matplotlib.pyplot as plt
+from torch.utils.data import Dataset
 from mpl_toolkits.mplot3d import Axes3D
+from PIL import Image
+
+# TODO: choose correct path
+FOLDERS = {
+    'training': {
+        'data': 'path',
+        'pose': 'path'
+    },
+    'validation':{
+        'data': 'path',
+        'pose': 'path'
+    },
+    'test': {
+        'data': 'path',
+        'pose': 'path'
+    }
+}
+
+IMAGE_EXTENSION = 'jpg'
+POSE_FILE_EXTENSION = 'txt'
 
 
-def build_index(root_folder, ground_truth_folder):
+class Subsequence(Dataset):
+
+    def __init__(self, data_folder, pose_folder, sequence_length, transform=None):
+        self.sequence_length = sequence_length
+        self.transform = transform
+        self.index = build_subsequence_index(data_folder, pose_folder, sequence_length)
+
+    def __len__(self):
+        return len(self.index)
+
+    def __getitem__(self, idx):
+        filenames, poses = self.index[idx]
+        images = [self.load_image(file).unsqueeze(0) for file in filenames]
+        image_sequence = torch.cat(images, dim=0)
+
+        # Convert raw pose (from text file) to 6D pose vectors
+        positions = get_positions(poses)
+        quaternions = get_quaternions(poses)
+        rel_positions, rel_quaternions = to_relative_pose(positions, quaternions)
+        pose_vectors = encode_poses(rel_positions, rel_quaternions)
+        pose_sequence = torch.from_numpy(pose_vectors)
+
+        return image_sequence, pose_sequence
+
+    def load_image(self, filename):
+        image = Image.open(filename).convert('RGB')
+        if self.transform:
+            image = self.transform(image)
+        return image
+
+
+
+def build_subsequence_index(root_folder, ground_truth_folder, sequence_length):
+    # Makes small chunks out of the large sequences
+    index = build_folder_index(root_folder, ground_truth_folder)
+    subsequences = []
+    for filenames, poses in index:
+        subsequence = [(filenames[i:i + sequence_length], poses[i:i + sequence_length])
+                       for i in range(0, len(filenames), sequence_length)]
+        subsequences.extend(subsequence)
+
+    return subsequences
+
+
+def build_folder_index(root_folder, ground_truth_folder):
     sequence_dirs = [path.join(root_folder, d) for d in os.listdir(root_folder)
                      if path.isdir(path.join(root_folder, d))]
 
@@ -19,13 +85,13 @@ def build_index(root_folder, ground_truth_folder):
     sequence_dirs.sort()
     pose_files.sort()
 
-    index = [build_index_for_sequence(sequence_dir, pose_file)
+    index = [build_index_for_folder_sequence(sequence_dir, pose_file)
              for pose_file, sequence_dir in zip(pose_files, sequence_dirs)]
 
     return index
 
 
-def build_index_for_sequence(sequence_dir, pose_file):
+def build_index_for_folder_sequence(sequence_dir, pose_file):
     all_times, all_poses = read_from_text_file(pose_file)
     interpolator = interpolate.interp1d(all_times, all_poses, kind='nearest', axis=0, copy=True,
                                         fill_value='extrapolate', assume_sorted=True)
@@ -40,6 +106,20 @@ def build_index_for_sequence(sequence_dir, pose_file):
     poses_interpolated = [interpolator(t) for t in query_times]
 
     return filenames, np.array(poses_interpolated)
+
+
+def encode_poses(positions, quaternions):
+    # positions: n x 3 array
+    # quaternions: n x 4 array
+    vectors = [encode_pose(p, q) for p, q in zip(positions, quaternions)]
+    return np.concatenate(vectors, axis=1)
+
+
+def encode_pose(position, quaternion):
+    axis, angle = quat2axangle(quaternion.reshape(-1))
+    axis = axis.reshape(1, -1)
+    e = axis * (1 + angle)
+    return np.concatenate((position, e), axis=1)
 
 
 def read_from_text_file(file):
@@ -71,7 +151,7 @@ def get_camera_optical_axes(quaternions):
     return np.array([rotate_vector([0, 1, 0], q) for q in quaternions])
 
 
-def to_relative_pose_quat(translations, quaternions):
+def to_relative_pose(translations, quaternions):
     t1 = translations[0]
     q1_inv = qinverse(quaternions[0])
 
@@ -90,7 +170,7 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
     quaternions = get_quaternions(poses)[::step]
 
     # Convert to relative pose
-    positions, quaternions = to_relative_pose_quat(positions, quaternions)
+    positions, quaternions = to_relative_pose(positions, quaternions)
 
     x, y, z = positions[:, 0], positions[:, 1], positions[:, 2]
     plt.plot(x, y)
