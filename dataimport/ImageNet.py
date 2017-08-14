@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 from torchvision import transforms
 import numpy as np
+import torch
 import random
 import os
 import re
@@ -36,19 +37,26 @@ class PoseGenerator(Dataset):
         return len(self.filenames)
 
     def __getitem__(self, index):
-        image = Image.open(self.filenames[index]).convert('RGB')
+        original = Image.open(self.filenames[index]).convert('RGB')
         if self.transform1:
-            image = self.transform1(image)
+            original = self.transform1(original)
 
         angle, target = random_pose(self.max_angle)
-        image, hom = self.homography_transform(image, angle)
+        new, hom = self.homography_transform(original, angle)
         # Rescale image such that no pixel is scaled up
-        image = compensate_homography_scale(image, hom)
+        # Make original image the same size
+        new = compensate_homography_scale(new, hom)
+        original = original.resize((new.width, new.height), random_interpolation_method())
 
         if self.transform2:
-            image = self.transform2(image)
+            original = self.transform2(original)
+            new = self.transform2(new)
 
-        return image, target
+        original.unsqueeze_(0)
+        new.unsqueeze_(0)
+        images = torch.cat((original, new), 0)
+
+        return images, target
 
     def homography_transform(self, image, angle):
         w, h = image.width, image.height

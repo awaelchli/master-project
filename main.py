@@ -6,6 +6,7 @@ import shutil
 from base import BaseExperiment
 from binarypose import BinaryPoseCNN
 from poseConvLSTM import KITTIPoseConvLSTM
+from binaryposeConvLSTM import BinaryPoseConvLSTM
 from base import CHECKPOINT_FILENAME
 
 
@@ -13,7 +14,8 @@ OUT_ROOT_FOLDER = 'out'
 ARCHS = {
     # 'cnnlstm': BaseExperiment,
     'binarypose': BinaryPoseCNN,
-    'kitticonvlstm': KITTIPoseConvLSTM
+    'kitticonvlstm': KITTIPoseConvLSTM,
+    'binaryposeconvlstm': BinaryPoseConvLSTM
 }
 
 
