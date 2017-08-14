@@ -38,7 +38,6 @@ class PoseConvLSTM(nn.Module):
             output, hidden = self.clstm.forward(x, hidden)
 
         # Apply linear layer to last output
-        print(output.size())
         output = self.fc(output.view(1, -1))
 
         return output, hidden
@@ -164,7 +163,6 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
             self.optimizer.zero_grad()
 
-            print(input.size())
             features = self.pre_cnn(input)
             output, _ = self.clstm(features)
 
