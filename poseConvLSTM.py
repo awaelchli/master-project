@@ -93,7 +93,10 @@ class KITTIPoseConvLSTM(BaseExperiment):
         channels, height, width = self.cnn_feature_size(self.image_size[1], self.image_size[2])
         print('Output size of CNN: {} x {} x {}'.format(channels, height, width))
 
-        self.model = PoseConvLSTM((height, width), channels, [128, 64, 64, 32, 32, 16, 16], 3)
+        hidden_channels = [128, 64, 64, 32, 32, 16, 16]
+        hidden_channels.reverse()
+        
+        self.model = PoseConvLSTM((height, width), channels, hidden_channels, 3)
 
         print('Size of final fc layer: {} x {}'.format(self.model.fc.in_features, self.model.fc.out_features))
 
@@ -250,7 +253,8 @@ class KITTIPoseConvLSTM(BaseExperiment):
         loss2 = torch.log(eps + t_diff)
         loss2 = loss2.sum() / sequence_length
 
-        return loss1 + loss2
+        #return loss1 + loss2
+        return self.criterion(output, target)
 
     def get_quaternion_pose(self, pose):
         # Output vector: [x, y, z, ax, ay, az]
