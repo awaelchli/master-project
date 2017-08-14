@@ -64,6 +64,9 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         # Model for binary classification
         self.pre_cnn = models.vgg19(pretrained=False).features
+        if self.use_cuda:
+            print('Moving CNN to GPU ...')
+            self.pre_cnn.cuda()
 
         channels, height, width = self.cnn_feature_size(224, 224)
         print(channels, height, width)
@@ -82,11 +85,9 @@ class BinaryPoseConvLSTM(BaseExperiment):
                                          )
 
         if self.use_cuda:
-            print('Moving CNN to GPU ...')
-            self.pre_cnn.cuda()
-            self.criterion.cuda()
             print('Moving LSTM to GPU ...')
             self.clstm.cuda()
+            self.criterion.cuda()
 
         self.print_freq = args.print_freq
 
