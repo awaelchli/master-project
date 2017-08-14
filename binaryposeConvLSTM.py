@@ -154,13 +154,13 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
-        for i, (images, pose) in enumerate(self.trainingset):
+        for i, (images, poses) in enumerate(self.trainingset):
 
             images.squeeze_(0)
-            pose.squeeze_(0)
+            poses.squeeze_(0)
 
             input = self.to_variable(images)
-            target = self.to_variable(pose)
+            target = self.to_variable(poses)
 
             self.optimizer.zero_grad()
 
@@ -197,9 +197,12 @@ class BinaryPoseConvLSTM(BaseExperiment):
         num_samples = len(dataloader) * dataloader.batch_size
         accuracy = 0
         avg_loss = AverageMeter()
-        for i, (image, pose) in enumerate(dataloader):
-            input = self.to_variable(image, volatile=True)
-            target = self.to_variable(pose, volatile=True)
+        for i, (images, poses) in enumerate(dataloader):
+            images.squeeze_(0)
+            poses.squeeze_(0)
+
+            input = self.to_variable(images, volatile=True)
+            target = self.to_variable(poses, volatile=True)
 
             features = self.pre_cnn(input)
             output, _ = self.clstm(features)
