@@ -1,30 +1,30 @@
-from transforms3d.euler import euler2axangle, euler2quat, quat2axangle
-from transforms3d.quaternions import rotate_vector, qinverse, qmult
-from math import radians
-from scipy import interpolate
-import numpy as np
-import os
-import torch
-from os import path
 import glob
+import os
+from math import radians
+from os import path
+
 import matplotlib.pyplot as plt
-from torch.utils.data import Dataset
-from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+import torch
 from PIL import Image
+from scipy import interpolate
+from torch.utils.data import Dataset
+from transforms3d.euler import euler2quat, quat2axangle
+from transforms3d.quaternions import rotate_vector, qinverse, qmult
 
 # TODO: choose correct path
 FOLDERS = {
     'training': {
-        'data': 'path',
-        'pose': 'path'
+        'data': '../data/GTA V/data/',
+        'pose': '../data/GTA V/poses/'
     },
     'validation':{
-        'data': 'path',
-        'pose': 'path'
+        'data': None,
+        'pose': None,
     },
     'test': {
-        'data': 'path',
-        'pose': 'path'
+        'data': None,
+        'pose': None,
     }
 }
 
@@ -187,8 +187,8 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
 #s = r'E:\Rockstar Games\Grand Theft Auto V\08.12.2017 - 18.04.57.txt'
 #plot_camera_path_2D(s, 0.07)
 
-#index = build_index(r'D:/ShadowPlay/Grand Theft Auto V/GTAV Dataset/data', r'D:/ShadowPlay/Grand Theft Auto V/GTAV Dataset/poses')
-#print(index[14][1])
+#index = build_subsequence_index(r'H:\Datasets\GTAV Dataset\data', r'H:\Datasets\GTAV Dataset\poses', 2)
+#print(index[0])
 
 # 3D plot:
 #fig = plt.figure()
