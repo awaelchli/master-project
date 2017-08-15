@@ -56,8 +56,8 @@ class ConvLSTM(nn.Module):
             self._all_layers.append(cell)
 
     def forward(self, input, internal_state=None):
-        internal_state = []
         if not internal_state:
+            internal_state = []
             # First forward pass in the time sequence
             # Initialize internal states of all layers
             for i in range(self.num_layers):
