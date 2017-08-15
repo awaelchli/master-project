@@ -8,6 +8,7 @@ import torch.nn as nn
 import plots
 import time
 import random
+from poseLSTM import PoseLSTM
 from convolution_lstm import ConvLSTM
 
 
@@ -66,10 +67,12 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         layers = models.vgg19(pretrained=False).features
 
-        for i in range(17):
-            self.pre_cnn.add_module('{}'.format(i), layers[i])
+        #for i in range(17):
+        #    self.pre_cnn.add_module('{}'.format(i), layers[i])
 
-        print(self.pre_cnn)
+        #print(self.pre_cnn)
+
+        self.pre_cnn = layers
 
         if self.use_cuda:
             print('Moving CNN to GPU ...')
@@ -81,7 +84,11 @@ class BinaryPoseConvLSTM(BaseExperiment):
         hidden_channels = [128, 64, 64, 32, 32, 16, 16]
         hidden_channels.reverse()
 
-        self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, 3)
+        #self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, 3)
+
+
+        self.clstm = PoseLSTM(channels * height * width, 512, 3, output_size=2)
+
 
         self.criterion = nn.CrossEntropyLoss()
 
@@ -174,9 +181,13 @@ class BinaryPoseConvLSTM(BaseExperiment):
             self.optimizer.zero_grad()
 
             features = self.pre_cnn(input)
+
+            features = features.view(1, 2, -1) # For fc-rnn
+
             output, _ = self.clstm(features)
 
-            loss = self.criterion(output, target)
+            #[:, 1, :] for fc-rnn
+            loss = self.criterion(output[:, 1, :], target)
             loss.backward()
             self.optimizer.step()
 
@@ -213,7 +224,12 @@ class BinaryPoseConvLSTM(BaseExperiment):
             target = self.to_variable(poses, volatile=True)
 
             features = self.pre_cnn(input)
+
+            features = features.view(1, 2, -1)  # For fc-rnn
+
             output, _ = self.clstm(features)
+
+            output = output[:, 1, :] # for rc-rnn
 
             # argmax = predicted class
             _, ind = torch.max(output.data, 1)

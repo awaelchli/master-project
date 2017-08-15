@@ -5,7 +5,7 @@ from torch.autograd import Variable
 
 class PoseLSTM(nn.Module):
 
-    def __init__(self, input_size, hidden_size, num_layers=1, dropout=0.5):
+    def __init__(self, input_size, hidden_size, num_layers=1, dropout=0.5, output_size=6):
         super(PoseLSTM, self).__init__()
 
         self.lstm = nn.LSTM(input_size=input_size,
@@ -14,7 +14,7 @@ class PoseLSTM(nn.Module):
                             batch_first=True,
                             dropout=dropout)
 
-        self.fc = nn.Linear(hidden_size, 6)
+        self.fc = nn.Linear(hidden_size, output_size)
 
         self.input_size = input_size
         self.hidden_size = hidden_size
