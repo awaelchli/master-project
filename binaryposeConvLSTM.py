@@ -62,7 +62,15 @@ class BinaryPoseConvLSTM(BaseExperiment):
         super(BinaryPoseConvLSTM, self).__init__(folder, args)
 
         # Model for binary classification
-        self.pre_cnn = models.vgg19(pretrained=False).features
+        self.pre_cnn = nn.Sequential()
+
+        layers = models.vgg19(pretrained=False).features
+
+        for i in range(17):
+            self.pre_cnn.add_module('{}'.format(i), layers[i])
+
+        print(self.pre_cnn)
+
         if self.use_cuda:
             print('Moving CNN to GPU ...')
             self.pre_cnn.cuda()
