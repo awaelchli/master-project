@@ -29,9 +29,13 @@ class PoseGenerator(Dataset):
         self.transform1 = transform1
         self.transform2 = transform2
         self.filenames = find_images(root)
+        self.visualize = None
         if max_size and max_size < len(self.filenames):
             shuffle(self.filenames)
             self.filenames = self.filenames[:max_size]
+
+    def visualize(self, output_folder):
+        self.visualize = output_folder
 
     def __len__(self):
         return len(self.filenames)
@@ -45,16 +49,24 @@ class PoseGenerator(Dataset):
         new, hom = self.homography_transform(original, angle)
         # Rescale image such that no pixel is scaled up
         # Make original image the same size
-        new = compensate_homography_scale(new, hom)
-        original = original.resize((new.width, new.height), random_interpolation_method())
+        new_downscaled = compensate_homography_scale(new, hom)
+        original_downscaled = original.resize((new_downscaled.width, new_downscaled.height), random_interpolation_method())
+
+        # Optional visualization
+        if self.visualize:
+            save_image(original, '{}a-ORIGINAL'.format(index), 0, 1, self.visualize)
+            save_image(new, '{}b-NEW'.format(index), angle, target, self.visualize)
+            save_image(original_downscaled, '{}c-ORIGINAL-DOWNSCALED'.format(index), angle, target, self.visualize)
+            save_image(new_downscaled, '{}d-NEW-DOWNSCALED'.format(index), angle, target, self.visualize)
+            # save_image(image, '{}-post-transform'.format(index), angle, target, self.visualize, is_torch_tensor=True)
 
         if self.transform2:
-            original = self.transform2(original)
-            new = self.transform2(new)
+            original_downscaled = self.transform2(original_downscaled)
+            new_downscaled = self.transform2(new_downscaled)
 
-        original.unsqueeze_(0)
-        new.unsqueeze_(0)
-        images = torch.cat((original, new), 0)
+        original_downscaled.unsqueeze_(0)
+        new_downscaled.unsqueeze_(0)
+        images = torch.cat((original_downscaled, new_downscaled), 0)
 
         return images, target
 
@@ -64,27 +76,6 @@ class PoseGenerator(Dataset):
         hom = homography_roty(angle, w, h, self.z_plane)
         image = apply_homography(image, hom)
         return image, hom
-
-    def visualize_sample_transforms(self, index, output_folder):
-        image = Image.open(self.filenames[index]).convert('RGB')
-        if self.transform1:
-            image = self.transform1(image)
-
-        save_image(image, '{}-original'.format(index), 0, 1, output_folder)
-
-        angle, target = random_pose(self.max_angle)
-        image, hom = self.homography_transform(image, angle)
-
-        save_image(image, '{}-homography'.format(index), angle, target, output_folder)
-
-        image = compensate_homography_scale(image, hom)
-
-        save_image(image, '{}-rescale'.format(index), angle, target, output_folder)
-
-        if self.transform2:
-            image = self.transform2(image)
-
-        save_image(image, '{}-post-transform'.format(index), angle, target, output_folder, is_torch_tensor=True)
 
 
 def save_image(image, basename, angle, label, output_folder, is_torch_tensor=False):

@@ -137,9 +137,11 @@ class BinaryPoseConvLSTM(BaseExperiment):
                                  transform2=transform3, max_size=args.max_size[2])
 
         # Export some examples from the generated dataset
+        train_set.visualize = self.out_folder
         for x in range(10):
             i = random.randint(0, len(train_set) - 1)
-            train_set.visualize_sample_transforms(i, self.out_folder)
+            tmp = train_set[i]
+        train_set.visualize = None
 
         dataloader_train = DataLoader(train_set, batch_size=1,
                                       shuffle=True, num_workers=args.workers)
