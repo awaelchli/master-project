@@ -65,7 +65,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
         # Model for binary classification
         self.pre_cnn = nn.Sequential()
 
-        layers = models.vgg19(pretrained=False).features
+        layers = models.vgg19(pretrained=True).features
 
         #for i in range(17):
         #    self.pre_cnn.add_module('{}'.format(i), layers[i])
@@ -73,6 +73,11 @@ class BinaryPoseConvLSTM(BaseExperiment):
         #print(self.pre_cnn)
 
         self.pre_cnn = layers
+
+        # Freeze params, no gradient computation required
+        for param in self.pre_cnn.parameters():
+            param.requires_grad = False
+
 
         if self.use_cuda:
             print('Moving CNN to GPU ...')
@@ -92,7 +97,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         self.criterion = nn.CrossEntropyLoss()
 
-        params = list(self.pre_cnn.parameters()) + self.clstm.get_parameters()
+        params = self.clstm.get_parameters()
         self.optimizer = torch.optim.SGD(params, self.lr,
                                          # momentum=args.momentum,
                                          # weight_decay=args.weight_decay)
