@@ -107,7 +107,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         self.criterion = nn.CrossEntropyLoss()
 
-        params = list(self.pre_cnn.parameters()) + list(self.fc.parameters()) #+ self.clstm.get_parameters()
+        params = list(self.fc.parameters()) #+ self.clstm.get_parameters()
         self.optimizer = torch.optim.Adam(params, self.lr,
                                          # momentum=args.momentum,
                                          # weight_decay=args.weight_decay)
