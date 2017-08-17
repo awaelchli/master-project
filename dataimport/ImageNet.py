@@ -71,12 +71,174 @@ class DiscretePoseGenerator(Dataset):
 
         return images, target
 
+    class DiscretePoseGenerator(Dataset):
+
+        def __init__(self, root, max_angle=45.0, classes=3, z_plane=1.0, transform1=None, transform2=None,
+                     max_size=None):
+            self.root = root
+            self.max_angle = max_angle
+            self.classes = classes
+            self.z_plane = z_plane
+            self.transform1 = transform1
+            self.transform2 = transform2
+            self.filenames = find_images(root)
+            self.visualize = None
+            if max_size and max_size < len(self.filenames):
+                shuffle(self.filenames)
+                self.filenames = self.filenames[:max_size]
+
+        def visualize(self, output_folder):
+            self.visualize = output_folder
+
+        def __len__(self):
+            return len(self.filenames)
+
+        def __getitem__(self, index):
+            original = Image.open(self.filenames[index]).convert('RGB')
+            if self.transform1:
+                original = self.transform1(original)
+
+            angle, target = random_pose_range(self.max_angle, self.classes)
+            new, hom = self.homography_transform(original, angle)
+            # Rescale image such that no pixel is scaled up
+            # Make original image the same size
+            new_downscaled = compensate_homography_scale(new, hom)
+            original_downscaled = original.resize((new_downscaled.width, new_downscaled.height),
+                                                  random_interpolation_method())
+
+            original_final = self.transform2(original_downscaled) if self.transform2 else original_downscaled
+            new_final = self.transform2(new_downscaled) if self.transform2 else new_downscaled
+
+            # Optional visualization
+            if self.visualize:
+                save_image(original, '{}a-ORIGINAL'.format(index), 0, 1, self.visualize)
+                save_image(new, '{}b-NEW'.format(index), angle, target, self.visualize)
+                save_image(original_downscaled, '{}c-ORIGINAL-DOWNSCALED'.format(index), angle, target, self.visualize)
+                save_image(new_downscaled, '{}d-NEW-DOWNSCALED'.format(index), angle, target, self.visualize)
+                save_image(original_final, '{}e-ORIGINAL-FINAL'.format(index), angle, target, self.visualize,
+                           is_torch_tensor=True)
+                save_image(new_final, '{}f-NEW-FINAL'.format(index), angle, target, self.visualize,
+                           is_torch_tensor=True)
+
+            original_final.unsqueeze_(0)
+            new_final.unsqueeze_(0)
+            images = torch.cat((original_final, new_final), 0)
+
+            return images, target
+
     def homography_transform(self, image, angle):
         w, h = image.width, image.height
         # Homography that rotates the image at a given depth
         hom = homography_roty(angle, w, h, self.z_plane)
         image = apply_homography(image, hom)
         return image, hom
+
+
+
+
+
+
+
+
+
+class BinaryPoseSequenceGenerator(Dataset):
+
+    def __init__(self, root, sequence_length=10, max_angle=45.0, step_angle=5.0, z_plane=1.0, transform1=None, transform2=None, max_size=None):
+        self.root = root
+        self.sequence_length=sequence_length
+        self.step_angle=step_angle
+        self.max_angle = max_angle
+        self.z_plane = z_plane
+        self.transform1 = transform1
+        self.transform2 = transform2
+        self.filenames = find_images(root)
+        self.visualize = None
+        if max_size and max_size < len(self.filenames):
+            shuffle(self.filenames)
+            self.filenames = self.filenames[:max_size]
+
+    def visualize(self, output_folder):
+        self.visualize = output_folder
+
+    def __len__(self):
+        return len(self.filenames)
+
+    def __getitem__(self, index):
+        original = Image.open(self.filenames[index]).convert('RGB')
+        if self.transform1:
+            original = self.transform1(original)
+
+        current_angle = 0 #random_angle(self.max_angle)
+        direction = -1 if random.uniform(0, 1) < 0.5 else 1
+        prob = 0.3
+
+        images = []
+        turns = []
+        for i in range(self.sequence_length):
+            direction = -direction if random.uniform(0, 1) < prob else direction
+            new_angle = current_angle + direction * self.step_angle
+            if not (-self.max_angle <= new_angle <= self.max_angle):
+                # If rotation goes outside maximum angle, turn in other direction
+                direction *= -1
+                new_angle = current_angle + direction * self.step_angle
+
+            current_angle = new_angle
+
+            new, hom = self.homography_transform(original, current_angle)
+            images.append(new)
+            turns.append(0 if direction < 0 else 1)
+
+            if self.visualize:
+                save_image(new, '{}a-ROTATED-{}'.format(index, i), current_angle, turns[-1], self.visualize)
+
+
+        # Rescale image such that no pixel is scaled up
+        # Make original image the same size
+        #new_downscaled = compensate_homography_scale(new, hom)
+        #original_downscaled = original.resize((new_downscaled.width, new_downscaled.height), random_interpolation_method())
+
+        #original_final = self.transform2(original_downscaled) if self.transform2 else original_downscaled
+        #new_final = self.transform2(new_downscaled) if self.transform2 else new_downscaled
+
+        # Optional visualization
+
+            #save_image(new, '{}b-NEW'.format(index), angle, target, self.visualize)
+            #save_image(original_downscaled, '{}c-ORIGINAL-DOWNSCALED'.format(index), angle, target, self.visualize)
+            #save_image(new_downscaled, '{}d-NEW-DOWNSCALED'.format(index), angle, target, self.visualize)
+            #save_image(original_final, '{}e-ORIGINAL-FINAL'.format(index), angle, target, self.visualize, is_torch_tensor=True)
+            #save_image(new_final, '{}f-NEW-FINAL'.format(index), angle, target, self.visualize, is_torch_tensor=True)
+        #
+        # original_final.unsqueeze_(0)
+        # new_final.unsqueeze_(0)
+        if self.transform2:
+            images = [self.transform2(img).unsqueeze(0) for img in images]
+
+        images = torch.cat(images, 0)
+        turns = torch.Tensor(turns)
+
+        print(images.size(0))
+        print(turns.size(0))
+        print(self.sequence_length)
+        assert images.size(0) == turns.size(0) + 1 == self.sequence_length
+        return images, turns
+
+    def homography_transform(self, image, angle):
+        w, h = image.width, image.height
+        # Homography that rotates the image at a given depth
+        hom = homography_roty(angle, w, h, self.z_plane)
+        image = apply_homography(image, hom)
+        return image, hom
+
+
+
+
+
+
+
+
+
+
+
 
 
 def save_image(image, basename, angle, label, output_folder, is_torch_tensor=False):

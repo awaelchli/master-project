@@ -1,5 +1,5 @@
 from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
-from dataimport.ImageNet import DiscretePoseGenerator, FOLDERS
+from dataimport.ImageNet import DiscretePoseGenerator, BinaryPoseSequenceGenerator, FOLDERS
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
 import os
@@ -64,39 +64,6 @@ class BinaryPoseConvLSTM(BaseExperiment):
     def __init__(self, folder, args):
         super(BinaryPoseConvLSTM, self).__init__(folder, args)
 
-        # Model for binary classification
-        self.pre_cnn = nn.Sequential()
-
-        model = flownets('../data/Pretrained Models/flownets_pytorch.pth')
-
-        model2 = torch.nn.Sequential(
-            model.conv1,
-            model.conv2,
-            model.conv3,
-            model.conv3_1,
-            model.conv4,
-            model.conv4_1,
-            model.conv5,
-            model.conv5_1,
-            model.conv6,
-            model.conv6_1,
-        )
-        self.fc = nn.Linear(1024 * 4 * 4, 2)
-
-
-        #layers = models.resnet18(pretrained=False)
-        #layers.fc = nn.Linear(512, 2)
-
-        #for i in range(17):
-        #    self.pre_cnn.add_module('{}'.format(i), layers[i])
-        self.pre_cnn = model2
-        print(self.pre_cnn)
-
-        if self.use_cuda:
-            print('Moving CNN to GPU ...')
-            self.pre_cnn.cuda()
-            self.fc.cuda()
-
         #channels, height, width = self.cnn_feature_size(224, 224)
         #print(channels, height, width)
 
@@ -133,16 +100,10 @@ class BinaryPoseConvLSTM(BaseExperiment):
         transform1 = transforms.Compose([
                 #transforms.RandomSizedCrop(224),
                 transforms.RandomHorizontalFlip(),
-            ])
-
-        # For validation set
-        transform2 = transforms.Compose([
-            #transforms.Scale(256),
-            #transforms.CenterCrop(224),
         ])
 
         # After homography is applied to image
-        transform3 = transforms.Compose([
+        transform2 = transforms.Compose([
             transforms.Scale(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
@@ -151,12 +112,12 @@ class BinaryPoseConvLSTM(BaseExperiment):
                                  #std=[0.229, 0.224, 0.225])
         ])
 
-        train_set = DiscretePoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
-                                          transform2=transform3, max_size=args.max_size[0])
-        val_set = DiscretePoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                        transform2=transform3, max_size=args.max_size[1])
-        test_set = DiscretePoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                         transform2=transform3, max_size=args.max_size[2])
+        train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=5, max_angle=args.angle, step_angle=5.0, z_plane=args.zplane,
+                                                transform1=transform1, transform2=transform2, max_size=args.max_size[0])
+        val_set   = BinaryPoseSequenceGenerator(traindir, sequence_length=5, max_angle=args.angle, step_angle=5.0, z_plane=args.zplane,
+                                                transform1=transform1, transform2=transform2, max_size=args.max_size[1])
+        test_set  = BinaryPoseSequenceGenerator(traindir, sequence_length=5, max_angle=args.angle, step_angle=5.0, z_plane=args.zplane,
+                                                transform1=transform1, transform2=transform2, max_size=args.max_size[2])
 
         # Export some examples from the generated dataset
         train_set.visualize = self.out_folder
@@ -165,13 +126,13 @@ class BinaryPoseConvLSTM(BaseExperiment):
             tmp = train_set[i]
         train_set.visualize = None
 
-        dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
+        dataloader_train = DataLoader(train_set, batch_size=1,
                                       shuffle=True, num_workers=args.workers)
 
-        dataloader_val = DataLoader(val_set, batch_size=args.batch_size,
+        dataloader_val = DataLoader(val_set, batch_size=1,
                                     shuffle=False, num_workers=args.workers)
 
-        dataloader_test = DataLoader(test_set, batch_size=args.batch_size,
+        dataloader_test = DataLoader(test_set, batch_size=1,
                                      shuffle=False, num_workers=args.workers)
 
         return dataloader_train, dataloader_val, dataloader_test

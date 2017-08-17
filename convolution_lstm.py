@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as functional
 from torch.autograd import Variable
 
 
@@ -74,6 +75,51 @@ class ConvLSTM(nn.Module):
             name = 'cell{}'.format(i)
             (h, c) = internal_state[i]
             x, new_c = getattr(self, name)(x, h, c)
+            internal_state[i] = (x, new_c)
+
+        return x, internal_state
+
+
+class ConvLSTMShrink(nn.Module):
+
+    def __init__(self, input_channels, hidden_channels, kernel_size, bias=True):
+        super(ConvLSTMShrink, self).__init__()
+        self.input_channels = [input_channels] + hidden_channels
+        self.hidden_channels = hidden_channels
+        self.kernel_size = kernel_size
+        self.num_layers = len(hidden_channels)
+        self.bias = bias
+
+        self._all_layers = []
+        for i in range(self.num_layers):
+            name = 'cell{}'.format(i)
+            cell = ConvLSTMCell(self.input_channels[i], self.hidden_channels[i], self.kernel_size, self.bias)
+            setattr(self, name, cell)
+            self._all_layers.append(cell)
+
+    def forward(self, input, internal_state=None):
+        if not internal_state:
+            internal_state = []
+            # First forward pass in the time sequence
+            # Initialize internal states of all layers
+            bsize, _, height, width = input.size()
+            for i in range(self.num_layers):
+                (h, c) = ConvLSTMCell.init_hidden(bsize, self.hidden_channels[i], (height, width))
+                if input.is_cuda:
+                    h = h.cuda()
+                    c = c.cuda()
+                internal_state.append((h, c))
+
+                height = int((height - 1) / 2 + 1)
+                width = int((width - 1) / 2 + 1)
+
+        # Forward pass through all layers in current time step
+        x = input
+        for i in range(self.num_layers):
+            name = 'cell{}'.format(i)
+            (h, c) = internal_state[i]
+            x, new_c = getattr(self, name)(x, h, c)
+            x = functional.max_pool2d(x, kernel_size=2, stride=2)
             internal_state[i] = (x, new_c)
 
         return x, internal_state
