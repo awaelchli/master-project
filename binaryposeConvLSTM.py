@@ -125,8 +125,8 @@ class BinaryPoseConvLSTM(BaseExperiment):
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             # For normalization, see https://github.com/pytorch/vision#models
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+            #transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 #std=[0.229, 0.224, 0.225])
         ])
 
         train_set = PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
@@ -156,10 +156,11 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
     def train(self):
         training_loss = AverageMeter()
+        sample_loss = []
         num_batches = len(self.trainingset)
 
         epoch = len(self.training_loss) + 1
-        self.adjust_learning_rate(epoch)
+        #self.adjust_learning_rate(epoch)
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
@@ -182,7 +183,9 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
-                print('Batch [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
+                print('Sample [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
+                sample_loss.append(loss.data[0])
+                plots.plot_sample_loss(sample_loss, save='sample-loss-epoch-{}.pdf'.format(epoch))
 
             training_loss.update(loss.data[0])
 
@@ -261,14 +264,3 @@ class BinaryPoseConvLSTM(BaseExperiment):
     def plot_performance(self):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
-
-    # def randomly_save_image(self, batch, prob=0.5):
-    #     if random.uniform(0, 1) < prob:
-    #         # Randomly select image from batch
-    #         i = random.randrange(0, batch.size(0))
-    #         image = batch[i].squeeze(0)
-    #         tf = transforms.ToPILImage()
-    #         image = tf(image)
-    #         fname = time.strftime('%Y%m%d-%H%M%S.png')
-    #         image.save(self.make_output_filename(fname))
-

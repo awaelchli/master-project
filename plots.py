@@ -40,15 +40,13 @@ def plot_epoch_loss(train_loss, validation_loss=None, save='loss.pdf'):
         plt.savefig(save, bbox_inches='tight')
 
 
-# def save_train_data(file, train_loss, validation_loss):
-#     epochs = train_loss.numel()
-#     epoch_index = torch.range(1, epochs).unsqueeze(1)
-#
-#     data = torch.cat((epoch_index, train_loss.view(epochs, 1), validation_loss.view(epochs, 1)), 1)
-#
-#     pd.DataFrame(np.random.randn(6, 4), index=None, columns=list('ABCD'))
+def plot_sample_loss(train_loss, save='sample_loss.pdf'):
+    samples = list(range(1, len(train_loss) + 1))
+    plt.clf()
+    plt.plot(samples, train_loss, 'b')
 
+    plt.ylabel('Loss')
+    plt.xlabel('Samples')
 
-#plot_loss_from_file('out/loss.txt', save='out/loss.pdf')
-#plot_train_data(torch.Tensor([0.1, 0.2, 0.3]), torch.Tensor([0.3, 0.5, 0.8]), save='t.pdf')
-#plot_epoch_loss([0.1, 0.2, 0.3], [0.3, 0.5, 0.8], save='t.pdf')
+    if save:
+        plt.savefig(save, bbox_inches='tight')

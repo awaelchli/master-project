@@ -52,21 +52,21 @@ class PoseGenerator(Dataset):
         new_downscaled = compensate_homography_scale(new, hom)
         original_downscaled = original.resize((new_downscaled.width, new_downscaled.height), random_interpolation_method())
 
+        original_final = self.transform2(original_downscaled) if self.transform2 else original_downscaled
+        new_final = self.transform2(new_downscaled) if self.transform2 else new_downscaled
+
         # Optional visualization
         if self.visualize:
             save_image(original, '{}a-ORIGINAL'.format(index), 0, 1, self.visualize)
             save_image(new, '{}b-NEW'.format(index), angle, target, self.visualize)
             save_image(original_downscaled, '{}c-ORIGINAL-DOWNSCALED'.format(index), angle, target, self.visualize)
             save_image(new_downscaled, '{}d-NEW-DOWNSCALED'.format(index), angle, target, self.visualize)
-            # save_image(image, '{}-post-transform'.format(index), angle, target, self.visualize, is_torch_tensor=True)
+            save_image(original_final, '{}e-ORIGINAL-FINAL'.format(index), angle, target, self.visualize, is_torch_tensor=True)
+            save_image(new_final, '{}f-NEW-FINAL'.format(index), angle, target, self.visualize, is_torch_tensor=True)
 
-        if self.transform2:
-            original_downscaled = self.transform2(original_downscaled)
-            new_downscaled = self.transform2(new_downscaled)
-
-        original_downscaled.unsqueeze_(0)
-        new_downscaled.unsqueeze_(0)
-        images = torch.cat((original_downscaled, new_downscaled), 0)
+        original_final.unsqueeze_(0)
+        new_final.unsqueeze_(0)
+        images = torch.cat((original_final, new_final), 0)
 
         return images, target
 
