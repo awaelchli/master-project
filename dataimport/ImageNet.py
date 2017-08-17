@@ -20,11 +20,12 @@ INTERPOLATION = [Image.NEAREST, Image.BILINEAR, Image.BICUBIC]
 EXTENSIONS = ['jpeg', 'jpg', 'png']
 
 
-class PoseGenerator(Dataset):
+class DiscretePoseGenerator(Dataset):
 
-    def __init__(self, root, max_angle=45.0, z_plane=1.0, transform1=None, transform2=None, max_size=None):
+    def __init__(self, root, max_angle=45.0, classes=3, z_plane=1.0, transform1=None, transform2=None, max_size=None):
         self.root = root
         self.max_angle = max_angle
+        self.classes = classes
         self.z_plane = z_plane
         self.transform1 = transform1
         self.transform2 = transform2
@@ -45,7 +46,7 @@ class PoseGenerator(Dataset):
         if self.transform1:
             original = self.transform1(original)
 
-        angle, target = random_pose_range(self.max_angle)
+        angle, target = random_pose_range(self.max_angle, self.classes)
         new, hom = self.homography_transform(original, angle)
         # Rescale image such that no pixel is scaled up
         # Make original image the same size
@@ -107,9 +108,12 @@ def random_pose(angle):
     return angle, pose
 
 
-def random_pose_range(max_angle):
+def random_pose_range(max_angle, classes = 3):
+    bins = np.linspace(-max_angle, max_angle, classes + 1)
     angle = random_angle(max_angle)
-    pose = 0 if angle < 0 else 1
+    pose = int(np.digitize(angle, bins)) - 1
+
+    assert 0 <= pose < classes
     return angle, pose
 
 

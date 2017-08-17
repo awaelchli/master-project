@@ -1,5 +1,5 @@
 from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
-from dataimport.ImageNet import PoseGenerator, FOLDERS
+from dataimport.ImageNet import DiscretePoseGenerator, FOLDERS
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
 import os
@@ -151,12 +151,12 @@ class BinaryPoseConvLSTM(BaseExperiment):
                                  #std=[0.229, 0.224, 0.225])
         ])
 
-        train_set = PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
-                                  transform2=transform3, max_size=args.max_size[0])
-        val_set = PoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                transform2=transform3, max_size=args.max_size[1])
-        test_set = PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                 transform2=transform3, max_size=args.max_size[2])
+        train_set = DiscretePoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
+                                          transform2=transform3, max_size=args.max_size[0])
+        val_set = DiscretePoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
+                                        transform2=transform3, max_size=args.max_size[1])
+        test_set = DiscretePoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
+                                         transform2=transform3, max_size=args.max_size[2])
 
         # Export some examples from the generated dataset
         train_set.visualize = self.out_folder

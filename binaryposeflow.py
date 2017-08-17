@@ -1,5 +1,5 @@
 from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
-from dataimport.ImageNet import PoseGenerator, FOLDERS
+from dataimport.ImageNet import DiscretePoseGenerator, FOLDERS
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -108,17 +108,14 @@ class BinaryPose(BaseExperiment):
             transforms.Scale(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            # For normalization, see https://github.com/pytorch/vision#models
-            #transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 #std=[0.229, 0.224, 0.225])
         ])
 
-        train_set = PoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
-                                  transform2=transform3, max_size=args.max_size[0])
-        val_set = PoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                transform2=transform3, max_size=args.max_size[1])
-        test_set = PoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
-                                 transform2=transform3, max_size=args.max_size[2])
+        train_set = DiscretePoseGenerator(traindir, max_angle=args.angle, z_plane=args.zplane, transform1=transform1,
+                                          transform2=transform3, max_size=args.max_size[0])
+        val_set = DiscretePoseGenerator(valdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
+                                        transform2=transform3, max_size=args.max_size[1])
+        test_set = DiscretePoseGenerator(testdir, max_angle=args.angle, z_plane=args.zplane, transform1=transform2,
+                                         transform2=transform3, max_size=args.max_size[2])
 
         # Export some examples from the generated dataset
         train_set.visualize = self.out_folder
@@ -167,7 +164,8 @@ class BinaryPose(BaseExperiment):
             if (i + 1) % self.print_freq == 0:
                 print('Sample [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
                 sample_loss.append(loss.data[0])
-                plots.plot_sample_loss(sample_loss, save='sample-loss-epoch-{}.pdf'.format(epoch))
+                filename = self.make_output_filename('sample-loss-epoch-{}.pdf'.format(epoch))
+                plots.plot_sample_loss(sample_loss, save=filename)
 
             training_loss.update(loss.data[0])
 
