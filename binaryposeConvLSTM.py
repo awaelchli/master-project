@@ -95,6 +95,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
         if self.use_cuda:
             print('Moving CNN to GPU ...')
             self.pre_cnn.cuda()
+            self.fc.cuda()
 
         #channels, height, width = self.cnn_feature_size(224, 224)
         #print(channels, height, width)
