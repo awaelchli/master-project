@@ -8,7 +8,7 @@ import torch.nn as nn
 import plots
 import time
 import random
-from convolution_lstm import ConvLSTM
+from convolution_lstm import ConvLSTM, ConvLSTMShrink
 from flownet.models.FlowNetS import flownets
 import torch
 from torch.autograd import Variable
@@ -16,16 +16,15 @@ from torch.autograd import Variable
 
 class PoseConvLSTM(nn.Module):
 
-    def __init__(self, input_size, input_channels, hidden_channels, kernel_size):
+    def __init__(self, input_size, input_channels, hidden_channels, shrink, kernel_size):
         super(PoseConvLSTM, self).__init__()
 
         self.input_size = input_size
-        self.clstm = ConvLSTM(input_channels, hidden_channels, kernel_size, bias=True)
+        self.clstm = ConvLSTMShrink(input_channels, hidden_channels, shrink, kernel_size, bias=True)
 
-        # The output size of the last cell defines the input size of the linear layer
-        last_hidden_size = input_size[0] * input_size[1] * hidden_channels[-1]
-        self.fc = nn.Linear(last_hidden_size, 2)
-
+        out, _ = self.clstm.forward(Variable(torch.rand(1, 3, input_size[0], input_size[1])))
+        print('Outsize:', out.size())
+        self.fc = nn.Linear(out.size(1) * out.size(2) * out.size(3), 2)
         self.init_weights()
 
     def init_weights(self):
@@ -35,15 +34,17 @@ class PoseConvLSTM(nn.Module):
     def forward(self, input):
         # Input format: [sequence_length, channels, h, w]
         hidden = None
-        output = None
+        outputs = []
         for i in range(input.size(0)):
             x = input[i, :, :, :].unsqueeze(0)
             output, hidden = self.clstm.forward(x, hidden)
+            outputs.append(output.view(1, -1))
 
-        # Apply linear layer to last output
-        output = self.fc(output.view(1, -1))
+        # Apply linear layer to all outputs except first one
+        outputs = torch.cat(outputs[1:], 0)
+        classifications = self.fc(outputs)
 
-        return output, hidden
+        return classifications, hidden
 
     def get_parameters(self):
         return list(self.clstm.parameters()) + list(self.fc.parameters())
@@ -60,31 +61,29 @@ class BinaryPoseConvLSTM(BaseExperiment):
         parser.add_argument('--max_size', type=int, nargs=3, default=[0, 0, 0],
                             help="""Clips training-, validation-, and testset at the given size. 
                             A zero signalizes that the whole dataset should be used.""")
+        parser.add_argument('--sequence', type=int, default=10,
+                            help='Length of sequence fed to the LSTM')
 
     def __init__(self, folder, args):
         super(BinaryPoseConvLSTM, self).__init__(folder, args)
 
-        #channels, height, width = self.cnn_feature_size(224, 224)
-        #print(channels, height, width)
-
+        channels, height, width = 3, 224, 224
         hidden_channels = [128, 64, 64, 32, 32, 16, 16]
-        #hidden_channels.reverse()
+        hidden_channels.reverse()
 
-        #self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, 3)
+        shrink = [2, None, 2, None, 2, None, 2]
+
+        self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, shrink, 3)
 
         self.criterion = nn.CrossEntropyLoss()
-
-        params = list(self.fc.parameters()) #+ self.clstm.get_parameters()
-        self.optimizer = torch.optim.Adam(params, self.lr,
-                                         # momentum=args.momentum,
-                                         # weight_decay=args.weight_decay)
-                                         )
+        self.optimizer = torch.optim.Adam(self.clstm.get_parameters(), self.lr)
 
         if self.use_cuda:
-            #print('Moving LSTM to GPU ...')
-            #self.clstm.cuda()
+            print('Moving LSTM to GPU ...')
+            self.clstm.cuda()
             self.criterion.cuda()
 
+        self.sequence_length = args.sequence
         self.print_freq = args.print_freq
 
         self.training_loss = []
@@ -98,7 +97,6 @@ class BinaryPoseConvLSTM(BaseExperiment):
         # Image pre-processing
         # For training set
         transform1 = transforms.Compose([
-                #transforms.RandomSizedCrop(224),
                 transforms.RandomHorizontalFlip(),
         ])
 
@@ -112,17 +110,20 @@ class BinaryPoseConvLSTM(BaseExperiment):
                                  #std=[0.229, 0.224, 0.225])
         ])
 
-        train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=5, max_angle=args.angle, step_angle=5.0, z_plane=args.zplane,
+        sequence = args.sequence
+        step = 5.0
+
+        train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=sequence, max_angle=args.angle, step_angle=step, z_plane=args.zplane,
                                                 transform1=transform1, transform2=transform2, max_size=args.max_size[0])
-        val_set   = BinaryPoseSequenceGenerator(traindir, sequence_length=5, max_angle=args.angle, step_angle=5.0, z_plane=args.zplane,
+        val_set   = BinaryPoseSequenceGenerator(valdir, sequence_length=sequence, max_angle=args.angle, step_angle=step, z_plane=args.zplane,
                                                 transform1=transform1, transform2=transform2, max_size=args.max_size[1])
-        test_set  = BinaryPoseSequenceGenerator(traindir, sequence_length=5, max_angle=args.angle, step_angle=5.0, z_plane=args.zplane,
+        test_set  = BinaryPoseSequenceGenerator(testdir, sequence_length=sequence, max_angle=args.angle, step_angle=step, z_plane=args.zplane,
                                                 transform1=transform1, transform2=transform2, max_size=args.max_size[2])
 
         # Export some examples from the generated dataset
         train_set.visualize = self.out_folder
-        for x in range(10):
-            i = random.randint(0, len(train_set) - 1)
+        inds = random.sample(range(len(train_set)), 10)
+        for i in inds:
             tmp = train_set[i]
         train_set.visualize = None
 
@@ -147,25 +148,28 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
-        for i, (images, pose) in enumerate(self.trainingset):
+        for i, (images, poses) in enumerate(self.trainingset):
 
-            #images.squeeze_(0)
-            #pose.squeeze_(0)
+            # Shape: images -> [1, sequence length, channels, h, w]
+            #        poses  -> [1, sequence length, 1]
 
+            images.squeeze_(0)
+            poses.squeeze_(0)
 
-            images = torch.cat((images[:, 0, :, :, :], images[:, 1, :, :, :]), 1)
-
-
-            input = self.to_variable(images)
-            target = self.to_variable(pose)
+            inputs = self.to_variable(images)
+            targets = self.to_variable(poses)
 
             self.optimizer.zero_grad()
 
-            output = self.pre_cnn(input)
-            output = self.fc(output.view(self.batch_size, -1))
-            #output, _ = self.clstm(features)
+            outputs, _ = self.clstm.forward(inputs)
 
-            loss = self.criterion(output, target)
+            #print('outputs', outputs)
+            #print('targets', targets)
+
+            loss = self.criterion(outputs, targets)
+
+            #print('loss', loss)
+
             loss.backward()
             self.optimizer.step()
 
@@ -173,7 +177,8 @@ class BinaryPoseConvLSTM(BaseExperiment):
             if (i + 1) % self.print_freq == 0:
                 print('Sample [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
                 sample_loss.append(loss.data[0])
-                plots.plot_sample_loss(sample_loss, save='sample-loss-epoch-{}.pdf'.format(epoch))
+                filename = self.make_output_filename('sample-loss-epoch-{}.pdf'.format(epoch))
+                plots.plot_sample_loss(sample_loss, save=filename)
 
             training_loss.update(loss.data[0])
 
@@ -193,49 +198,44 @@ class BinaryPoseConvLSTM(BaseExperiment):
         if not dataloader:
             dataloader = self.testset
 
-        num_samples = len(dataloader) * dataloader.batch_size
+        num_predictions = len(dataloader) * (self.sequence_length - 1)
         accuracy = 0
         avg_loss = AverageMeter()
         for i, (images, poses) in enumerate(dataloader):
-            #images.squeeze_(0)
-            #poses.squeeze_(0)
 
-            images = torch.cat((images[:, 0, :, :, :], images[:, 1, :, :, :]), 1)
+            images.squeeze_(0)
+            poses.squeeze_(0)
 
-            input = self.to_variable(images, volatile=True)
-            target = self.to_variable(poses, volatile=True)
+            inputs = self.to_variable(images)
+            targets = self.to_variable(poses)
 
-            output = self.pre_cnn(input)
-            output = self.fc(output.view(self.batch_size, -1))
-            #output, _ = self.clstm(features)
+            outputs, _ = self.clstm.forward(inputs)
 
             # argmax = predicted class
-            _, ind = torch.max(output.data, 1)
+            _, ind = torch.max(outputs.data, 1)
+
+            # print(outputs.data)
+            # print(targets.data)
+            # print(ind)
 
             # Correct predictions in the batch
-            accuracy += torch.sum(torch.eq(ind, target.data))
+            accuracy += torch.sum(torch.eq(ind, targets.data))
 
-            loss = self.criterion(output, target)
+            loss = self.criterion(outputs, targets)
             avg_loss.update(loss.data[0])
 
-        accuracy /= num_samples
+        accuracy /= num_predictions
         avg_loss = avg_loss.average
 
         print('Accuracy: {:.4f}'.format(accuracy))
         return avg_loss, accuracy
-
-    def cnn_feature_size(self, input_height, input_width):
-        input = self.to_variable(torch.zeros(1, 3, input_height, input_width), volatile=True)
-        output = self.pre_cnn(input)
-        # channels, height, width
-        return output.size(1), output.size(2), output.size(3)
 
     def make_checkpoint(self):
         checkpoint = {
             'epoch': len(self.training_loss),
             'training_loss': self.training_loss,
             'validation_loss': self.validation_loss,
-            'model': self.pre_cnn.state_dict(),
+            'model': self.clstm.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
         return checkpoint
@@ -243,7 +243,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
     def restore_from_checkpoint(self, checkpoint):
         self.training_loss = checkpoint['training_loss']
         self.validation_loss = checkpoint['validation_loss']
-        self.pre_cnn.load_state_dict(checkpoint['model'])
+        self.clstm.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
 
     def adjust_learning_rate(self, epoch):

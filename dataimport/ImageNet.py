@@ -165,16 +165,17 @@ class BinaryPoseSequenceGenerator(Dataset):
 
     def __getitem__(self, index):
         original = Image.open(self.filenames[index]).convert('RGB')
-        if self.transform1:
-            original = self.transform1(original)
+        #if self.transform1:
+         #   original = self.transform1(original)
 
         current_angle = 0 #random_angle(self.max_angle)
         direction = -1 if random.uniform(0, 1) < 0.5 else 1
-        prob = 0.3
+        prob = 0.25
 
-        images = []
+        images = [original]
+        angles = []
         turns = []
-        for i in range(self.sequence_length):
+        for i in range(self.sequence_length - 1):
             direction = -direction if random.uniform(0, 1) < prob else direction
             new_angle = current_angle + direction * self.step_angle
             if not (-self.max_angle <= new_angle <= self.max_angle):
@@ -186,6 +187,7 @@ class BinaryPoseSequenceGenerator(Dataset):
 
             new, hom = self.homography_transform(original, current_angle)
             images.append(new)
+            angles.append(current_angle)
             turns.append(0 if direction < 0 else 1)
 
             if self.visualize:
@@ -197,28 +199,17 @@ class BinaryPoseSequenceGenerator(Dataset):
         #new_downscaled = compensate_homography_scale(new, hom)
         #original_downscaled = original.resize((new_downscaled.width, new_downscaled.height), random_interpolation_method())
 
-        #original_final = self.transform2(original_downscaled) if self.transform2 else original_downscaled
-        #new_final = self.transform2(new_downscaled) if self.transform2 else new_downscaled
-
-        # Optional visualization
-
-            #save_image(new, '{}b-NEW'.format(index), angle, target, self.visualize)
-            #save_image(original_downscaled, '{}c-ORIGINAL-DOWNSCALED'.format(index), angle, target, self.visualize)
-            #save_image(new_downscaled, '{}d-NEW-DOWNSCALED'.format(index), angle, target, self.visualize)
-            #save_image(original_final, '{}e-ORIGINAL-FINAL'.format(index), angle, target, self.visualize, is_torch_tensor=True)
-            #save_image(new_final, '{}f-NEW-FINAL'.format(index), angle, target, self.visualize, is_torch_tensor=True)
-        #
-        # original_final.unsqueeze_(0)
-        # new_final.unsqueeze_(0)
         if self.transform2:
-            images = [self.transform2(img).unsqueeze(0) for img in images]
+            images = [self.transform2(img) for img in images]
 
+        if self.visualize:
+            for i, im in enumerate(images[1:]):
+                save_image(im, '{}a-FINAL-{}'.format(index, i), current_angle, turns[i], self.visualize, is_torch_tensor=True)
+
+        images = [img.unsqueeze(0) for img in images]
         images = torch.cat(images, 0)
-        turns = torch.Tensor(turns)
+        turns = torch.LongTensor(turns)
 
-        print(images.size(0))
-        print(turns.size(0))
-        print(self.sequence_length)
         assert images.size(0) == turns.size(0) + 1 == self.sequence_length
         return images, turns
 

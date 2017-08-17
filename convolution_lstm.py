@@ -82,13 +82,16 @@ class ConvLSTM(nn.Module):
 
 class ConvLSTMShrink(nn.Module):
 
-    def __init__(self, input_channels, hidden_channels, kernel_size, bias=True):
+    def __init__(self, input_channels, hidden_channels, shrink=None, kernel_size=3, bias=True):
         super(ConvLSTMShrink, self).__init__()
         self.input_channels = [input_channels] + hidden_channels
         self.hidden_channels = hidden_channels
         self.kernel_size = kernel_size
         self.num_layers = len(hidden_channels)
         self.bias = bias
+
+        assert not shrink or len(shrink) == len(hidden_channels)
+        self.shrink = len(hidden_channels) * [None] if not shrink else shrink
 
         self._all_layers = []
         for i in range(self.num_layers):
@@ -110,8 +113,12 @@ class ConvLSTMShrink(nn.Module):
                     c = c.cuda()
                 internal_state.append((h, c))
 
-                height = int((height - 1) / 2 + 1)
-                width = int((width - 1) / 2 + 1)
+                if self.shrink[i]:
+                    height = int((height - (self.shrink[i] - 1) - 1) / self.shrink[i] + 1)
+                    width = int((width - (self.shrink[i] - 1) - 1) / self.shrink[i] + 1)
+
+                #TODO: remove
+                #print('height', height, 'width', width)
 
         # Forward pass through all layers in current time step
         x = input
@@ -119,7 +126,10 @@ class ConvLSTMShrink(nn.Module):
             name = 'cell{}'.format(i)
             (h, c) = internal_state[i]
             x, new_c = getattr(self, name)(x, h, c)
-            x = functional.max_pool2d(x, kernel_size=2, stride=2)
             internal_state[i] = (x, new_c)
+
+            if self.shrink and self.shrink[i]:
+                x = functional.max_pool2d(x, kernel_size=self.shrink[i], stride=self.shrink[i])
+
 
         return x, internal_state
