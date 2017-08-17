@@ -9,7 +9,7 @@ import plots
 import time
 import random
 from convolution_lstm import ConvLSTM
-from flownet.models.FlowNetS import flownets
+from flownet2.models.FlowNetS import flownets
 import torch
 from torch.autograd import Variable
 
