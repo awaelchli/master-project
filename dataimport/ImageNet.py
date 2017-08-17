@@ -45,7 +45,7 @@ class PoseGenerator(Dataset):
         if self.transform1:
             original = self.transform1(original)
 
-        angle, target = random_pose(self.max_angle)
+        angle, target = random_pose_range(self.max_angle)
         new, hom = self.homography_transform(original, angle)
         # Rescale image such that no pixel is scaled up
         # Make original image the same size
@@ -107,14 +107,14 @@ def random_pose(angle):
     return angle, pose
 
 
-def random_pose_range(total_angle):
-    angle = random_angle(total_angle)
+def random_pose_range(max_angle):
+    angle = random_angle(max_angle)
     pose = 0 if angle < 0 else 1
     return angle, pose
 
 
 def random_angle(theta):
-    return random.uniform(-theta / 2, theta / 2)
+    return random.uniform(-theta, theta)
 
 
 def random_interpolation_method():

@@ -7,6 +7,7 @@ from base import BaseExperiment
 from binarypose import BinaryPoseCNN
 from poseConvLSTM import KITTIPoseConvLSTM
 from binaryposeConvLSTM import BinaryPoseConvLSTM
+from binaryposeflow import BinaryPose
 from base import CHECKPOINT_FILENAME
 
 
@@ -15,7 +16,8 @@ ARCHS = {
     # 'cnnlstm': BaseExperiment,
     'binarypose': BinaryPoseCNN,
     'kitticonvlstm': KITTIPoseConvLSTM,
-    'binaryposeconvlstm': BinaryPoseConvLSTM
+    'binaryposeconvlstm': BinaryPoseConvLSTM,
+    'binaryflownet': BinaryPose
 }
 
 

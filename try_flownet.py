@@ -1,4 +1,4 @@
-from flownet2.models.FlowNetS import flownets
+from flownet.models.FlowNetS import flownets
 import torch
 from torch.autograd import Variable
 

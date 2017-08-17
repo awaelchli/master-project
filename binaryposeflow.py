@@ -2,54 +2,51 @@ from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
 from dataimport.ImageNet import PoseGenerator, FOLDERS
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
-import os
-import torch
 import torch.nn as nn
 import plots
-import time
 import random
-from convolution_lstm import ConvLSTM
 from flownet.models.FlowNetS import flownets
 import torch
 from torch.autograd import Variable
 
 
-class PoseConvLSTM(nn.Module):
+class BinaryFlowNetPose(nn.Module):
 
-    def __init__(self, input_size, input_channels, hidden_channels, kernel_size):
-        super(PoseConvLSTM, self).__init__()
+    def __init__(self, input_size):
+        super(BinaryFlowNetPose, self).__init__()
 
-        self.input_size = input_size
-        self.clstm = ConvLSTM(input_channels, hidden_channels, kernel_size, bias=True)
+        flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
 
-        # The output size of the last cell defines the input size of the linear layer
-        last_hidden_size = input_size[0] * input_size[1] * hidden_channels[-1]
-        self.fc = nn.Linear(last_hidden_size, 2)
+        self.layers = torch.nn.Sequential(
+            flownet.conv1,
+            flownet.conv2,
+            flownet.conv3,
+            flownet.conv3_1,
+            flownet.conv4,
+            flownet.conv4_1,
+            flownet.conv5,
+            flownet.conv5_1,
+            flownet.conv6,
+            flownet.conv6_1,
+        )
 
-        self.init_weights()
+        temp = self.layers(Variable(torch.zeros(1, 6, input_size[0], input_size[1])))
+        self.fc = nn.Linear(temp.size().prod(), 2)
 
     def init_weights(self):
         self.fc.weight.data.uniform_(-0.1, 0.1)
         self.fc.bias.data.zero_()
 
     def forward(self, input):
-        # Input format: [sequence_length, channels, h, w]
-        hidden = None
-        output = None
-        for i in range(input.size(0)):
-            x = input[i, :, :, :].unsqueeze(0)
-            output, hidden = self.clstm.forward(x, hidden)
-
-        # Apply linear layer to last output
-        output = self.fc(output.view(1, -1))
-
-        return output, hidden
+        batch_size = input.size(0)
+        out = self.layers(input)
+        return self.fc(out.view(batch_size, -1))
 
     def get_parameters(self):
-        return list(self.clstm.parameters()) + list(self.fc.parameters())
+        return list(self.fc.parameters())
 
 
-class BinaryPoseConvLSTM(BaseExperiment):
+class BinaryPose(BaseExperiment):
 
     @staticmethod
     def submit_arguments(parser):
@@ -62,61 +59,26 @@ class BinaryPoseConvLSTM(BaseExperiment):
                             A zero signalizes that the whole dataset should be used.""")
 
     def __init__(self, folder, args):
-        super(BinaryPoseConvLSTM, self).__init__(folder, args)
+        super(BinaryPose, self).__init__(folder, args)
 
         # Model for binary classification
         self.pre_cnn = nn.Sequential()
 
-        model = flownets('../data/Pretrained Models/flownets_pytorch.pth')
-
-        model2 = torch.nn.Sequential(
-            model.conv1,
-            model.conv2,
-            model.conv3,
-            model.conv3_1,
-            model.conv4,
-            model.conv4_1,
-            model.conv5,
-            model.conv5_1,
-            model.conv6,
-            model.conv6_1,
-        )
-        self.fc = nn.Linear(1024 * 4 * 4, 2)
-
-
-        #layers = models.resnet18(pretrained=False)
-        #layers.fc = nn.Linear(512, 2)
-
-        #for i in range(17):
-        #    self.pre_cnn.add_module('{}'.format(i), layers[i])
-        self.pre_cnn = model2
+        self.pre_cnn = BinaryFlowNetPose((224, 224))
         print(self.pre_cnn)
+
+        self.criterion = nn.CrossEntropyLoss()
 
         if self.use_cuda:
             print('Moving CNN to GPU ...')
             self.pre_cnn.cuda()
-            self.fc.cuda()
+            self.criterion.cuda()
 
-        #channels, height, width = self.cnn_feature_size(224, 224)
-        #print(channels, height, width)
-
-        hidden_channels = [128, 64, 64, 32, 32, 16, 16]
-        #hidden_channels.reverse()
-
-        #self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, 3)
-
-        self.criterion = nn.CrossEntropyLoss()
-
-        params = list(self.fc.parameters()) #+ self.clstm.get_parameters()
+        params = self.pre_cnn.get_parameters()
         self.optimizer = torch.optim.Adam(params, self.lr,
                                          # momentum=args.momentum,
                                          # weight_decay=args.weight_decay)
                                          )
-
-        if self.use_cuda:
-            #print('Moving LSTM to GPU ...')
-            #self.clstm.cuda()
-            self.criterion.cuda()
 
         self.print_freq = args.print_freq
 
@@ -188,12 +150,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         for i, (images, pose) in enumerate(self.trainingset):
 
-            #images.squeeze_(0)
-            #pose.squeeze_(0)
-
-
             images = torch.cat((images[:, 0, :, :, :], images[:, 1, :, :, :]), 1)
-
 
             input = self.to_variable(images)
             target = self.to_variable(pose)
@@ -201,8 +158,6 @@ class BinaryPoseConvLSTM(BaseExperiment):
             self.optimizer.zero_grad()
 
             output = self.pre_cnn(input)
-            output = self.fc(output.view(self.batch_size, -1))
-            #output, _ = self.clstm(features)
 
             loss = self.criterion(output, target)
             loss.backward()
@@ -236,8 +191,6 @@ class BinaryPoseConvLSTM(BaseExperiment):
         accuracy = 0
         avg_loss = AverageMeter()
         for i, (images, poses) in enumerate(dataloader):
-            #images.squeeze_(0)
-            #poses.squeeze_(0)
 
             images = torch.cat((images[:, 0, :, :, :], images[:, 1, :, :, :]), 1)
 
@@ -245,8 +198,6 @@ class BinaryPoseConvLSTM(BaseExperiment):
             target = self.to_variable(poses, volatile=True)
 
             output = self.pre_cnn(input)
-            output = self.fc(output.view(self.batch_size, -1))
-            #output, _ = self.clstm(features)
 
             # argmax = predicted class
             _, ind = torch.max(output.data, 1)
@@ -262,12 +213,6 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         print('Accuracy: {:.4f}'.format(accuracy))
         return avg_loss, accuracy
-
-    def cnn_feature_size(self, input_height, input_width):
-        input = self.to_variable(torch.zeros(1, 3, input_height, input_width), volatile=True)
-        output = self.pre_cnn(input)
-        # channels, height, width
-        return output.size(1), output.size(2), output.size(3)
 
     def make_checkpoint(self):
         checkpoint = {
