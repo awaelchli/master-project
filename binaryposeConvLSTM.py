@@ -9,6 +9,9 @@ import plots
 import time
 import random
 from convolution_lstm import ConvLSTM
+from flownet.models.FlowNetS import flownets
+import torch
+from torch.autograd import Variable
 
 
 class PoseConvLSTM(nn.Module):
@@ -64,36 +67,54 @@ class BinaryPoseConvLSTM(BaseExperiment):
         # Model for binary classification
         self.pre_cnn = nn.Sequential()
 
-        layers = models.vgg19(pretrained=False).features
+        model = flownets('../data/Pretrained Models/flownets_pytorch.pth')
 
-        for i in range(17):
-            self.pre_cnn.add_module('{}'.format(i), layers[i])
+        model2 = torch.nn.Sequential(
+            model.conv1,
+            model.conv2,
+            model.conv3,
+            model.conv3_1,
+            model.conv4,
+            model.conv4_1,
+            model.conv5,
+            model.conv5_1,
+            model.conv6,
+            model.conv6_1,
+        )
+        self.fc = nn.Linear(1024 * 4 * 4, 2)
 
+
+        #layers = models.resnet18(pretrained=False)
+        #layers.fc = nn.Linear(512, 2)
+
+        #for i in range(17):
+        #    self.pre_cnn.add_module('{}'.format(i), layers[i])
+        self.pre_cnn = model2
         print(self.pre_cnn)
 
         if self.use_cuda:
             print('Moving CNN to GPU ...')
             self.pre_cnn.cuda()
 
-        channels, height, width = self.cnn_feature_size(224, 224)
-        print(channels, height, width)
+        #channels, height, width = self.cnn_feature_size(224, 224)
+        #print(channels, height, width)
 
         hidden_channels = [128, 64, 64, 32, 32, 16, 16]
         #hidden_channels.reverse()
 
-        self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, 3)
+        #self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, 3)
 
         self.criterion = nn.CrossEntropyLoss()
 
-        params = list(self.pre_cnn.parameters()) + self.clstm.get_parameters()
+        params = list(self.pre_cnn.parameters()) + list(self.fc.parameters()) #+ self.clstm.get_parameters()
         self.optimizer = torch.optim.Adam(params, self.lr,
                                          # momentum=args.momentum,
                                          # weight_decay=args.weight_decay)
                                          )
 
         if self.use_cuda:
-            print('Moving LSTM to GPU ...')
-            self.clstm.cuda()
+            #print('Moving LSTM to GPU ...')
+            #self.clstm.cuda()
             self.criterion.cuda()
 
         self.print_freq = args.print_freq
@@ -143,13 +164,13 @@ class BinaryPoseConvLSTM(BaseExperiment):
             tmp = train_set[i]
         train_set.visualize = None
 
-        dataloader_train = DataLoader(train_set, batch_size=1,
+        dataloader_train = DataLoader(train_set, batch_size=args.batch_size,
                                       shuffle=True, num_workers=args.workers)
 
-        dataloader_val = DataLoader(val_set, batch_size=1,
+        dataloader_val = DataLoader(val_set, batch_size=args.batch_size,
                                     shuffle=False, num_workers=args.workers)
 
-        dataloader_test = DataLoader(test_set, batch_size=1,
+        dataloader_test = DataLoader(test_set, batch_size=args.batch_size,
                                      shuffle=False, num_workers=args.workers)
 
         return dataloader_train, dataloader_val, dataloader_test
@@ -164,18 +185,23 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
-        for i, (images, poses) in enumerate(self.trainingset):
+        for i, (images, pose) in enumerate(self.trainingset):
 
-            images.squeeze_(0)
-            poses.squeeze_(0)
+            #images.squeeze_(0)
+            #pose.squeeze_(0)
+
+
+            images = torch.cat((images[:, 0, :, :, :], images[:, 1, :, :, :]), 1)
+
 
             input = self.to_variable(images)
-            target = self.to_variable(poses)
+            target = self.to_variable(pose)
 
             self.optimizer.zero_grad()
 
-            features = self.pre_cnn(input)
-            output, _ = self.clstm(features)
+            output = self.pre_cnn(input)
+            output = self.fc(output.view(self.batch_size, -1))
+            #output, _ = self.clstm(features)
 
             loss = self.criterion(output, target)
             loss.backward()
@@ -209,14 +235,17 @@ class BinaryPoseConvLSTM(BaseExperiment):
         accuracy = 0
         avg_loss = AverageMeter()
         for i, (images, poses) in enumerate(dataloader):
-            images.squeeze_(0)
-            poses.squeeze_(0)
+            #images.squeeze_(0)
+            #poses.squeeze_(0)
+
+            images = torch.cat((images[:, 0, :, :, :], images[:, 1, :, :, :]), 1)
 
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
-            features = self.pre_cnn(input)
-            output, _ = self.clstm(features)
+            output = self.pre_cnn(input)
+            output = self.fc(output.view(self.batch_size, -1))
+            #output, _ = self.clstm(features)
 
             # argmax = predicted class
             _, ind = torch.max(output.data, 1)

@@ -15,10 +15,14 @@ model2 = torch.nn.Sequential(
     model.conv5,
     model.conv5_1,
     model.conv6,
-    model.conv6_1
+    model.conv6_1,
+
 )
 
-out = model2(Variable(torch.zeros(1, 6, 200, 200)))
+model3 = torch.nn.Linear(1024 * 4 * 4, 2)
+
+out = model2(Variable(torch.zeros(10, 6, 224, 224)))
+out = model3(out.view(10, -1))
 
 print(out.size())
 
