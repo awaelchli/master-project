@@ -79,14 +79,14 @@ class BinaryPoseConvLSTM(BaseExperiment):
         print(channels, height, width)
 
         hidden_channels = [128, 64, 64, 32, 32, 16, 16]
-        hidden_channels.reverse()
+        #hidden_channels.reverse()
 
         self.clstm = PoseConvLSTM((height, width), channels, hidden_channels, 3)
 
         self.criterion = nn.CrossEntropyLoss()
 
         params = list(self.pre_cnn.parameters()) + self.clstm.get_parameters()
-        self.optimizer = torch.optim.SGD(params, self.lr,
+        self.optimizer = torch.optim.Adam(params, self.lr,
                                          # momentum=args.momentum,
                                          # weight_decay=args.weight_decay)
                                          )
