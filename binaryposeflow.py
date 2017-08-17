@@ -31,7 +31,7 @@ class BinaryFlowNetPose(nn.Module):
         )
 
         temp = self.layers(Variable(torch.zeros(1, 6, input_size[0], input_size[1])))
-        self.fc = nn.Linear(temp.size().prod(), 2)
+        self.fc = nn.Linear(temp.size(1) * temp.size(2) * temp.size(3), 2)
 
     def init_weights(self):
         self.fc.weight.data.uniform_(-0.1, 0.1)
