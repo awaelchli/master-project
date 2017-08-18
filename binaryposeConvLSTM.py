@@ -163,6 +163,10 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
             outputs, _ = self.clstm.forward(inputs)
 
+            _, ind = torch.max(outputs.data, 1)
+            print('Prediction: ', ind.view(1, -1))
+            print('Target:     ', targets.view(1, -1))
+
             #print('outputs', outputs)
             #print('targets', targets)
 
