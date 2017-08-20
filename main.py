@@ -21,10 +21,6 @@ ARCHS = {
 }
 
 
-def setup_environment():
-    os.makedirs(OUT_ROOT_FOLDER, exist_ok=True)
-
-
 def reset_folder(folder):
     # Wipe all existing data
     if os.path.isdir(folder):
@@ -72,7 +68,6 @@ def print_elapsed_hours(elapsed):
 
 if __name__ == '__main__':
     print_cuda_status()
-    setup_environment()
 
     main_parser = get_main_parser()
     subparsers = main_parser.add_subparsers()
@@ -87,6 +82,11 @@ if __name__ == '__main__':
 
     experiment_folder = os.path.join(OUT_ROOT_FOLDER, args.name)
     if args.train and not args.resume:
+        if os.path.isdir(experiment_folder):
+            new_name = input('Output folder exists. Press ENTER to overwrite or type a name for a new folder.\n')
+            args.name = new_name if new_name else args.name
+            experiment_folder = os.path.join(OUT_ROOT_FOLDER, args.name)
+
         reset_folder(experiment_folder)
 
     experiment = args.create(experiment_folder, args)
