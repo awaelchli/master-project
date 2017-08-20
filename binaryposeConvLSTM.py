@@ -111,7 +111,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
         ])
 
         sequence = args.sequence
-        step = 5.0
+        step = 10
 
         train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=sequence, max_angle=args.angle, step_angle=step, z_plane=args.zplane,
                                                 transform1=transform1, transform2=transform2, max_size=args.max_size[0])
@@ -122,7 +122,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         # Export some examples from the generated dataset
         train_set.visualize = self.out_folder
-        inds = random.sample(range(len(train_set)), 10)
+        inds = random.sample(range(len(train_set)), min(10, args.max_size[0]))
         for i in inds:
             tmp = train_set[i]
         train_set.visualize = None
@@ -136,6 +136,9 @@ class BinaryPoseConvLSTM(BaseExperiment):
         dataloader_test = DataLoader(test_set, batch_size=1,
                                      shuffle=False, num_workers=args.workers)
 
+        #TODO: undo freeze
+        self.frozen = [e for e in train_set]
+
         return dataloader_train, dataloader_val, dataloader_test
 
     def train(self):
@@ -148,7 +151,8 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
-        for i, (images, poses) in enumerate(self.trainingset):
+        # TODO: undo freeze
+        for i, (images, poses) in enumerate(self.frozen):
 
             # Shape: images -> [1, sequence length, channels, h, w]
             #        poses  -> [1, sequence length, 1]
