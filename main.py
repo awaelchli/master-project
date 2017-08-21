@@ -17,7 +17,7 @@ ARCHS = {
     'binarypose': BinaryPoseCNN,
     'kitticonvlstm': KITTIPoseConvLSTM,
     'binaryposeconvlstm': BinaryPoseConvLSTM,
-    'binaryflownet': BinaryPose
+    'flow': BinaryPose
 }
 
 

@@ -22,6 +22,7 @@ model2 = torch.nn.Sequential(
 model3 = torch.nn.Linear(1024 * 4 * 4, 2)
 
 out = model2(Variable(torch.zeros(10, 6, 224, 224)))
+print(out.size())
 out = model3(out.view(10, -1))
 
 print(out.size())
