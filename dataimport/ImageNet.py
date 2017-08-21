@@ -110,8 +110,8 @@ class BinaryPoseSequenceGenerator(Dataset):
 
     def __getitem__(self, index):
         original = Image.open(self.filenames[index]).convert('RGB')
-        #if self.transform1:
-         #   original = self.transform1(original)
+        if self.transform1:
+            original = self.transform1(original)
 
         current_angle = 0 #random_angle(self.max_angle)
         direction = -1 if random.uniform(0, 1) < 0.5 else 1
@@ -149,7 +149,7 @@ class BinaryPoseSequenceGenerator(Dataset):
 
         if self.visualize:
             for i, im in enumerate(images[1:]):
-                save_image(im, '{}a-FINAL-{}'.format(index, i), current_angle, turns[i], self.visualize, is_torch_tensor=True)
+                save_image(im, '{}a-FINAL-{}'.format(index, i), angles[i], turns[i], self.visualize, is_torch_tensor=True)
 
         images = [img.unsqueeze(0) for img in images]
         images = torch.cat(images, 0)

@@ -68,8 +68,6 @@ class BinaryFlowNetPose(nn.Module):
             c0 = c0.cuda()
 
         outputs, _ = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
-
-        # Apply linear layer to all outputs except first one
         classifications = self.fc(outputs.squeeze(0))
 
         return classifications
@@ -84,6 +82,8 @@ class BinaryPose(BaseExperiment):
     def submit_arguments(parser):
         parser.add_argument('--angle', type=float, default=10,
                             help='The maximum range of rotation of the images.')
+        parser.add_argument('--step', type=float, default=5,
+                            help='Increment in rotation angle for generating the sequence.')
         parser.add_argument('--zplane', type=float, default=1,
                             help='Location of the image in front of the camera (along Z-axis).')
         parser.add_argument('--max_size', type=int, nargs=3, default=[0, 0, 0],
@@ -114,8 +114,10 @@ class BinaryPose(BaseExperiment):
 
         self.print_freq = args.print_freq
         self.sequence_length = args.sequence
+        self.step = args.step
         self.training_loss = []
         self.validation_loss = []
+        self.validation_accuracy = []
 
     def load_dataset(self, args):
         traindir = FOLDERS['training']
@@ -140,7 +142,7 @@ class BinaryPose(BaseExperiment):
         ])
 
         sequence = args.sequence
-        step = 5
+        step = args.step
 
         train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=sequence, max_angle=args.angle,
                                                 step_angle=step, z_plane=args.zplane,
@@ -156,7 +158,7 @@ class BinaryPose(BaseExperiment):
         train_set.visualize = self.out_folder
         inds = random.sample(range(len(train_set)), max(min(10, args.max_size[0]), 1))
         for i in inds:
-            tmp = train_set[i]
+            _ = train_set[i]
         train_set.visualize = None
 
         dataloader_train = DataLoader(train_set, batch_size=1, pin_memory=self.use_cuda,
@@ -216,8 +218,9 @@ class BinaryPose(BaseExperiment):
         self.training_loss.append(training_loss)
 
         # Validate after each epoch
-        validation_loss, _ = self.test(dataloader=self.validationset)
+        validation_loss, acc = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
+        self.validation_accuracy.append(acc)
 
         # Save extra checkpoint for best validation loss
         if validation_loss < best_validation_loss:
@@ -261,6 +264,7 @@ class BinaryPose(BaseExperiment):
             'epoch': len(self.training_loss),
             'training_loss': self.training_loss,
             'validation_loss': self.validation_loss,
+            'validation_accuracy': self.validation_accuracy,
             'model': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
@@ -269,6 +273,7 @@ class BinaryPose(BaseExperiment):
     def restore_from_checkpoint(self, checkpoint):
         self.training_loss = checkpoint['training_loss']
         self.validation_loss = checkpoint['validation_loss']
+        self.validation_accuracy = checkpoint['validation_accuracy']
         self.model.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
 
@@ -281,3 +286,4 @@ class BinaryPose(BaseExperiment):
     def plot_performance(self):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
+        plots.plot_epoch_accuracy(checkpoint['validation_accuracy'], save=self.make_output_filename('accuracy.pdf'))

@@ -40,6 +40,18 @@ def plot_epoch_loss(train_loss, validation_loss=None, save='loss.pdf'):
         plt.savefig(save, bbox_inches='tight')
 
 
+def plot_epoch_accuracy(accuracy, save='accuracy.pdf'):
+    epochs = list(range(1, len(accuracy) + 1))
+    plt.clf()
+    plt.plot(epochs, accuracy, 'b')
+
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+
+    if save:
+        plt.savefig(save, bbox_inches='tight')
+
+
 def plot_sample_loss(train_loss, save='sample_loss.pdf'):
     samples = list(range(1, len(train_loss) + 1))
     plt.clf()
