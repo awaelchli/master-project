@@ -161,8 +161,8 @@ class BinaryPoseSequenceGenerator(Dataset):
     def homography_transform(self, image, angle):
         w, h = image.width, image.height
         # Homography that rotates the image at a given depth
-        #hom = homography_roty(angle, w, h, self.z_plane)
-        hom = homography_shiftx(angle, w, h, self.z_plane)
+        hom = homography_roty(angle, w, h, self.z_plane)
+        #hom = homography_shiftx(angle, w, h, self.z_plane)
         image = apply_homography(image, hom)
         return image, hom
 

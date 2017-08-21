@@ -67,11 +67,8 @@ class BinaryFlowNetPose(nn.Module):
             h0 = h0.cuda()
             c0 = c0.cuda()
 
-        #print(pairs.size())
-        #print(pairs.view(1, n - 1, -1).size())
         outputs, _ = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
 
-        #print(outputs.size())
         # Apply linear layer to all outputs except first one
         classifications = self.fc(outputs.squeeze(0))
 
@@ -121,15 +118,15 @@ class BinaryPose(BaseExperiment):
         self.validation_loss = []
 
     def load_dataset(self, args):
-        traindir = '../data/simple'  # FOLDERS['training']
-        valdir = traindir  # FOLDERS['validation']
-        testdir = traindir  # FOLDERS['test']
+        traindir = FOLDERS['training']
+        valdir = FOLDERS['validation']
+        testdir = FOLDERS['test']
 
         # Image pre-processing
         # For training set
         transform1 = transforms.Compose([
-            # transforms.RandomHorizontalFlip(),
-            transforms.Scale(256),
+            transforms.RandomHorizontalFlip(),
+            #transforms.Scale(256),
         ])
 
         # After homography is applied to image
@@ -143,7 +140,7 @@ class BinaryPose(BaseExperiment):
         ])
 
         sequence = args.sequence
-        step = 20
+        step = 5
 
         train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=sequence, max_angle=args.angle,
                                                 step_angle=step, z_plane=args.zplane,
@@ -172,7 +169,7 @@ class BinaryPose(BaseExperiment):
                                      shuffle=False, num_workers=args.workers)
 
         # TODO: undo freeze
-        self.frozen = [e for e in train_set]
+        #self.frozen = [e for e in train_set]
 
         return dataloader_train, dataloader_val, dataloader_test
 
