@@ -41,11 +41,11 @@ class BinaryFlowNetPose(nn.Module):
                             num_layers=self.nlayers,
                             batch_first=True)
 
-        self.fc = nn.Linear(self.hidden, 2)
+        self.fc = nn.Linear(self.hidden, 1)
+        self.init_weights()
 
     def init_weights(self):
-        # TODO: this is never used!
-        self.fc.weight.data.uniform_(-0.1, 0.1)
+        self.fc.weight.data.uniform_(-10, 10)
         self.fc.bias.data.zero_()
 
     def forward(self, input):
@@ -69,15 +69,15 @@ class BinaryFlowNetPose(nn.Module):
             c0 = c0.cuda()
 
         outputs, _ = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
-        classifications = self.fc(outputs.squeeze(0))
+        predictions = self.fc(outputs.squeeze(0))
 
-        return classifications
+        return predictions
 
     def get_parameters(self):
         return list(self.lstm.parameters()) + list(self.fc.parameters())
 
 
-class BinaryPose(BaseExperiment):
+class BinaryPoseRegression(BaseExperiment):
 
     @staticmethod
     def submit_arguments(parser):
@@ -94,13 +94,13 @@ class BinaryPose(BaseExperiment):
                             help='Length of sequence fed to the LSTM')
 
     def __init__(self, folder, args):
-        super(BinaryPose, self).__init__(folder, args)
+        super(BinaryPoseRegression, self).__init__(folder, args)
 
         # Model for binary classification
         self.model = BinaryFlowNetPose((224, 224))
         print(self.model)
 
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.MSELoss()
 
         if self.use_cuda:
             print('Moving model to GPU ...')
@@ -115,7 +115,6 @@ class BinaryPose(BaseExperiment):
         self.step = args.step
         self.training_loss = []
         self.validation_loss = []
-        self.validation_accuracy = []
 
     def load_dataset(self, args):
         traindir = FOLDERS['training']
@@ -180,20 +179,20 @@ class BinaryPose(BaseExperiment):
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
-        for i, (images, poses, _) in enumerate(self.trainingset):
+        for i, (images, _, angles) in enumerate(self.trainingset):
 
             images.squeeze_(0)
-            poses.squeeze_(0)
+            angles.squeeze_(0)
 
             input = self.to_variable(images)
-            target = self.to_variable(poses)
+            target = self.to_variable(angles)
 
             self.optimizer.zero_grad()
 
             output = self.model(input)
 
-            _, ind = torch.max(output.data, 1)
-            print('Prediction: ', ind.view(1, -1))
+            #_, ind = torch.max(output.data, 1)
+            print('Prediction: ', output.view(1, -1))
             print('Target:     ', target.view(1, -1))
 
             loss = self.criterion(output, target)
@@ -213,9 +212,8 @@ class BinaryPose(BaseExperiment):
         self.training_loss.append(training_loss)
 
         # Validate after each epoch
-        validation_loss, acc = self.test(dataloader=self.validationset)
+        validation_loss = self.test(dataloader=self.validationset)
         self.validation_loss.append(validation_loss)
-        self.validation_accuracy.append(acc)
 
         # Save extra checkpoint for best validation loss
         if validation_loss < best_validation_loss:
@@ -226,40 +224,31 @@ class BinaryPose(BaseExperiment):
         if not dataloader:
             dataloader = self.testset
 
-        num_predictions = len(dataloader) * (self.sequence_length - 1)
-        accuracy = 0
+        #num_predictions = len(dataloader) * (self.sequence_length - 1)
         avg_loss = AverageMeter()
-        for i, (images, poses) in enumerate(dataloader):
+        for i, (images, _, angles) in enumerate(dataloader):
 
             images.squeeze_(0)
-            poses.squeeze_(0)
+            angles.squeeze_(0)
 
             input = self.to_variable(images, volatile=True)
-            target = self.to_variable(poses, volatile=True)
+            target = self.to_variable(angles, volatile=True)
 
             output = self.model(input)
-
-            # argmax = predicted class
-            _, ind = torch.max(output.data, 1)
-
-            # Correct predictions in the batch
-            accuracy += torch.sum(torch.eq(ind, target.data))
 
             loss = self.criterion(output, target)
             avg_loss.update(loss.data[0])
 
-        accuracy /= num_predictions
         avg_loss = avg_loss.average
 
-        print('Accuracy: {:.4f}'.format(accuracy))
-        return avg_loss, accuracy
+        print('Average loss: {:.4f}'.format(avg_loss))
+        return avg_loss
 
     def make_checkpoint(self):
         checkpoint = {
             'epoch': len(self.training_loss),
             'training_loss': self.training_loss,
             'validation_loss': self.validation_loss,
-            'validation_accuracy': self.validation_accuracy,
             'model': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
@@ -268,7 +257,6 @@ class BinaryPose(BaseExperiment):
     def restore_from_checkpoint(self, checkpoint):
         self.training_loss = checkpoint['training_loss']
         self.validation_loss = checkpoint['validation_loss']
-        self.validation_accuracy = checkpoint['validation_accuracy']
         self.model.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
 
@@ -281,4 +269,3 @@ class BinaryPose(BaseExperiment):
     def plot_performance(self):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
-        plots.plot_epoch_accuracy(checkpoint['validation_accuracy'], save=self.make_output_filename('accuracy.pdf'))

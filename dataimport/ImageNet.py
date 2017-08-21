@@ -154,9 +154,10 @@ class BinaryPoseSequenceGenerator(Dataset):
         images = [img.unsqueeze(0) for img in images]
         images = torch.cat(images, 0)
         turns = torch.LongTensor(turns)
+        angles = torch.Tensor(angles)
 
         assert images.size(0) == turns.size(0) + 1 == self.sequence_length
-        return images, turns
+        return images, turns, angles
 
     def homography_transform(self, image, angle):
         w, h = image.width, image.height

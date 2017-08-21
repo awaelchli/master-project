@@ -8,6 +8,7 @@ from binarypose import BinaryPoseCNN
 from poseConvLSTM import KITTIPoseConvLSTM
 from binaryposeConvLSTM import BinaryPoseConvLSTM
 from binaryposeflow import BinaryPose
+from poseflowregression import BinaryPoseRegression
 from base import CHECKPOINT_FILENAME
 
 
@@ -17,7 +18,8 @@ ARCHS = {
     'binarypose': BinaryPoseCNN,
     'kitticonvlstm': KITTIPoseConvLSTM,
     'binaryposeconvlstm': BinaryPoseConvLSTM,
-    'flow': BinaryPose
+    'flow': BinaryPose,
+    'flowreg': BinaryPoseRegression,
 }
 
 
