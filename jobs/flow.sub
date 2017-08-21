@@ -16,4 +16,7 @@
 module load anaconda
 
 # Training
-python main.py flow --cuda --name flow4rot --train --epochs 120 --sequence 20 --angle 50 --zplane 0.7 --lr 0.001 --workers 4 --print_freq 1 --max_size 4 4 4
+python main.py flow --cuda --name flow5rot --train --epochs 120 --sequence 20 --angle 50 --zplane 0.7 --lr 0.0001 --workers 4 --print_freq 1 --max_size 4 4 4
+
+# Testing
+#python main.py flow --cuda --name flow5rot --test --sequence 25 --angle 40 --zplane 0.6 --workers 4 --print_freq 1 --max_size 4 4 4
