@@ -44,6 +44,7 @@ class BinaryFlowNetPose(nn.Module):
         self.fc = nn.Linear(self.hidden, 2)
 
     def init_weights(self):
+        # TODO: this is never used!
         self.fc.weight.data.uniform_(-0.1, 0.1)
         self.fc.bias.data.zero_()
 
@@ -102,15 +103,12 @@ class BinaryPose(BaseExperiment):
         self.criterion = nn.CrossEntropyLoss()
 
         if self.use_cuda:
-            print('Moving CNN to GPU ...')
+            print('Moving model to GPU ...')
             self.model.cuda()
             self.criterion.cuda()
 
         params = self.model.get_parameters()
-        self.optimizer = torch.optim.Adam(params, self.lr,
-                                         # momentum=args.momentum,
-                                         # weight_decay=args.weight_decay)
-                                         )
+        self.optimizer = torch.optim.Adam(params, self.lr)
 
         self.print_freq = args.print_freq
         self.sequence_length = args.sequence
@@ -169,9 +167,6 @@ class BinaryPose(BaseExperiment):
 
         dataloader_test = DataLoader(test_set, batch_size=1, pin_memory=self.use_cuda,
                                      shuffle=False, num_workers=args.workers)
-
-        # TODO: undo freeze
-        #self.frozen = [e for e in train_set]
 
         return dataloader_train, dataloader_val, dataloader_test
 
