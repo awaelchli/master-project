@@ -90,14 +90,15 @@ class BinaryPoseConvLSTM(BaseExperiment):
         self.validation_loss = []
 
     def load_dataset(self, args):
-        traindir = FOLDERS['training']
-        valdir = FOLDERS['validation']
-        testdir = FOLDERS['test']
+        traindir = '../data/simple'#FOLDERS['training']
+        valdir = traindir #FOLDERS['validation']
+        testdir = traindir #FOLDERS['test']
 
         # Image pre-processing
         # For training set
         transform1 = transforms.Compose([
-                transforms.RandomHorizontalFlip(),
+                #transforms.RandomHorizontalFlip(),
+                transforms.Scale(256),
         ])
 
         # After homography is applied to image
@@ -111,7 +112,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
         ])
 
         sequence = args.sequence
-        step = 10
+        step = 20
 
         train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=sequence, max_angle=args.angle, step_angle=step, z_plane=args.zplane,
                                                 transform1=transform1, transform2=transform2, max_size=args.max_size[0])
@@ -122,7 +123,7 @@ class BinaryPoseConvLSTM(BaseExperiment):
 
         # Export some examples from the generated dataset
         train_set.visualize = self.out_folder
-        inds = random.sample(range(len(train_set)), min(10, args.max_size[0]))
+        inds = random.sample(range(len(train_set)), max(min(10, args.max_size[0]), 1))
         for i in inds:
             tmp = train_set[i]
         train_set.visualize = None
