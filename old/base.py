@@ -109,3 +109,34 @@ class AverageMeter(object):
     def update(self, value):
         self.sum += value
         self.count += 1
+
+
+class Logger:
+
+    def __init__(self, file):
+        self.file = file
+        self.column_name = []
+        self.format_spec = []
+        self.sep = ' '
+        self.header_printed = False
+
+    def column(self, name='', format='{}'):
+        self.column_name.append(name)
+        self.format_spec.append(format)
+
+    def print_header(self):
+        if not self.header_printed:
+            self.header_printed = True
+            with open(self.file, 'w') as f:
+                f.write(self.sep.join(self.column_name))
+                f.write('\n')
+
+    def log(self, *data):
+        assert len(data) == len(self.column_name)
+        self.print_header()
+
+        line = [t.format(data) for t, data in zip(self.format_spec, data)]
+        line = self.sep.join(line)
+        with open(self.file, 'a') as f:
+            f.write(line)
+            f.write('\n')
