@@ -8,7 +8,7 @@ from torchvision import transforms
 
 import plots
 from ImageNet import BinaryPoseSequenceGenerator, FOLDERS
-from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
+from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 
 
@@ -37,10 +37,11 @@ class BinaryFlowNetPose(nn.Module):
         temp = self.layers(Variable(torch.zeros(1, 6, input_size[0], input_size[1])))
         self.hidden = 500
         self.nlayers = 3
-        self.lstm = nn.LSTM(input_size=temp.size(1) * temp.size(2) * temp.size(3),
-                            hidden_size=self.hidden,
-                            num_layers=self.nlayers,
-                            batch_first=True)
+        self.lstm = nn.LSTM(
+            input_size=temp.size(1) * temp.size(2) * temp.size(3),
+            hidden_size=self.hidden,
+            num_layers=self.nlayers,
+            batch_first=True)
 
         self.fc = nn.Linear(self.hidden, 1)
         self.init_weights()
@@ -117,16 +118,18 @@ class BinaryPoseRegression(BaseExperiment):
         self.training_loss = []
         self.validation_loss = []
 
+        self.train_logger.column('Epoch', '{:d}')
+        self.train_logger.column('Training Loss', '{:.4f}')
+        self.train_logger.column('Validation Loss', '{:.4f}')
+
     def load_dataset(self, args):
         traindir = FOLDERS['training']
         valdir = FOLDERS['validation']
         testdir = FOLDERS['test']
 
         # Image pre-processing
-        # For training set
         transform1 = transforms.Compose([
             transforms.RandomHorizontalFlip(),
-            #transforms.Scale(256),
         ])
 
         # After homography is applied to image
@@ -134,45 +137,63 @@ class BinaryPoseRegression(BaseExperiment):
             transforms.Scale(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            # For normalization, see https://github.com/pytorch/vision#models
-            # transforms.Normalize(mean=[0.485, 0.456, 0.406],
-            # std=[0.229, 0.224, 0.225])
         ])
 
-        sequence = args.sequence
-        step = args.step
+        train_set = BinaryPoseSequenceGenerator(
+            traindir,
+            sequence_length=args.sequence,
+            max_angle=args.angle,
+            step_angle=args.step,
+            z_plane=args.zplane,
+            transform1=transform1,
+            transform2=transform2,
+            max_size=args.max_size[0])
 
-        train_set = BinaryPoseSequenceGenerator(traindir, sequence_length=sequence, max_angle=args.angle,
-                                                step_angle=step, z_plane=args.zplane,
-                                                transform1=transform1, transform2=transform2, max_size=args.max_size[0])
-        val_set = BinaryPoseSequenceGenerator(valdir, sequence_length=sequence, max_angle=args.angle, step_angle=step,
-                                              z_plane=args.zplane,
-                                              transform1=transform1, transform2=transform2, max_size=args.max_size[1])
-        test_set = BinaryPoseSequenceGenerator(testdir, sequence_length=sequence, max_angle=args.angle, step_angle=step,
-                                               z_plane=args.zplane,
-                                               transform1=transform1, transform2=transform2, max_size=args.max_size[2])
+        val_set = BinaryPoseSequenceGenerator(
+            valdir,
+            sequence_length=args.sequence,
+            max_angle=args.angle,
+            step_angle=args.step,
+            z_plane=args.zplane,
+            transform1=transform1,
+            transform2=transform2,
+            max_size=args.max_size[1])
 
-        # Export some examples from the generated dataset
-        train_set.visualize = self.out_folder
-        inds = random.sample(range(len(train_set)), max(min(10, args.max_size[0]), 1))
-        for i in inds:
-            _ = train_set[i]
-        train_set.visualize = None
+        test_set = BinaryPoseSequenceGenerator(
+            testdir,
+            sequence_length=args.sequence,
+            max_angle=args.angle,
+            step_angle=args.step,
+            z_plane=args.zplane,
+            transform1=transform1,
+            transform2=transform2,
+            max_size=args.max_size[2])
 
-        dataloader_train = DataLoader(train_set, batch_size=1, pin_memory=self.use_cuda,
-                                      shuffle=True, num_workers=args.workers)
+        dataloader_train = DataLoader(
+            train_set,
+            batch_size=1,
+            pin_memory=self.use_cuda,
+            shuffle=True,
+            num_workers=args.workers)
 
-        dataloader_val = DataLoader(val_set, batch_size=1, pin_memory=self.use_cuda,
-                                    shuffle=False, num_workers=args.workers)
+        dataloader_val = DataLoader(
+            val_set,
+            batch_size=1,
+            pin_memory=self.use_cuda,
+            shuffle=False,
+            num_workers=args.workers)
 
-        dataloader_test = DataLoader(test_set, batch_size=1, pin_memory=self.use_cuda,
-                                     shuffle=False, num_workers=args.workers)
+        dataloader_test = DataLoader(
+            test_set,
+            batch_size=1,
+            pin_memory=self.use_cuda,
+            shuffle=False,
+            num_workers=args.workers)
 
         return dataloader_train, dataloader_val, dataloader_test
 
     def train(self):
         training_loss = AverageMeter()
-        sample_loss = []
         num_batches = len(self.trainingset)
 
         epoch = len(self.training_loss) + 1
@@ -193,8 +214,8 @@ class BinaryPoseRegression(BaseExperiment):
             output = self.model(input)
 
             #_, ind = torch.max(output.data, 1)
-            print('Prediction: ', output.view(1, -1))
-            print('Target:     ', target.view(1, -1))
+            #print('Prediction: ', output.view(1, -1))
+            #print('Target:     ', target.view(1, -1))
 
             loss = self.criterion(output, target)
             loss.backward()
@@ -203,9 +224,6 @@ class BinaryPoseRegression(BaseExperiment):
             # Print log info
             if (i + 1) % self.print_freq == 0:
                 print('Sample [{:d}/{:d}], Loss: {:.4f}'.format(i + 1, num_batches, loss.data[0]))
-                sample_loss.append(loss.data[0])
-                filename = self.make_output_filename('sample-loss-epoch-{}.pdf'.format(epoch))
-                plots.plot_sample_loss(sample_loss, save=filename)
 
             training_loss.update(loss.data[0])
 
@@ -213,21 +231,19 @@ class BinaryPoseRegression(BaseExperiment):
         self.training_loss.append(training_loss)
 
         # Validate after each epoch
-        validation_loss = self.test(dataloader=self.validationset)
+        validation_loss = self.validate()
         self.validation_loss.append(validation_loss)
+
+        self.train_logger.log(epoch, training_loss, validation_loss)
 
         # Save extra checkpoint for best validation loss
         if validation_loss < best_validation_loss:
             best_validation_loss = validation_loss
             torch.save(self.make_checkpoint(), self.make_output_filename(CHECKPOINT_BEST_FILENAME))
 
-    def test(self, dataloader=None):
-        if not dataloader:
-            dataloader = self.testset
-
-        #num_predictions = len(dataloader) * (self.sequence_length - 1)
+    def validate(self):
         avg_loss = AverageMeter()
-        for i, (images, _, angles) in enumerate(dataloader):
+        for i, (images, _, angles) in enumerate(self.validationset):
 
             images.squeeze_(0)
             angles.squeeze_(0)
@@ -241,8 +257,55 @@ class BinaryPoseRegression(BaseExperiment):
             avg_loss.update(loss.data[0])
 
         avg_loss = avg_loss.average
+        return avg_loss
 
-        print('Average loss: {:.4f}'.format(avg_loss))
+    def test(self, dataloader=None, log=True):
+        if not dataloader:
+            dataloader = self.testset
+
+        #num_predictions = len(dataloader) * (self.sequence_length - 1)
+        avg_loss = AverageMeter()
+
+        all_predictions = []
+        all_targets = []
+
+        for i, (images, _, angles) in enumerate(dataloader):
+
+            images.squeeze_(0)
+            angles.squeeze_(0)
+
+            input = self.to_variable(images, volatile=True)
+            target = self.to_variable(angles, volatile=True)
+
+            output = self.model(input)
+
+            all_predictions.append(output.data.view(1, -1))
+            all_targets.append(angles.view(1, -1))
+
+            loss = self.criterion(output, target)
+            avg_loss.update(loss.data[0])
+
+        avg_loss = avg_loss.average
+
+        all_predictions = torch.cat(all_predictions, 0)
+        all_targets = torch.cat(all_targets, 0)
+        errors = torch.abs(all_predictions - all_targets)
+        mean_errors = list(torch.mean(errors, 0).view(-1))
+
+        plots.plot_sequence_error(mean_errors, self.make_output_filename('average_sequence_error.pdf'))
+        self.test_logger.clear()
+        self.test_logger.print('Average absolute sequence error:')
+        self.test_logger.print(', '.join([str(i) for i in mean_errors]))
+        self.test_logger.print()
+
+        thresholds, cdf = self.error_distribution(errors)
+        plots.plot_error_distribution(thresholds, cdf, self.make_output_filename('error_distribution.pdf'))
+        self.test_logger.print('Cumulative distribution of angular error:')
+        self.test_logger.print('Threshold: ' + ', '.join([str(t) for t in thresholds]))
+        self.test_logger.print('Fraction:  ' + ', '.join([str(p) for p in cdf]))
+        self.test_logger.print()
+        self.test_logger.print('Average loss on testset (MSE): {:.4f}'.format(avg_loss))
+
         return avg_loss
 
     def make_checkpoint(self):
@@ -270,3 +333,9 @@ class BinaryPoseRegression(BaseExperiment):
     def plot_performance(self):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
+
+    def error_distribution(self, errors, start=1.0, stop=10.0, step=1.0):
+        thresholds = list(torch.arange(start, stop, step))
+        n = torch.numel(errors)
+        distribution = [torch.sum(errors <= t) / n for t in thresholds]
+        return thresholds, distribution

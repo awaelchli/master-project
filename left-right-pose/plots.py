@@ -59,3 +59,26 @@ def plot_sample_loss(train_loss, save='sample_loss.pdf'):
 
     if save:
         plt.savefig(save, bbox_inches='tight')
+
+
+def plot_sequence_error(errors, save='sequence_error.pdf'):
+    sequence = list(range(1, len(errors) + 1))
+    plt.clf()
+    plt.plot(sequence, errors, 'b')
+
+    plt.ylabel('Average Absolute Error in Degrees')
+    plt.xlabel('Sequence')
+
+    if save:
+        plt.savefig(save, bbox_inches='tight')
+
+
+def plot_error_distribution(t, cdf, save='error_distribution.pdf'):
+    plt.clf()
+    plt.plot(t, cdf, 'b')
+
+    plt.ylabel('Distribution')
+    plt.xlabel('Average Absolute Error (degrees)')
+
+    if save:
+        plt.savefig(save, bbox_inches='tight')

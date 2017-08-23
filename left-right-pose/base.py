@@ -16,9 +16,10 @@ class BaseExperiment:
         self.batch_size = args.batch_size
 
         self.out_folder = folder
-        self.loss_file = self.make_output_filename('loss.txt')
         self.save_loss_plot = self.make_output_filename('loss.pdf')
         self.checkpoint_file = self.make_output_filename(args.checkpoint)
+        self.train_logger = Logger(self.make_output_filename('training.log'))
+        self.test_logger = Logger(self.make_output_filename('test.log'))
 
         self._trainingset, self._validationset, self._testset = self.load_dataset(args)
 
@@ -47,6 +48,9 @@ class BaseExperiment:
         return len(self.validationset) * self.validationset.batch_size
 
     def train(self):
+        pass
+
+    def validate(self):
         pass
 
     def test(self):
@@ -117,7 +121,7 @@ class Logger:
         self.file = file
         self.column_name = []
         self.format_spec = []
-        self.sep = ' '
+        self.sep = ', '
         self.header_printed = False
 
     def column(self, name='', format='{}'):
@@ -140,3 +144,11 @@ class Logger:
         with open(self.file, 'a') as f:
             f.write(line)
             f.write('\n')
+
+    def print(self, line='\n'):
+        with open(self.file, 'a') as f:
+            f.write(line)
+            f.write('\n')
+
+    def clear(self):
+        open(self.file, 'w').close()
