@@ -334,7 +334,7 @@ class BinaryPoseRegression(BaseExperiment):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
 
-    def error_distribution(self, errors, start=1.0, stop=10.0, step=1.0):
+    def error_distribution(self, errors, start=0.0, stop=10.0, step=1.0):
         thresholds = list(torch.arange(start, stop, step))
         n = torch.numel(errors)
         distribution = [torch.sum(errors <= t) / n for t in thresholds]

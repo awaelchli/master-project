@@ -69,6 +69,8 @@ def plot_sequence_error(errors, save='sequence_error.pdf'):
     plt.ylabel('Average Absolute Error in Degrees')
     plt.xlabel('Sequence')
 
+    plt.xlim(0, len(sequence) + 1)
+
     if save:
         plt.savefig(save, bbox_inches='tight')
 
@@ -79,6 +81,8 @@ def plot_error_distribution(t, cdf, save='error_distribution.pdf'):
 
     plt.ylabel('Distribution')
     plt.xlabel('Average Absolute Error (degrees)')
+
+    plt.xlim(min(t), max(t))
 
     if save:
         plt.savefig(save, bbox_inches='tight')
