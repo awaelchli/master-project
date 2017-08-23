@@ -280,7 +280,7 @@ class BinaryPoseRegression(BaseExperiment):
             output = self.model(input)
 
             all_predictions.append(output.data.view(1, -1))
-            all_targets.append(angles.view(1, -1))
+            all_targets.append(target.data.view(1, -1))
 
             loss = self.criterion(output, target)
             avg_loss.update(loss.data[0])
