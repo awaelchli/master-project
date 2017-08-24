@@ -21,7 +21,7 @@ INTERPOLATION = [Image.NEAREST, Image.BILINEAR, Image.BICUBIC]
 EXTENSIONS = ['jpeg', 'jpg', 'png']
 
 
-class BinaryPoseSequenceGenerator(Dataset):
+class RotationSequence(Dataset):
 
     def __init__(self, root, sequence_length=10, max_angle=45.0, step_angle=5.0, z_plane=1.0, transform1=None, transform2=None, max_size=None):
         self.root = root
@@ -37,6 +37,10 @@ class BinaryPoseSequenceGenerator(Dataset):
             shuffle(self.filenames)
             self.filenames = self.filenames[:max_size]
 
+        turn_probability = 0.2
+        self.angles_turns = [generate_angles(self.sequence_length, self.max_angle, self.step_angle, turn_probability)
+                             for _ in range(len(self.filenames))]
+
     def visualize(self, output_folder):
         self.visualize = output_folder
 
@@ -48,30 +52,12 @@ class BinaryPoseSequenceGenerator(Dataset):
         if self.transform1:
             original = self.transform1(original)
 
-        current_angle = 0 #random_angle(self.max_angle)
-        direction = -1 if random.uniform(0, 1) < 0.5 else 1
-        prob = 0.25
+        angles, turns = self.angles_turns[index]
+        images = [original] + [self.homography_transform(original, angle)[0] for angle in angles]
 
-        images = [original]
-        angles = []
-        turns = []
-        for i in range(self.sequence_length - 1):
-            direction = -direction if random.uniform(0, 1) < prob else direction
-            new_angle = current_angle + direction * self.step_angle
-            if not (-self.max_angle <= new_angle <= self.max_angle):
-                # If rotation goes outside maximum angle, turn in other direction
-                direction *= -1
-                new_angle = current_angle + direction * self.step_angle
-
-            current_angle = new_angle
-
-            new, hom = self.homography_transform(original, current_angle)
-            images.append(new)
-            angles.append(current_angle)
-            turns.append(0 if direction < 0 else 1)
-
-            if self.visualize:
-                save_image(new, '{}a-ROTATED-{}'.format(index, i), current_angle, turns[-1], self.visualize)
+        if self.visualize:
+            for i, im in enumerate(images[1:]):
+                save_image(im, '{}a-ROTATED-{}'.format(index, i + 1), angles[i], turns[i], self.visualize)
 
 
         # Rescale image such that no pixel is scaled up
@@ -84,7 +70,7 @@ class BinaryPoseSequenceGenerator(Dataset):
 
         if self.visualize:
             for i, im in enumerate(images[1:]):
-                save_image(im, '{}a-FINAL-{}'.format(index, i), angles[i], turns[i], self.visualize, is_torch_tensor=True)
+                save_image(im, '{}a-FINAL-{}'.format(index, i + 1), angles[i], turns[i], self.visualize, is_torch_tensor=True)
 
         images = [img.unsqueeze(0) for img in images]
         images = torch.cat(images, 0)
@@ -101,6 +87,27 @@ class BinaryPoseSequenceGenerator(Dataset):
         #hom = homography_shiftx(angle, w, h, self.z_plane)
         image = apply_homography(image, hom)
         return image, hom
+
+
+def generate_angles(sequence_length, max_angle, step, turn_probability):
+    current_angle = 0  # random_angle(self.max_angle)
+    direction = -1 if random.uniform(0, 1) < 0.5 else 1
+
+    angles = []
+    turns = []
+    for i in range(sequence_length - 1):
+        direction = -direction if random.uniform(0, 1) < turn_probability else direction
+        new_angle = current_angle + direction * step
+        if not (-max_angle <= new_angle <= max_angle):
+            # If rotation goes outside maximum angle, turn in other direction
+            direction *= -1
+            new_angle = current_angle + direction * step
+
+        current_angle = new_angle
+        angles.append(current_angle)
+        turns.append(0 if direction < 0 else 1)
+
+    return angles, turns
 
 
 def save_image(image, basename, angle, label, output_folder, is_torch_tensor=False):

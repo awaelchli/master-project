@@ -1,7 +1,8 @@
-from ImageNet import FOLDERS, BinaryPoseSequenceGenerator
+from ImageNet import FOLDERS, RotationSequence
 from torchvision import transforms
 import os
 import random
+import shutil
 
 traindir = FOLDERS['training']
 n = 5
@@ -11,6 +12,8 @@ step = 5
 zplane = 0.7
 
 out_folder = os.path.join('out', 'dataset_visualization')
+if os.path.isdir(out_folder):
+    shutil.rmtree(out_folder)
 os.makedirs(out_folder)
 
 # Image pre-processing
@@ -25,7 +28,7 @@ transform2 = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-train_set = BinaryPoseSequenceGenerator(
+train_set = RotationSequence(
     traindir,
     sequence_length=sequence,
     max_angle=angle,

@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 import plots
-from ImageNet import BinaryPoseSequenceGenerator, FOLDERS
+from ImageNet import RotationSequence, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 
@@ -139,7 +139,7 @@ class BinaryPoseRegression(BaseExperiment):
             transforms.ToTensor(),
         ])
 
-        train_set = BinaryPoseSequenceGenerator(
+        train_set = RotationSequence(
             traindir,
             sequence_length=args.sequence,
             max_angle=args.angle,
@@ -149,7 +149,7 @@ class BinaryPoseRegression(BaseExperiment):
             transform2=transform2,
             max_size=args.max_size[0])
 
-        val_set = BinaryPoseSequenceGenerator(
+        val_set = RotationSequence(
             valdir,
             sequence_length=args.sequence,
             max_angle=args.angle,
@@ -159,7 +159,7 @@ class BinaryPoseRegression(BaseExperiment):
             transform2=transform2,
             max_size=args.max_size[1])
 
-        test_set = BinaryPoseSequenceGenerator(
+        test_set = RotationSequence(
             testdir,
             sequence_length=args.sequence,
             max_angle=args.angle,
