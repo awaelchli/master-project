@@ -78,7 +78,7 @@ class FlowNetLSTM(nn.Module):
         return list(self.lstm.parameters()) + list(self.fc.parameters())
 
 
-class BinaryPoseClassification(BaseExperiment):
+class LeftRightPoseClassification(BaseExperiment):
 
     @staticmethod
     def submit_arguments(parser):
@@ -95,7 +95,7 @@ class BinaryPoseClassification(BaseExperiment):
                             help='Length of sequence fed to the LSTM')
 
     def __init__(self, folder, args):
-        super(BinaryPoseClassification, self).__init__(folder, args)
+        super(LeftRightPoseClassification, self).__init__(folder, args)
 
         # Model for binary classification
         self.model = FlowNetLSTM((224, 224))

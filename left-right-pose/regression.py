@@ -12,10 +12,10 @@ from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 
 
-class BinaryFlowNetPose(nn.Module):
+class LeftRightPoseModel(nn.Module):
 
     def __init__(self, input_size):
-        super(BinaryFlowNetPose, self).__init__()
+        super(LeftRightPoseModel, self).__init__()
 
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
 
@@ -79,7 +79,7 @@ class BinaryFlowNetPose(nn.Module):
         return list(self.lstm.parameters()) + list(self.fc.parameters())
 
 
-class BinaryPoseRegression(BaseExperiment):
+class LeftRightPoseRegression(BaseExperiment):
 
     @staticmethod
     def submit_arguments(parser):
@@ -96,10 +96,10 @@ class BinaryPoseRegression(BaseExperiment):
                             help='Length of sequence fed to the LSTM')
 
     def __init__(self, folder, args):
-        super(BinaryPoseRegression, self).__init__(folder, args)
+        super(LeftRightPoseRegression, self).__init__(folder, args)
 
         # Model for binary classification
-        self.model = BinaryFlowNetPose((224, 224))
+        self.model = LeftRightPoseModel((224, 224))
         print(self.model)
 
         self.criterion = nn.MSELoss()

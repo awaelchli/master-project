@@ -6,13 +6,13 @@ import time
 import torch
 
 from base import CHECKPOINT_FILENAME
-from classification import BinaryPoseClassification
-from regression import BinaryPoseRegression
+from classification import LeftRightPoseClassification
+from regression import LeftRightPoseRegression
 
 OUT_ROOT_FOLDER = 'out'
 ARCHS = {
-    'classification': BinaryPoseClassification,
-    'regression': BinaryPoseRegression,
+    'classification': LeftRightPoseClassification,
+    'regression': LeftRightPoseRegression,
 }
 
 
