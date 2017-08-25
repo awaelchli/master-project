@@ -97,8 +97,9 @@ class LeftRightPoseRegression(BaseExperiment):
     def __init__(self, folder, args):
         super(LeftRightPoseRegression, self).__init__(folder, args)
 
-        # Model for binary classification
-        self.model = LeftRightPoseModel((224, 224))
+        # Model
+        self.input_size = (224, 224)
+        self.model = LeftRightPoseModel(self.input_size)
         self.criterion = nn.MSELoss()
 
         if self.use_cuda:
@@ -120,6 +121,7 @@ class LeftRightPoseRegression(BaseExperiment):
         self.train_logger.column('Validation Loss', '{:.4f}')
 
         self.print_info(self.model)
+        self.print_info('Input size: {} x {}'.format(self.input_size[0], self.input_size[1]))
         self.print_info('Number of trainable parameters: {}'.format(self.num_parameters()))
         self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
         print(self.load_benchmark())
@@ -137,7 +139,7 @@ class LeftRightPoseRegression(BaseExperiment):
         # After homography is applied to image
         transform2 = transforms.Compose([
             transforms.Scale(256),
-            transforms.CenterCrop(224),
+            transforms.CenterCrop(self.input_size),
             transforms.ToTensor(),
         ])
 
@@ -331,7 +333,7 @@ class LeftRightPoseRegression(BaseExperiment):
 
     def adjust_learning_rate(self, epoch):
         """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-        lr = self.lr * (0.1 ** (epoch // 30))
+        lr = self.lr * (0.5 ** (epoch // 5))
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
 
