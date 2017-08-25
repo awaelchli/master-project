@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N train_flow_regression
+#$ -N regression_imagenet
 #$ -S /bin/bash
 #$ -cwd
 #$ -j y
@@ -17,10 +17,10 @@ module load anaconda
 
 # Training
 python left-right-pose/main.py regression \
---name regression_full_imagenet \
+--name regression_imagenet_20k \
 --cuda \
 --train \
---epochs 5 \
+--epochs 20 \
 --sequence 20 \
 --angle 50 \
 --step 5 \
@@ -28,11 +28,11 @@ python left-right-pose/main.py regression \
 --lr 0.0001 \
 --workers 4 \
 --print_freq 1 \
---max_size 10000 1000 0
+--max_size 20000 1000 0
 
 # Testing
 python left-right-pose/main.py regression \
---name regression_full_imagenet \
+--name regression_imagenet_20k \
 --cuda \
 --test \
 --sequence 25 \
@@ -41,4 +41,4 @@ python left-right-pose/main.py regression \
 --zplane 0.7 \
 --workers 4 \
 --print_freq 1 \
---max_size 0 0 1000
+--max_size 0 0 5000
