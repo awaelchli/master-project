@@ -48,7 +48,7 @@ class Subsequence(Dataset):
         images = [self.load_image(file).unsqueeze(0) for file in filenames]
         image_sequence = torch.cat(images, dim=0)
 
-        # Convert raw pose (from text file) to 6D pose vectors
+        # Convert raw pose (from text file) to 7D pose vectors (translation + quaternion)
         positions = get_positions(poses)
         quaternions = get_quaternions(poses)
         rel_positions, rel_quaternions = to_relative_pose(positions, quaternions)
@@ -116,9 +116,9 @@ def encode_poses(positions, quaternions):
 
 
 def encode_pose(position, quaternion):
-    axis, angle = quat2axangle(quaternion)
-    e = axis * (1 + angle)
-    return np.concatenate((position, e)).reshape(1, -1)
+    #axis, angle = quat2axangle(quaternion)
+    #e = axis * (1 + angle)
+    return np.concatenate((position, quaternion)).reshape(1, -1)
 
 
 def read_from_text_file(file):
