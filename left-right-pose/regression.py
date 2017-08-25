@@ -208,6 +208,7 @@ class LeftRightPoseRegression(BaseExperiment):
 
     def train(self):
         training_loss = AverageMeter()
+        forward_backward_time = AverageMeter()
         num_batches = len(self.trainingset)
 
         epoch = len(self.training_loss) + 1
@@ -225,6 +226,7 @@ class LeftRightPoseRegression(BaseExperiment):
 
             self.optimizer.zero_grad()
 
+            start = time.time()
             output = self.model(input)
 
             #_, ind = torch.max(output.data, 1)
@@ -234,6 +236,8 @@ class LeftRightPoseRegression(BaseExperiment):
             loss = self.criterion(output, target)
             loss.backward()
             self.optimizer.step()
+
+            forward_backward_time.update(time.time() - start)
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
@@ -254,6 +258,10 @@ class LeftRightPoseRegression(BaseExperiment):
         if validation_loss < best_validation_loss:
             best_validation_loss = validation_loss
             torch.save(self.make_checkpoint(), self.make_output_filename(CHECKPOINT_BEST_FILENAME))
+
+        if epoch == 1:
+            self.print_info('Average time for forward and backward operation: {:.4f} seconds'.format(
+                forward_backward_time.average))
 
     def validate(self):
         avg_loss = AverageMeter()
