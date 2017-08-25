@@ -50,8 +50,11 @@ class LeftRightPoseModel(nn.Module):
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
-        temp = self.layers(Variable(torch.zeros(1, 6, input_size[0], input_size[1])))
-        return temp.size(0), temp.size(1), temp.size(2), temp.size(3)
+        var = Variable(torch.zeros(1, 6, input_size[0], input_size[1]), volatile=True)
+        if next(self.layers.parameters()).is_cuda:
+            var = var.cuda()
+        out = self.layers(var)
+        return out.size(0), out.size(1), out.size(2), out.size(3)
 
     def forward(self, input):
         # Input shape: [sequence, channels, h, w]
