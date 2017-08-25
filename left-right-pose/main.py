@@ -58,7 +58,9 @@ def print_cuda_status():
 
 
 def print_elapsed_hours(elapsed):
-    print('Elapsed time: {:.4f} hours.'.format(elapsed / 3600))
+    s = 'Elapsed time: {:.4f} hours.'.format(elapsed / 3600)
+    print(s)
+    return s
 
 
 if __name__ == '__main__':
@@ -95,8 +97,10 @@ if __name__ == '__main__':
         start_epoch = checkpoint['epoch'] + 1
 
     if args.train:
-        print('Trainingset: {} samples'.format(experiment.trainingset_size))
-        print('Validationset: {} samples'.format(experiment.validationset_size))
+        datasetinfo = 'Trainingset: {} samples\n' \
+                      'Validationset: {} samples'.format(experiment.trainingset_size, experiment.validationset_size)
+        print(datasetinfo)
+        experiment.print_info(datasetinfo)
         print('Training for {} epochs ...'.format(args.epochs))
         start_time = time.time()
 
@@ -110,10 +114,14 @@ if __name__ == '__main__':
         print(print_elapsed_hours(time.time() - start_time))
 
     if args.test:
-        print('Testset: {} samples'.format(experiment.testset_size))
+        datasetinfo = 'Testset: {} samples'.format(experiment.testset_size)
+        print(datasetinfo)
+        experiment.print_info(datasetinfo)
+
         print('Testing ...')
         start_time = time.time()
         checkpoint = experiment.load_checkpoint()
         experiment.restore_from_checkpoint(checkpoint)
         experiment.test()
+
         print(print_elapsed_hours(time.time() - start_time))

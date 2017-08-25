@@ -1,5 +1,4 @@
-import random
-
+import time
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -100,8 +99,6 @@ class LeftRightPoseRegression(BaseExperiment):
 
         # Model for binary classification
         self.model = LeftRightPoseModel((224, 224))
-        print(self.model)
-
         self.criterion = nn.MSELoss()
 
         if self.use_cuda:
@@ -121,6 +118,11 @@ class LeftRightPoseRegression(BaseExperiment):
         self.train_logger.column('Epoch', '{:d}')
         self.train_logger.column('Training Loss', '{:.4f}')
         self.train_logger.column('Validation Loss', '{:.4f}')
+
+        self.print_info(self.model)
+        self.print_info('Number of trainable parameters: {}'.format(self.num_parameters()))
+        self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
+        print(self.load_benchmark())
 
     def load_dataset(self, args):
         traindir = FOLDERS['training']
@@ -324,6 +326,9 @@ class LeftRightPoseRegression(BaseExperiment):
         self.model.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
 
+    def num_parameters(self):
+        return sum([p.numel() for p in self.model.get_parameters()])
+
     def adjust_learning_rate(self, epoch):
         """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
         lr = self.lr * (0.1 ** (epoch // 30))
@@ -339,3 +344,13 @@ class LeftRightPoseRegression(BaseExperiment):
         n = torch.numel(errors)
         distribution = [torch.sum(errors <= t) / n for t in thresholds]
         return thresholds, distribution
+
+    def load_benchmark(self):
+        start = time.time()
+        g = enumerate(self.trainingset)
+        n = 10
+        for i in range(n):
+            next(g)
+
+        elapsed = time.time() - start
+        return elapsed / n

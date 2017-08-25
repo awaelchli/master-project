@@ -5,6 +5,7 @@ from torch.autograd import Variable
 
 CHECKPOINT_FILENAME = 'checkpoint.pth.tar'
 CHECKPOINT_BEST_FILENAME = 'checkpoint-best.pth.tar'
+INFO_FILENAME = 'info.txt'
 
 
 class BaseExperiment:
@@ -83,6 +84,9 @@ class BaseExperiment:
     def plot_performance(self):
         pass
 
+    def num_parameters(self):
+        pass
+
     def to_variable(self, data, volatile=False):
         var = Variable(data, volatile=volatile)
         if self.use_cuda:
@@ -91,6 +95,12 @@ class BaseExperiment:
 
     def make_output_filename(self, filename):
         return os.path.join(self.out_folder, filename)
+
+    def print_info(self, info, clear=False):
+        mode = 'w' if clear else 'a'
+        with open(self.make_output_filename(INFO_FILENAME), mode) as f:
+            f.write(str(info))
+            f.write('\n')
 
     @staticmethod
     def submit_arguments(parser):
