@@ -33,11 +33,11 @@ class LeftRightPoseModel(nn.Module):
         for param in self.layers.parameters():
             param.requires_grad = False
 
-        temp = self.layers(Variable(torch.zeros(1, 6, input_size[0], input_size[1])))
+        fout = self.flownet_output_size(input_size)
         self.hidden = 500
         self.nlayers = 3
         self.lstm = nn.LSTM(
-            input_size=temp.size(1) * temp.size(2) * temp.size(3),
+            input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
             num_layers=self.nlayers,
             batch_first=True)
@@ -48,6 +48,10 @@ class LeftRightPoseModel(nn.Module):
     def init_weights(self):
         self.fc.weight.data.uniform_(-10, 10)
         self.fc.bias.data.zero_()
+
+    def flownet_output_size(self, input_size):
+        temp = self.layers(Variable(torch.zeros(1, 6, input_size[0], input_size[1])))
+        return temp.size(0), temp.size(1), temp.size(2), temp.size(3)
 
     def forward(self, input):
         # Input shape: [sequence, channels, h, w]
@@ -93,12 +97,14 @@ class LeftRightPoseRegression(BaseExperiment):
                             A zero signalizes that the whole dataset should be used.""")
         parser.add_argument('--sequence', type=int, default=10,
                             help='Length of sequence fed to the LSTM')
+        parser.add_argument('--input_size', type=int, nargs=2, default=(224, 224),
+                            help='Height and width of the images.')
 
     def __init__(self, folder, args):
         super(LeftRightPoseRegression, self).__init__(folder, args)
 
         # Model
-        self.input_size = (224, 224)
+        self.input_size = args.input_size
         self.model = LeftRightPoseModel(self.input_size)
         self.criterion = nn.MSELoss()
 
@@ -122,9 +128,10 @@ class LeftRightPoseRegression(BaseExperiment):
 
         self.print_info(self.model)
         self.print_info('Input size: {} x {}'.format(self.input_size[0], self.input_size[1]))
+        _, c, h, w = self.model.flownet_output_size(self.input_size)
+        self.print_info('FlowNet output shape: {} x {} x {}'.format(c, h, w))
         self.print_info('Number of trainable parameters: {}'.format(self.num_parameters()))
         self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
-        print(self.load_benchmark())
 
     def load_dataset(self, args):
         traindir = FOLDERS['training']
@@ -139,7 +146,7 @@ class LeftRightPoseRegression(BaseExperiment):
         # After homography is applied to image
         transform2 = transforms.Compose([
             transforms.Scale(256),
-            transforms.CenterCrop(self.input_size),
+            transforms.CenterCrop(args.input_size),
             transforms.ToTensor(),
         ])
 
