@@ -116,8 +116,6 @@ def encode_poses(positions, quaternions):
 
 
 def encode_pose(position, quaternion):
-    #axis, angle = quat2axangle(quaternion)
-    #e = axis * (1 + angle)
     return np.concatenate((position, quaternion)).reshape(1, -1)
 
 
