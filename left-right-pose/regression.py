@@ -229,10 +229,6 @@ class LeftRightPoseRegression(BaseExperiment):
             start = time.time()
             output = self.model(input)
 
-            #_, ind = torch.max(output.data, 1)
-            #print('Prediction: ', output.view(1, -1))
-            #print('Target:     ', target.view(1, -1))
-
             loss = self.criterion(output, target)
             loss.backward()
             self.optimizer.step()
