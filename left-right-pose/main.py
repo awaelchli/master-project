@@ -111,7 +111,7 @@ if __name__ == '__main__':
             experiment.save_checkpoint(experiment.make_checkpoint())
             experiment.plot_performance()
 
-        print(print_elapsed_hours(time.time() - start_time))
+        print_elapsed_hours(time.time() - start_time)
 
     if args.test:
         datasetinfo = 'Testset: {} samples'.format(experiment.testset_size)
@@ -124,4 +124,4 @@ if __name__ == '__main__':
         experiment.restore_from_checkpoint(checkpoint)
         experiment.test()
 
-        print(print_elapsed_hours(time.time() - start_time))
+        print_elapsed_hours(time.time() - start_time)
