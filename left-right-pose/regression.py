@@ -316,6 +316,11 @@ class LeftRightPoseRegression(BaseExperiment):
         self.test_logger.print(', '.join([str(i) for i in mean_errors]))
         self.test_logger.print()
 
+        err_logger = self.make_logger('absolute_prediction_errors.log')
+        err_logger.column('Absolute error in degrees per prediction', format='{:.4f}')
+        for err in errors.view(-1):
+            err_logger.log(err)
+
         thresholds, cdf = self.error_distribution(errors)
         plots.plot_error_distribution(thresholds, cdf, self.make_output_filename('error_distribution.pdf'))
         self.test_logger.print('Cumulative distribution of angular error:')

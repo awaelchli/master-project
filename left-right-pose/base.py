@@ -20,8 +20,8 @@ class BaseExperiment:
         self.out_folder = out_folder
         self.save_loss_plot = self.make_output_filename('loss.pdf')
         self.checkpoint_file = self.make_input_filename(args.checkpoint)
-        self.train_logger = Logger(self.make_output_filename('training.log'))
-        self.test_logger = Logger(self.make_output_filename('test.log'))
+        self.train_logger = self.make_logger('training.log')
+        self.test_logger = self.make_logger('test.log')
 
         self._trainingset, self._validationset, self._testset = self.load_dataset(args)
 
@@ -99,6 +99,9 @@ class BaseExperiment:
 
     def make_input_filename(self, filename):
         return os.path.join(self.in_folder, filename)
+
+    def make_logger(self, name):
+        return Logger(self.make_output_filename(name))
 
     def print_info(self, info, clear=False):
         mode = 'w' if clear else 'a'
