@@ -17,7 +17,7 @@ module load anaconda
 
 # Training
 python left-right-pose/main.py regression \
---name regression_imagenet_20k \
+--output regression_imagenet_20k \
 --cuda \
 --train \
 --epochs 20 \
@@ -32,7 +32,7 @@ python left-right-pose/main.py regression \
 
 # Testing
 python left-right-pose/main.py regression \
---name regression_imagenet_20k \
+--output regression_imagenet_20k \
 --cuda \
 --test \
 --sequence 25 \

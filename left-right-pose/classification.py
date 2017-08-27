@@ -94,8 +94,8 @@ class LeftRightPoseClassification(BaseExperiment):
         parser.add_argument('--sequence', type=int, default=10,
                             help='Length of sequence fed to the LSTM')
 
-    def __init__(self, folder, args):
-        super(LeftRightPoseClassification, self).__init__(folder, args)
+    def __init__(self, in_folder, out_folder, args):
+        super(LeftRightPoseClassification, self).__init__(in_folder, out_folder, args)
 
         # Model for binary classification
         self.model = FlowNetLSTM((224, 224))

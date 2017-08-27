@@ -103,8 +103,8 @@ class LeftRightPoseRegression(BaseExperiment):
         parser.add_argument('--input_size', type=int, nargs=2, default=(224, 224),
                             help='Height and width of the images.')
 
-    def __init__(self, folder, args):
-        super(LeftRightPoseRegression, self).__init__(folder, args)
+    def __init__(self, in_folder, out_folder, args):
+        super(LeftRightPoseRegression, self).__init__(in_folder, out_folder, args)
 
         # Model
         self.input_size = args.input_size
