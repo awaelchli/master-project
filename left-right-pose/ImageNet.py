@@ -23,11 +23,12 @@ EXTENSIONS = ['jpeg', 'jpg', 'png']
 
 class RotationSequence(Dataset):
 
-    def __init__(self, root, sequence_length=10, max_angle=45.0, step_angle=5.0, z_plane=1.0, transform1=None, transform2=None, max_size=None):
+    def __init__(self, root, sequence_length=10, max_angle=45.0, step_angle=5.0, noise=1.0, z_plane=1.0, transform1=None, transform2=None, max_size=None):
         self.root = root
         self.sequence_length=sequence_length
         self.step_angle=step_angle
         self.max_angle = max_angle
+        self.noise = noise
         self.z_plane = z_plane
         self.transform1 = transform1
         self.transform2 = transform2
@@ -38,7 +39,7 @@ class RotationSequence(Dataset):
             self.filenames = self.filenames[:max_size]
 
         turn_probability = 0.2
-        self.angles_turns = [generate_angles(self.sequence_length, self.max_angle, self.step_angle, turn_probability)
+        self.angles_turns = [generate_angles(self.sequence_length, self.max_angle, self.step_angle, self.noise, turn_probability)
                              for _ in range(len(self.filenames))]
 
     def visualize(self, output_folder):
@@ -89,7 +90,7 @@ class RotationSequence(Dataset):
         return image, hom
 
 
-def generate_angles(sequence_length, max_angle, step, turn_probability):
+def generate_angles(sequence_length, max_angle, step, noise, turn_probability):
     current_angle = 0  # random_angle(self.max_angle)
     direction = -1 if random.uniform(0, 1) < 0.5 else 1
 
@@ -103,7 +104,7 @@ def generate_angles(sequence_length, max_angle, step, turn_probability):
             direction *= -1
             new_angle = current_angle + direction * step
 
-        current_angle = new_angle
+        current_angle = new_angle + random.uniform(-noise, noise)
         angles.append(current_angle)
         turns.append(0 if direction < 0 else 1)
 

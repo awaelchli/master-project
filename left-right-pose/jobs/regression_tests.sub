@@ -20,13 +20,14 @@ module load anaconda
 #################################
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k \
---output regression_imagenet_20k/seq25angle50step5 \
+--input regression_imagenet_20k_noise \
+--output regression_imagenet_20k_noise/seq25angle50step5 \
 --cuda \
 --test \
 --sequence 25 \
 --angle 50 \
 --step 5 \
+--noise 2 \
 --zplane 0.7 \
 --workers 4 \
 --print_freq 1 \
@@ -34,13 +35,14 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k \
---output regression_imagenet_20k/seq25angle50step6 \
+--input regression_imagenet_20k_noise \
+--output regression_imagenet_20k_noise/seq25angle50step6 \
 --cuda \
 --test \
 --sequence 25 \
 --angle 50 \
 --step 6 \
+--noise 2 \
 --zplane 0.7 \
 --workers 4 \
 --print_freq 1 \
@@ -48,13 +50,14 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k \
---output regression_imagenet_20k/seq25angle50step7 \
+--input regression_imagenet_20k_noise \
+--output regression_imagenet_20k_noise/seq25angle50step7 \
 --cuda \
 --test \
 --sequence 25 \
 --angle 50 \
 --step 7 \
+--noise 2 \
 --zplane 0.7 \
 --workers 4 \
 --print_freq 1 \
@@ -62,13 +65,14 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k \
---output regression_imagenet_20k/seq25angle50step8 \
+--input regression_imagenet_20k_noise \
+--output regression_imagenet_20k_noise/seq25angle50step8 \
 --cuda \
 --test \
 --sequence 25 \
 --angle 50 \
 --step 8 \
+--noise 2 \
 --zplane 0.7 \
 --workers 4 \
 --print_freq 1 \
@@ -76,13 +80,14 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k \
---output regression_imagenet_20k/seq25angle50step9 \
+--input regression_imagenet_20k_noise \
+--output regression_imagenet_20k_noise/seq25angle50step9 \
 --cuda \
 --test \
 --sequence 25 \
 --angle 50 \
 --step 9 \
+--noise 2 \
 --zplane 0.7 \
 --workers 4 \
 --print_freq 1 \
@@ -90,13 +95,14 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k \
---output regression_imagenet_20k/seq25angle50step10 \
+--input regression_imagenet_20k_noise \
+--output regression_imagenet_20k_noise/seq25angle50step10 \
 --cuda \
 --test \
 --sequence 25 \
 --angle 50 \
 --step 10 \
+--noise 2 \
 --zplane 0.7 \
 --workers 4 \
 --print_freq 1 \

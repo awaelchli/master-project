@@ -93,6 +93,8 @@ class LeftRightPoseRegression(BaseExperiment):
                             help='The maximum range of rotation of the images.')
         parser.add_argument('--step', type=float, default=5,
                             help='Increment in rotation angle for generating the sequence.')
+        parser.add_argument('--noise', type=float, default=1,
+                            help='Amount of noise in degrees to add to the generated angles.')
         parser.add_argument('--zplane', type=float, default=1,
                             help='Location of the image in front of the camera (along Z-axis).')
         parser.add_argument('--max_size', type=int, nargs=3, default=[0, 0, 0],
@@ -158,6 +160,7 @@ class LeftRightPoseRegression(BaseExperiment):
             sequence_length=args.sequence,
             max_angle=args.angle,
             step_angle=args.step,
+            noise=args.noise,
             z_plane=args.zplane,
             transform1=transform1,
             transform2=transform2,
@@ -168,6 +171,7 @@ class LeftRightPoseRegression(BaseExperiment):
             sequence_length=args.sequence,
             max_angle=args.angle,
             step_angle=args.step,
+            noise=args.noise,
             z_plane=args.zplane,
             transform1=transform1,
             transform2=transform2,
@@ -178,6 +182,7 @@ class LeftRightPoseRegression(BaseExperiment):
             sequence_length=args.sequence,
             max_angle=args.angle,
             step_angle=args.step,
+            noise=args.noise,
             z_plane=args.zplane,
             transform1=transform1,
             transform2=transform2,
