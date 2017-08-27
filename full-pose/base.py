@@ -10,17 +10,18 @@ INFO_FILENAME = 'info.txt'
 
 class BaseExperiment:
 
-    def __init__(self, folder, args):
+    def __init__(self, in_folder, out_folder, args):
         self.use_cuda = torch.cuda.is_available() and args.cuda
         self.lr = args.lr
         self.workers = args.workers
         self.batch_size = args.batch_size
 
-        self.out_folder = folder
+        self.in_folder = in_folder
+        self.out_folder = out_folder
         self.save_loss_plot = self.make_output_filename('loss.pdf')
-        self.checkpoint_file = self.make_output_filename(args.checkpoint)
-        self.train_logger = Logger(self.make_output_filename('training.log'))
-        self.test_logger = Logger(self.make_output_filename('test.log'))
+        self.checkpoint_file = self.make_input_filename(args.checkpoint)
+        self.train_logger = self.make_logger('training.log')
+        self.test_logger = self.make_logger('test.log')
 
         self._trainingset, self._validationset, self._testset = self.load_dataset(args)
 
@@ -95,6 +96,12 @@ class BaseExperiment:
 
     def make_output_filename(self, filename):
         return os.path.join(self.out_folder, filename)
+
+    def make_input_filename(self, filename):
+        return os.path.join(self.in_folder, filename)
+
+    def make_logger(self, name):
+        return Logger(self.make_output_filename(name))
 
     def print_info(self, info, clear=False):
         mode = 'w' if clear else 'a'

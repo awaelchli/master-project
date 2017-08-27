@@ -10,7 +10,7 @@ from fullpose import FullPose7D
 
 OUT_ROOT_FOLDER = 'out'
 ARCHS = {
-    'pose7D': FullPose7D
+    'pose7D': FullPose7D,
 }
 
 
@@ -32,8 +32,12 @@ def get_main_parser():
     parser.add_argument('--print_freq', type=int, default=100,
                         help='Frequency of printed information during training')
 
-    parser.add_argument('--name', type=str, default='unnamed',
-                        help='Name of the experiment. Output files will be stored in this folder.')
+    parser.add_argument('--input', type=str, default=None,
+                        help='Input folder. All resources (such as checkpoint) will be read from this location.')
+    parser.add_argument('--output', type=str, default='unnamed',
+                        help='Output files will be stored in this folder.')
+    parser.add_argument('--overwrite', action='store_true',
+                        help='Overwrite the contents of the output folder if it exists without asking.')
 
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--workers', type=int, default=2)
@@ -75,16 +79,19 @@ if __name__ == '__main__':
     args = main_parser.parse_args()
     print(args)
 
-    experiment_folder = os.path.join(OUT_ROOT_FOLDER, args.name)
-    if args.train and not args.resume:
-        if os.path.isdir(experiment_folder):
-            new_name = input('Output folder exists. Press ENTER to overwrite or type a name for a new folder.\n')
-            args.name = new_name if new_name else args.name
-            experiment_folder = os.path.join(OUT_ROOT_FOLDER, args.name)
+    args.input = args.output if not args.input else args.input
+    out_folder = os.path.join(OUT_ROOT_FOLDER, args.output)
+    in_folder = os.path.join(OUT_ROOT_FOLDER, args.input)
+    if not args.resume:
+        if os.path.isdir(out_folder) and not args.overwrite:
+            new_name = input('Output folder "{}" exists. Press ENTER to overwrite or type a name for a new folder.\n'
+                             .format(args.output))
+            args.output = new_name if new_name else args.output
+            out_folder = os.path.join(OUT_ROOT_FOLDER, args.output)
 
-        reset_folder(experiment_folder)
+        reset_folder(out_folder)
 
-    experiment = args.create(experiment_folder, args)
+    experiment = args.create(in_folder, out_folder, args)
 
     start_epoch = 1
     checkpoint = None

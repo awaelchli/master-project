@@ -12,6 +12,7 @@ from flownet.models.FlowNetS import flownets
 from transforms3d.quaternions import qinverse, qmult
 import numpy as np
 
+
 class FullPose7DModel(nn.Module):
 
     def __init__(self, input_size):
@@ -98,8 +99,8 @@ class FullPose7D(BaseExperiment):
         parser.add_argument('--image_size', type=int, nargs=1, default=256,
                             help='The shorter side of the images will be scaled to the given size.')
 
-    def __init__(self, folder, args):
-        super(FullPose7D, self).__init__(folder, args)
+    def __init__(self, in_folder, out_folder, args):
+        super(FullPose7D, self).__init__(in_folder, out_folder, args)
 
         # Determine size of input images
         _, tmp, _ = next(enumerate(self.trainingset))
