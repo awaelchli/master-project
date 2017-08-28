@@ -82,7 +82,7 @@ if __name__ == '__main__':
     args.input = args.output if not args.input else args.input
     out_folder = os.path.join(OUT_ROOT_FOLDER, args.output)
     in_folder = os.path.join(OUT_ROOT_FOLDER, args.input)
-    if not args.resume:
+    if not args.test and not args.resume:
         if os.path.isdir(out_folder) and not args.overwrite:
             new_name = input('Output folder "{}" exists. Press ENTER to overwrite or type a name for a new folder.\n'
                              .format(args.output))
