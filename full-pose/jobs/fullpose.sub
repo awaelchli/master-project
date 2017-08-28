@@ -28,7 +28,7 @@ python full-pose/main.py pose7D \
 
 # Testing
 python full-pose/main.py pose7D \
---input gta5pose7D
+--input gta5pose7D \
 --output gta5pose7D/test \
 --cuda \
 --test \
