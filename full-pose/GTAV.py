@@ -8,24 +8,24 @@ import numpy as np
 import torch
 from PIL import Image
 from scipy import interpolate
-from torch.utils.data import Dataset, DataLoader
-from transforms3d.euler import euler2quat, quat2axangle
+from torch.utils.data import Dataset
+from transforms3d.euler import euler2quat
 from transforms3d.quaternions import rotate_vector, qinverse, qmult
-from torchvision import transforms
 
-# TODO: choose correct path
 FOLDERS = {
-    'training': {
-        'data': '../data/GTA V/data/',
-        'pose': '../data/GTA V/poses/'
-    },
-    'validation':{
-        'data': None,
-        'pose': None,
-    },
-    'test': {
-        'data': None,
-        'pose': None,
+    'walking': {
+        'training': {
+            'data': '../data/GTA V/walking/train/data/',
+            'pose': '../data/GTA V/walking/train/poses/'
+        },
+        'validation':{
+            'data': '../data/GTA V/walking/test/data/',
+            'pose': '../data/GTA V/walking/test/data/',
+        },
+        'test': {
+            'data': '../data/GTA V/walking/test/data/',
+            'pose': '../data/GTA V/walking/test/data/',
+        }
     }
 }
 
@@ -35,10 +35,13 @@ POSE_FILE_EXTENSION = 'txt'
 
 class Subsequence(Dataset):
 
-    def __init__(self, data_folder, pose_folder, sequence_length, transform=None):
+    def __init__(self, data_folder, pose_folder, sequence_length, transform=None, max_size=None):
         self.sequence_length = sequence_length
         self.transform = transform
         self.index = build_subsequence_index(data_folder, pose_folder, sequence_length)
+
+        if max_size and max_size < len(self):
+            self.index = self.index[:max_size]
 
     def __len__(self):
         return len(self.index)
@@ -53,7 +56,7 @@ class Subsequence(Dataset):
         quaternions = get_quaternions(poses)
         rel_positions, rel_quaternions = to_relative_pose(positions, quaternions)
         pose_vectors = encode_poses(rel_positions, rel_quaternions)
-        pose_sequence = torch.from_numpy(pose_vectors)
+        pose_sequence = torch.from_numpy(pose_vectors).float()
 
         return image_sequence, pose_sequence
 

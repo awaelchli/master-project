@@ -29,7 +29,7 @@ def get_main_parser():
 
     parser.add_argument('--cuda', action='store_true')
 
-    parser.add_argument('--print_freq', type=int, default=100,
+    parser.add_argument('--print_freq', type=int, default=1,
                         help='Frequency of printed information during training')
 
     parser.add_argument('--input', type=str, default=None,
