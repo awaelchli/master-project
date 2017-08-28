@@ -361,10 +361,12 @@ class FullPose7D(BaseExperiment):
         # Normalize output quaternion
         q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
         q1 = q1 / q1_norm.expand_as(q1)
-        q1 = q1.numpy()
 
-        q2 = targets[:, 3:].numpy()
+        # Convert to numpy
+        q1 = q1.cpu().numpy()
+        q2 = targets[:, 3:].cpu().numpy()
 
+        # Compute the relative rotation
         rel_q = [qmult(qinverse(r1), r2) for r1, r2 in zip(q1, q2)]
         rel_angles = [quat2axangle(q)[1] for q in rel_q]
         return rel_angles
