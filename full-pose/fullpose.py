@@ -215,8 +215,8 @@ class FullPose7D(BaseExperiment):
             start = time.time()
             output = self.model(input)
 
-            print('Prediction: ', output)
-            print('Target:     ', target)
+            #print('Prediction: ', output)
+            #print('Target:     ', target)
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             loss.backward()
@@ -336,9 +336,9 @@ class FullPose7D(BaseExperiment):
         q1_norm = torch.norm(q1, 2, dim=1).view(-1, 1)
         q1 = q1 / q1_norm.expand_as(q1)
 
-        print('Q1, Q2')
-        print(q1)
-        print(q2)
+        #print('Q1, Q2')
+        #print(q1)
+        #print(q2)
 
         # Loss for rotation: dot product between quaternions
         loss1 = 1 - torch.abs((q1 * q2).sum(1))
