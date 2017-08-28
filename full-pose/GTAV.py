@@ -72,8 +72,12 @@ def build_subsequence_index(root_folder, ground_truth_folder, sequence_length):
     index = build_folder_index(root_folder, ground_truth_folder)
     subsequences = []
     for filenames, poses in index:
+        # Note: If the last sequence ends up to have only a single image, it gets dropped
+        reminder = len(filenames) % sequence_length
+        end = len(filenames) - 1 if reminder == 1 else len(filenames)
+
         subsequence = [(filenames[i:i + sequence_length], poses[i:i + sequence_length])
-                       for i in range(0, len(filenames), sequence_length)]
+                       for i in range(0, end, sequence_length)]
         subsequences.extend(subsequence)
 
     return subsequences
