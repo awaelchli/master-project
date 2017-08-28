@@ -354,9 +354,9 @@ class FullPose7D(BaseExperiment):
         return loss1 + loss2, loss1, loss2
 
     # TODO: finish
-    def relative_rotation_angles(self, outputs, targets):
+    def relative_rotation_angles(self, predictions, targets):
         # Dimensions: [sequence_length, 7]
-        q1 = outputs[:, 3:]
+        q1 = predictions[:, 3:]
 
         # Normalize output quaternion
         q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
@@ -365,6 +365,9 @@ class FullPose7D(BaseExperiment):
         # Convert to numpy
         q1 = q1.cpu().numpy()
         q2 = targets[:, 3:].cpu().numpy()
+
+        print(q1.shape)
+        print(q2.shape)
 
         # Compute the relative rotation
         rel_q = [qmult(qinverse(r1), r2) for r1, r2 in zip(q1, q2)]
