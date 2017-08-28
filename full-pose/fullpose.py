@@ -283,8 +283,8 @@ class FullPose7D(BaseExperiment):
 
             output = self.model(input)
 
-            all_predictions.append(output.data.view(1, -1))
-            all_targets.append(target.data.view(1, -1))
+            all_predictions.append(output.data)
+            all_targets.append(target.data[1:])
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
