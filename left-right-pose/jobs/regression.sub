@@ -44,4 +44,3 @@ python left-right-pose/main.py regression \
 --workers 4 \
 --print_freq 1 \
 --max_size 0 0 5000 \
---overwrite
