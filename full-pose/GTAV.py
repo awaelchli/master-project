@@ -20,11 +20,11 @@ FOLDERS = {
         },
         'validation':{
             'data': '../data/GTA V/walking/test/data/',
-            'pose': '../data/GTA V/walking/test/data/',
+            'pose': '../data/GTA V/walking/test/poses/',
         },
         'test': {
             'data': '../data/GTA V/walking/test/data/',
-            'pose': '../data/GTA V/walking/test/data/',
+            'pose': '../data/GTA V/walking/test/poses/',
         }
     }
 }
