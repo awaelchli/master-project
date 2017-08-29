@@ -217,7 +217,7 @@ class LeftRightPoseRegression(BaseExperiment):
         num_batches = len(self.trainingset)
 
         epoch = len(self.training_loss) + 1
-        #self.adjust_learning_rate(epoch)
+        self.adjust_learning_rate(epoch)
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
@@ -356,7 +356,7 @@ class LeftRightPoseRegression(BaseExperiment):
         return sum([p.numel() for p in self.model.get_parameters()])
 
     def adjust_learning_rate(self, epoch):
-        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+        """Sets the learning rate to the initial LR decayed some factor in regular intervals of epochs"""
         lr = self.lr * (0.5 ** (epoch // 5))
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr

@@ -20,8 +20,8 @@ module load anaconda
 #################################
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k_noise \
---output regression_imagenet_20k_noise/seq25angle50step5 \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step5 \
 --cuda \
 --test \
 --sequence 25 \
@@ -35,8 +35,8 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k_noise \
---output regression_imagenet_20k_noise/seq25angle50step6 \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step6 \
 --cuda \
 --test \
 --sequence 25 \
@@ -50,8 +50,8 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k_noise \
---output regression_imagenet_20k_noise/seq25angle50step7 \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step7 \
 --cuda \
 --test \
 --sequence 25 \
@@ -65,8 +65,8 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k_noise \
---output regression_imagenet_20k_noise/seq25angle50step8 \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step8 \
 --cuda \
 --test \
 --sequence 25 \
@@ -80,8 +80,8 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k_noise \
---output regression_imagenet_20k_noise/seq25angle50step9 \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step9 \
 --cuda \
 --test \
 --sequence 25 \
@@ -95,8 +95,8 @@ python left-right-pose/main.py regression \
 --overwrite
 
 python left-right-pose/main.py regression \
---input regression_imagenet_20k_noise \
---output regression_imagenet_20k_noise/seq25angle50step10 \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step10 \
 --cuda \
 --test \
 --sequence 25 \
