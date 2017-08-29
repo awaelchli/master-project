@@ -50,7 +50,7 @@ class FullPose7DModel(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self.fc.weight.data.uniform_(-1, 1)
+        self.fc.weight.data.uniform_(-0.1, 0.1)
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
@@ -269,6 +269,8 @@ class FullPose7D(BaseExperiment):
 
     def test(self):
         avg_loss = AverageMeter()
+        avg_rot_loss = AverageMeter()
+        avg_trans_loss = AverageMeter()
 
         all_predictions = []
         all_targets = []
@@ -288,8 +290,12 @@ class FullPose7D(BaseExperiment):
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
+            avg_rot_loss.update(r_loss.data[0])
+            avg_trans_loss.update(t_loss.data[0])
 
         avg_loss = avg_loss.average
+        avg_rot_loss = avg_rot_loss.average
+        avg_trans_loss = avg_trans_loss.average
 
         all_predictions = torch.cat(all_predictions, 0)
         all_targets = torch.cat(all_targets, 0)
@@ -316,7 +322,9 @@ class FullPose7D(BaseExperiment):
         self.test_logger.print('Threshold: ' + ', '.join([str(t) for t in thresholds]))
         self.test_logger.print('Fraction:  ' + ', '.join([str(p) for p in cdf]))
         self.test_logger.print()
-        self.test_logger.print('Average loss on testset (MSE): {:.4f}'.format(avg_loss))
+        self.test_logger.print('Average combined loss on testset: {:.4f}'.format(avg_loss))
+        self.test_logger.print('Average rotation loss on testset: {:.4f}'.format(avg_rot_loss))
+        self.test_logger.print('Average translation loss on testset: {:.4f}'.format(avg_trans_loss))
 
         return avg_loss
 

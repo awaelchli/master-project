@@ -22,7 +22,7 @@ python full-pose/main.py pose7D \
 --train \
 --epochs 10 \
 --sequence 10 \
---lr 0.0002 \
+--lr 0.001 \
 --workers 4 \
 --print_freq 1 \
 
