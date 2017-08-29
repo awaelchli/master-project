@@ -100,6 +100,8 @@ class FullPose7D(BaseExperiment):
                             help='Length of sequence fed to the LSTM')
         parser.add_argument('--image_size', type=int, nargs=1, default=256,
                             help='The shorter side of the images will be scaled to the given size.')
+        parser.add_argument('--beta', type=float, default=1,
+                            help='Balance weight for the translation loss')
 
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
@@ -118,6 +120,7 @@ class FullPose7D(BaseExperiment):
         params = self.model.get_parameters()
         self.optimizer = torch.optim.Adam(params, self.lr)
 
+        self.beta = args.beta
         self.print_freq = args.print_freq
         self.sequence_length = args.sequence
         self.training_loss = []
@@ -274,6 +277,7 @@ class FullPose7D(BaseExperiment):
 
         all_predictions = []
         all_targets = []
+        rel_angle_error_over_time = []
 
         for i, (images, poses) in enumerate(self.testset):
 
@@ -287,35 +291,32 @@ class FullPose7D(BaseExperiment):
 
             all_predictions.append(output.data)
             all_targets.append(target.data[1:])
+            rel_angle_error_over_time.append(self.relative_rotation_angles(output.data, target.data[1:]))
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
             avg_rot_loss.update(r_loss.data[0])
             avg_trans_loss.update(t_loss.data[0])
 
+        # Average losses for rotation, translation and combined
         avg_loss = avg_loss.average
         avg_rot_loss = avg_rot_loss.average
         avg_trans_loss = avg_trans_loss.average
 
         all_predictions = torch.cat(all_predictions, 0)
         all_targets = torch.cat(all_targets, 0)
+        rel_angle_error_over_time = torch.Tensor(rel_angle_error_over_time).mean(0).view(-1)
 
-        poses = self.relative_rotation_angles(all_predictions, all_targets)
-        poses = [degrees(a) for a in poses]
-
+        # Relative rotation angle between estimated and target rotation
         rot_error_logger = self.make_logger('relative_rotation_angles.log')
         rot_error_logger.clear()
         rot_error_logger.column('Relative rotation angle between prediction and target', format='{:.4f}')
-        for err in poses:
+        pose_errors = self.relative_rotation_angles(all_predictions, all_targets)
+        for err in pose_errors:
             rot_error_logger.log(err)
 
-        # plots.plot_sequence_error(mean_errors, self.make_output_filename('average_sequence_error.pdf'))
-        # self.test_logger.clear()
-        # self.test_logger.print('Average absolute sequence error:')
-        # self.test_logger.print(', '.join([str(i) for i in mean_errors]))
-        # self.test_logger.print()
-
-        thresholds, cdf = self.error_distribution(torch.Tensor(poses))
+        # The distribution of relative rotation angle
+        thresholds, cdf = self.error_distribution(torch.Tensor(pose_errors))
         plots.plot_error_distribution(thresholds, cdf, self.make_output_filename('rotation_error_distribution.pdf'))
         self.test_logger.clear()
         self.test_logger.print('Cumulative distribution of rotation error:')
@@ -325,6 +326,12 @@ class FullPose7D(BaseExperiment):
         self.test_logger.print('Average combined loss on testset: {:.4f}'.format(avg_loss))
         self.test_logger.print('Average rotation loss on testset: {:.4f}'.format(avg_rot_loss))
         self.test_logger.print('Average translation loss on testset: {:.4f}'.format(avg_trans_loss))
+
+        plots.plot_sequence_error(rel_angle_error_over_time, self.make_output_filename('average_rotation_error_over_time.pdf'))
+        self.test_logger.clear()
+        self.test_logger.print('Average relative rotation error over time:')
+        self.test_logger.print(', '.join([str(i) for i in rel_angle_error_over_time]))
+        self.test_logger.print()
 
         return avg_loss
 
@@ -361,9 +368,8 @@ class FullPose7D(BaseExperiment):
         loss2 = torch.log(eps + t_diff)
         loss2 = loss2.sum() / sequence_length
 
-        return loss1 + loss2, loss1, loss2
+        return loss1 + self.beta * loss2, loss1, loss2
 
-    # TODO: finish
     def relative_rotation_angles(self, predictions, targets):
         # Dimensions: [sequence_length, 7]
         q1 = predictions[:, 3:]
@@ -379,6 +385,7 @@ class FullPose7D(BaseExperiment):
         # Compute the relative rotation
         rel_q = [qmult(qinverse(r1), r2) for r1, r2 in zip(q1, q2)]
         rel_angles = [quat2axangle(q)[1] for q in rel_q]
+        rel_angles = [degrees(a) for a in rel_angles]
         return rel_angles
 
     def make_checkpoint(self):

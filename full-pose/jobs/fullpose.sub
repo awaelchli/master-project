@@ -23,6 +23,7 @@ python full-pose/main.py pose7D \
 --epochs 10 \
 --sequence 10 \
 --lr 0.00005 \
+--beta 0.01 \
 --workers 4 \
 --print_freq 1 \
 
@@ -33,6 +34,7 @@ python full-pose/main.py pose7D \
 --cuda \
 --test \
 --sequence 15 \
+--beta 0.01 \
 --workers 4 \
 --print_freq 1 \
 --overwrite \
