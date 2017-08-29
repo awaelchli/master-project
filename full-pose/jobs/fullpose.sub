@@ -17,19 +17,19 @@ module load anaconda
 
 # Training
 python full-pose/main.py pose7D \
---output gta5pose7D_lr \
+--output gta5pose7D_exp \
 --cuda \
 --train \
 --epochs 10 \
 --sequence 10 \
---lr 0.001 \
+--lr 0.0002 \
 --workers 4 \
 --print_freq 1 \
 
 # Testing
 python full-pose/main.py pose7D \
---input gta5pose7D_lr \
---output gta5pose7D_lr/test \
+--input gta5pose7D_exp \
+--output gta5pose7D_exp/test \
 --cuda \
 --test \
 --sequence 15 \
