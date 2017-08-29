@@ -50,7 +50,7 @@ class FullPose7DModel(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self.fc.weight.data.uniform_(-0.1, 0.1)
+        self.fc.weight.data.uniform_(-1, 1)
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
@@ -298,6 +298,7 @@ class FullPose7D(BaseExperiment):
         poses = [degrees(a) for a in poses]
 
         rot_error_logger = self.make_logger('relative_rotation_angles.log')
+        rot_error_logger.clear()
         rot_error_logger.column('Relative rotation angle between prediction and target', format='{:.4f}')
         for err in poses:
             rot_error_logger.log(err)
@@ -310,6 +311,7 @@ class FullPose7D(BaseExperiment):
 
         thresholds, cdf = self.error_distribution(torch.Tensor(poses))
         plots.plot_error_distribution(thresholds, cdf, self.make_output_filename('rotation_error_distribution.pdf'))
+        self.test_logger.clear()
         self.test_logger.print('Cumulative distribution of rotation error:')
         self.test_logger.print('Threshold: ' + ', '.join([str(t) for t in thresholds]))
         self.test_logger.print('Fraction:  ' + ', '.join([str(p) for p in cdf]))
@@ -365,9 +367,6 @@ class FullPose7D(BaseExperiment):
         # Convert to numpy
         q1 = q1.cpu().numpy()
         q2 = targets[:, 3:].cpu().numpy()
-
-        print(q1.shape)
-        print(q2.shape)
 
         # Compute the relative rotation
         rel_q = [qmult(qinverse(r1), r2) for r1, r2 in zip(q1, q2)]

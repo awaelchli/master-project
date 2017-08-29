@@ -100,6 +100,7 @@ if __name__ == '__main__':
         checkpoint = experiment.load_checkpoint()
         experiment.restore_from_checkpoint(checkpoint)
         start_epoch = checkpoint['epoch'] + 1
+        experiment.print_info('\n Resuming training at epoch {} \n'.format(start_epoch))
 
     if args.train:
         datasetinfo = 'Trainingset: {} samples\n' \

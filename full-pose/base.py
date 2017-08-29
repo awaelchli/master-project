@@ -139,7 +139,7 @@ class Logger:
         self.column_name = []
         self.format_spec = []
         self.sep = ', '
-        self.header_printed = False
+        self.header_printed = os.path.exists(file)
 
     def column(self, name='', format='{}'):
         self.column_name.append(name)
