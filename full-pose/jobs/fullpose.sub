@@ -17,7 +17,7 @@ module load anaconda
 
 # Training
 python full-pose/main.py pose7D \
---output gta5pose7D_exp \
+--output gta5pose7D_exp2 \
 --cuda \
 --train \
 --epochs 10 \
@@ -29,8 +29,8 @@ python full-pose/main.py pose7D \
 
 # Testing
 python full-pose/main.py pose7D \
---input gta5pose7D_exp \
---output gta5pose7D_exp/test \
+--input gta5pose7D_exp2 \
+--output gta5pose7D_exp2/test \
 --cuda \
 --test \
 --sequence 10 \
