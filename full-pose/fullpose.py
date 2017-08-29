@@ -128,7 +128,9 @@ class FullPose7D(BaseExperiment):
 
         self.train_logger.column('Epoch', '{:d}')
         self.train_logger.column('Training Loss', '{:.4f}')
-        self.train_logger.column('Validation Loss', '{:.4f}')
+        self.train_logger.column('Validation Loss (combined)', '{:.4f}')
+        self.train_logger.column('Validation Loss (rotation)', '{:.4f}')
+        self.train_logger.column('Validation Loss (translation)', '{:.4f}')
 
         self.print_info(self.model)
         self.print_info('Input size: {} x {}'.format(self.input_size[0], self.input_size[1]))
@@ -238,10 +240,10 @@ class FullPose7D(BaseExperiment):
         self.training_loss.append(training_loss)
 
         # Validate after each epoch
-        validation_loss = self.validate()
+        validation_loss, validation_r_loss, validation_t_loss = self.validate()
         self.validation_loss.append(validation_loss)
 
-        self.train_logger.log(epoch, training_loss, validation_loss)
+        self.train_logger.log(epoch, training_loss, validation_loss, validation_r_loss, validation_t_loss)
 
         # Save extra checkpoint for best validation loss
         if validation_loss < best_validation_loss:
@@ -254,6 +256,9 @@ class FullPose7D(BaseExperiment):
 
     def validate(self):
         avg_loss = AverageMeter()
+        avg_r_loss = AverageMeter()
+        avg_t_loss = AverageMeter()
+
         for i, (images, poses) in enumerate(self.validationset):
 
             images.squeeze_(0)
@@ -266,9 +271,14 @@ class FullPose7D(BaseExperiment):
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
+            avg_r_loss.update(r_loss.data[0])
+            avg_t_loss.update(t_loss.data[0])
 
         avg_loss = avg_loss.average
-        return avg_loss
+        avg_r_loss = avg_r_loss.average
+        avg_t_loss = avg_t_loss.average
+
+        return avg_loss, avg_r_loss, avg_t_loss
 
     def test(self):
         avg_loss = AverageMeter()
