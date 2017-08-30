@@ -304,7 +304,7 @@ class FullPose7D(BaseExperiment):
 
             # A few sequences are shorter, don't add them for averaging
             tmp = self.relative_rotation_angles(output.data, target.data[1:])
-            if len(tmp) == self.sequence_length:
+            if len(tmp) == self.sequence_length - 1:
                 rel_angle_error_over_time.append(tmp)
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
@@ -341,7 +341,7 @@ class FullPose7D(BaseExperiment):
         self.test_logger.print('Average rotation loss on testset: {:.4f}'.format(avg_rot_loss))
         self.test_logger.print('Average translation loss on testset: {:.4f}'.format(avg_trans_loss))
 
-        plots.plot_sequence_error(rel_angle_error_over_time, self.make_output_filename('average_rotation_error_over_time.pdf'))
+        plots.plot_sequence_error(list(rel_angle_error_over_time), self.make_output_filename('average_rotation_error_over_time.pdf'))
         self.test_logger.clear()
         self.test_logger.print('Average relative rotation error over time:')
         self.test_logger.print(', '.join([str(i) for i in rel_angle_error_over_time]))
