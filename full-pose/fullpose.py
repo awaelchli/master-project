@@ -301,7 +301,11 @@ class FullPose7D(BaseExperiment):
 
             all_predictions.append(output.data)
             all_targets.append(target.data[1:])
-            rel_angle_error_over_time.append(self.relative_rotation_angles(output.data, target.data[1:]))
+
+            # A few sequences are shorter, don't add them for averaging
+            tmp = self.relative_rotation_angles(output.data, target.data[1:])
+            if len(tmp) == self.sequence_length:
+                rel_angle_error_over_time.append(tmp)
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
