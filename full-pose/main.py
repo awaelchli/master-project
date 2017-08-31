@@ -7,10 +7,12 @@ import torch
 
 from base import CHECKPOINT_FILENAME
 from fullpose import FullPose7D
+from rotation_only import RotationOnly
 
 OUT_ROOT_FOLDER = 'out'
 ARCHS = {
     'pose7D': FullPose7D,
+    'rotation': RotationOnly,
 }
 
 

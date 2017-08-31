@@ -19,7 +19,7 @@ FOLDERS = {
             'data': '../data/GTA V/walking/train/data/',
             'pose': '../data/GTA V/walking/train/poses/'
         },
-        'validation':{
+        'validation': {
             'data': '../data/GTA V/walking/test/data/',
             'pose': '../data/GTA V/walking/test/poses/',
         },
@@ -27,7 +27,21 @@ FOLDERS = {
             'data': '../data/GTA V/walking/test/data/',
             'pose': '../data/GTA V/walking/test/poses/',
         }
-    }
+    },
+    'standing': {
+        'training': {
+            'data': '../data/GTA V/standing/train/data/',
+            'pose': '../data/GTA V/standing/train/poses/'
+        },
+        'validation': {
+            'data': '../data/GTA V/standing/test/data/',
+            'pose': '../data/GTA V/standing/test/poses/',
+        },
+        'test': {
+            'data': '../data/GTA V/standing/test/data/',
+            'pose': '../data/GTA V/standing/test/poses/',
+        }
+    },
 }
 
 IMAGE_EXTENSION = 'jpg'
