@@ -406,7 +406,7 @@ class FullPose7D(BaseExperiment):
         q_norm = torch.norm(q, 2, dim=1).view(-1, 1)
         q = q / q_norm.expand_as(q)
 
-        return torch.cat(t, q, 1)
+        return torch.cat((t, q), 1)
 
     def relative_rotation_angles(self, predictions, targets):
         # Dimensions: [N, 7]
