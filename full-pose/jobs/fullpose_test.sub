@@ -17,8 +17,8 @@ module load anaconda
 
 # Testing
 python full-pose/main.py pose7D \
---input gta5pose7D_exp3 \
---output gta5pose7D_exp3/test \
+--input gta5pose7D_exp3_fixed \
+--output gta5pose7D_exp3_fixed/test \
 --cuda \
 --test \
 --sequence 10 \
