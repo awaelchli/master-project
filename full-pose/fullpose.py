@@ -16,7 +16,7 @@ from flownet.models.FlowNetS import flownets
 
 class FullPose7DModel(nn.Module):
 
-    def __init__(self, input_size):
+    def __init__(self, input_size, fix_flownet=True):
         super(FullPose7DModel, self).__init__()
 
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
@@ -33,8 +33,10 @@ class FullPose7DModel(nn.Module):
             flownet.conv6,
             flownet.conv6_1,
         )
-        for param in self.layers.parameters():
-            param.requires_grad = False
+        self.fix_flownet = fix_flownet
+        if fix_flownet:
+            for param in self.layers.parameters():
+                param.requires_grad = False
 
         fout = self.flownet_output_size(input_size)
         self.hidden = 64
@@ -86,7 +88,10 @@ class FullPose7DModel(nn.Module):
         return predictions
 
     def get_parameters(self):
-        return list(self.lstm.parameters()) + list(self.fc.parameters())
+        params = list(self.lstm.parameters()) + list(self.fc.parameters())
+        if not self.fix_flownet:
+            params = list(self.layers.parameters()) + params
+        return params
 
 
 class FullPose7D(BaseExperiment):
@@ -111,7 +116,7 @@ class FullPose7D(BaseExperiment):
         self.input_size = (tmp.size(3), tmp.size(4))
 
         # Model
-        self.model = FullPose7DModel(self.input_size)
+        self.model = FullPose7DModel(self.input_size, fix_flownet=False)
 
         if self.use_cuda:
             print('Moving model to GPU ...')
