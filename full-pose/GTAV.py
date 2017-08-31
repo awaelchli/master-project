@@ -166,9 +166,9 @@ def to_relative_pose(translations, quaternions):
     return np.array(rel_translations), np.array(rel_quaternions)
 
 
-def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
+def plot_camera_path_2D(file, resolution=1.0, show_rot=True, output='path.pdf'):
     assert 0 < resolution <= 1
-    step = 1 / resolution
+    step = int(1 / resolution)
 
     _, poses = read_from_text_file(file)
     positions = get_positions(poses)[::step]
@@ -178,6 +178,8 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
     positions, quaternions = to_relative_pose(positions, quaternions)
 
     x, y, z = positions[:, 0], positions[:, 1], positions[:, 2]
+
+    plt.clf()
     plt.plot(x, y)
 
     if show_rot:
@@ -186,8 +188,11 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
 
         plt.quiver(x, y, u, v, units='xy', scale_units='xy', scale=0.5, width=0.05)
 
+    plt.ylabel('y')
+    plt.xlabel('x')
     plt.axis('equal')
-    plt.show()
+
+    plt.savefig(output, bbox_inches='tight')
 
 
 def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, show_rot=True):
@@ -223,25 +228,3 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
 
     plt.axis('equal')
     plt.savefig(output_file, bbox_inches='tight')
-
-#s = r'E:\Rockstar Games\Grand Theft Auto V\08.12.2017 - 18.04.57.txt'
-#plot_camera_path_2D(s, 0.07)
-
-#index = build_subsequence_index(r'H:\Datasets\GTAV Dataset\data', r'H:\Datasets\GTAV Dataset\poses', 2)
-#print(index[0])
-
-# 3D plot:
-#fig = plt.figure()
-    #ax = fig.add_subplot(111, projection='3d')
-    # ax.plot_wireframe(x, y, z)
-
-
-# Dataset class
-# transform = transforms.Compose([
-#     transforms.Scale(200),
-#     transforms.ToTensor(),
-#     #transforms.Normalize()
-# ])
-# trainset = Subsequence('../' + FOLDERS['training']['data'], '../' + FOLDERS['training']['pose'], 10, transform)
-#
-# print(trainset[0])
