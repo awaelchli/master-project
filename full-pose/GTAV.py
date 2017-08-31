@@ -214,8 +214,8 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
         u1, v1, w1 = y_axes1[:, 0], y_axes1[:, 1], y_axes1[:, 2]
         u2, v2, w2 = y_axes2[:, 0], y_axes2[:, 1], y_axes2[:, 2]
 
-        plt.quiver(x1, y1, u1, v1, units='xy', scale_units='xy', scale=0.5, width=0.05)
-        plt.quiver(x2, y2, u2, v2, units='xy', scale_units='xy', scale=0.5, width=0.05)
+        plt.quiver(x1, y1, u1, v1, units='xy', scale_units='xy', scale=0.2, width=0.01, color='b')
+        plt.quiver(x2, y2, u2, v2, units='xy', scale_units='xy', scale=0.2, width=0.01, color='r')
 
     plt.legend()
     plt.ylabel('y')
