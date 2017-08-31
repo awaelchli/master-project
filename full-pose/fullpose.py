@@ -39,8 +39,8 @@ class FullPose7DModel(nn.Module):
             param.requires_grad = False
 
         fout = self.flownet_output_size(input_size)
-        self.hidden = 64
-        self.nlayers = 5
+        self.hidden = 500
+        self.nlayers = 3
         self.lstm = nn.LSTM(
             input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
@@ -89,8 +89,8 @@ class FullPose7DModel(nn.Module):
 
     def get_parameters(self):
         params = list(self.lstm.parameters()) + list(self.fc.parameters())
-        # if not self.fix_flownet:
-        #     params = list(self.layers.parameters()) + params
+        if not self.fix_flownet:
+            params = list(self.layers.parameters()) + params
         return params
 
 
@@ -319,7 +319,7 @@ class FullPose7D(BaseExperiment):
 
             # Visualize predicted path
             of = self.make_output_filename('{:05}-path.pdf'.format(i))
-            visualize_predicted_path(output.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=True)
+            visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=True)
 
 
         # Average losses for rotation, translation and combined
