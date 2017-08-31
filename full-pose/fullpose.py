@@ -321,7 +321,7 @@ class FullPose7D(BaseExperiment):
             avg_trans_loss.update(t_loss.data[0])
 
             # Visualize predicted path
-            of = self.make_output_filename('{:05}-path.pdf'.format(i))
+            of = self.make_output_filename('{:05}-path.png'.format(i))
             visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=True)
 
 
