@@ -192,7 +192,7 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
 
 def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, show_rot=True):
     assert 0 < resolution <= 1
-    step = 1 / resolution
+    step = int(1 / resolution)
 
     positions1 = predictions[::step, :3]
     positions2 = targets[::step, :3]
