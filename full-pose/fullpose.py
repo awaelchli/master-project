@@ -224,6 +224,7 @@ class FullPose7D(BaseExperiment):
 
             start = time.time()
             output = self.model(input)
+            output = self.normalize_output(output)
 
             #print('Prediction: ', output)
             #print('Target:     ', target)
@@ -273,6 +274,7 @@ class FullPose7D(BaseExperiment):
             target = self.to_variable(poses, volatile=True)
 
             output = self.model(input)
+            output = self.normalize_output(output)
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
@@ -303,6 +305,7 @@ class FullPose7D(BaseExperiment):
             target = self.to_variable(poses, volatile=True)
 
             output = self.model(input)
+            output = self.normalize_output(output)
 
             all_predictions.append(output.data)
             all_targets.append(target.data[1:])
@@ -374,8 +377,8 @@ class FullPose7D(BaseExperiment):
         assert q1.size(1) == q2.size(1) == 4
 
         # Normalize output quaternion
-        q1_norm = torch.norm(q1, 2, dim=1).view(-1, 1)
-        q1 = q1 / q1_norm.expand_as(q1)
+        #q1_norm = torch.norm(q1, 2, dim=1).view(-1, 1)
+        #q1 = q1 / q1_norm.expand_as(q1)
 
         #print('Q1, Q2')
         #print(q1)
@@ -394,13 +397,24 @@ class FullPose7D(BaseExperiment):
 
         return loss1 + self.beta * loss2, loss1, loss2
 
+    def normalize_output(self, output):
+        # Normalize quaternion in output to unit quaternion
+        t = output[:, :3]
+        q = output[:, 3:]
+
+
+        q_norm = torch.norm(q, 2, dim=1).view(-1, 1)
+        q = q / q_norm.expand_as(q)
+
+        return torch.cat(t, q, 1)
+
     def relative_rotation_angles(self, predictions, targets):
         # Dimensions: [N, 7]
         q1 = predictions[:, 3:]
 
         # Normalize output quaternion
-        q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
-        q1 = q1 / q1_norm.expand_as(q1)
+        #q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
+        #q1 = q1 / q1_norm.expand_as(q1)
 
         # Convert to numpy
         q1 = q1.cpu().numpy()
@@ -418,8 +432,8 @@ class FullPose7D(BaseExperiment):
         q2 = targets[:, 3:]
 
         # Normalize output quaternion
-        q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
-        q1 = q1 / q1_norm.expand_as(q1)
+        #q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
+        #q1 = q1 / q1_norm.expand_as(q1)
 
         rel_angles = torch.acos(2 * (q1 * q2).sum(1) ** 2 - 1)
 

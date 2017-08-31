@@ -202,6 +202,8 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
 
     x1, y1, z1 = positions1[:, 0], positions1[:, 1], positions1[:, 2]
     x2, y2, z2 = positions2[:, 0], positions2[:, 1], positions2[:, 2]
+
+    plt.clf()
     plt.plot(x1, y1, 'b', label='Prediction')
     plt.plot(x2, y2, 'r', label='Ground Truth')
 
@@ -214,6 +216,10 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
 
         plt.quiver(x1, y1, u1, v1, units='xy', scale_units='xy', scale=0.5, width=0.05)
         plt.quiver(x2, y2, u2, v2, units='xy', scale_units='xy', scale=0.5, width=0.05)
+
+    plt.legend()
+    plt.ylabel('y')
+    plt.xlabel('x')
 
     plt.axis('equal')
     plt.savefig(output_file, bbox_inches='tight')
