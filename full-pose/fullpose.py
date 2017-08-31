@@ -33,10 +33,10 @@ class FullPose7DModel(nn.Module):
             flownet.conv6,
             flownet.conv6_1,
         )
-        self.fix_flownet = fix_flownet
-        if fix_flownet:
-            for param in self.layers.parameters():
-                param.requires_grad = False
+        # self.fix_flownet = fix_flownet
+        # if fix_flownet:
+        for param in self.layers.parameters():
+            param.requires_grad = False
 
         fout = self.flownet_output_size(input_size)
         self.hidden = 64
@@ -89,8 +89,8 @@ class FullPose7DModel(nn.Module):
 
     def get_parameters(self):
         params = list(self.lstm.parameters()) + list(self.fc.parameters())
-        if not self.fix_flownet:
-            params = list(self.layers.parameters()) + params
+        # if not self.fix_flownet:
+        #     params = list(self.layers.parameters()) + params
         return params
 
 
