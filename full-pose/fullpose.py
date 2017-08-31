@@ -9,7 +9,7 @@ from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
 import plots
-from GTAV import Subsequence, FOLDERS
+from GTAV import Subsequence, visualize_predicted_path, FOLDERS
 from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 
@@ -317,6 +317,11 @@ class FullPose7D(BaseExperiment):
             avg_rot_loss.update(r_loss.data[0])
             avg_trans_loss.update(t_loss.data[0])
 
+            # Visualize predicted path
+            of = self.make_output_filename('{:05}-path.pdf'.format(i))
+            visualize_predicted_path(output.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=True)
+
+
         # Average losses for rotation, translation and combined
         avg_loss = avg_loss.average
         avg_rot_loss = avg_rot_loss.average
@@ -330,7 +335,7 @@ class FullPose7D(BaseExperiment):
         rot_error_logger = self.make_logger('relative_rotation_angles.log')
         rot_error_logger.clear()
         rot_error_logger.column('Relative rotation angle between prediction and target', format='{:.4f}')
-        pose_errors = self.relative_rotation_angles(all_predictions, all_targets)
+        pose_errors = self.relative_rotation_angles2(all_predictions, all_targets)
         for err in pose_errors:
             rot_error_logger.log(err)
 
@@ -390,7 +395,7 @@ class FullPose7D(BaseExperiment):
         return loss1 + self.beta * loss2, loss1, loss2
 
     def relative_rotation_angles(self, predictions, targets):
-        # Dimensions: [sequence_length, 7]
+        # Dimensions: [N, 7]
         q1 = predictions[:, 3:]
 
         # Normalize output quaternion
@@ -406,6 +411,19 @@ class FullPose7D(BaseExperiment):
         rel_angles = [quat2axangle(q)[1] for q in rel_q]
         rel_angles = [degrees(a) for a in rel_angles]
         return rel_angles
+
+    def relative_rotation_angles2(self, predictions, targets):
+        # Dimensions: [N, 7]
+        q1 = predictions[:, 3:]
+        q2 = targets[:, 3:]
+
+        # Normalize output quaternion
+        q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
+        q1 = q1 / q1_norm.expand_as(q1)
+
+        rel_angles = torch.acos(2 * (q1 * q2).sum(1) ** 2 - 1)
+
+        return [degrees(a) for a in rel_angles.view(-1)]
 
     def make_checkpoint(self):
         checkpoint = {

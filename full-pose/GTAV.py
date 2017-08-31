@@ -4,6 +4,7 @@ from math import radians
 from os import path
 
 import matplotlib.pyplot as plt
+plt.switch_backend('agg') # For machines without display (e.g. cluster)
 import numpy as np
 import torch
 from PIL import Image
@@ -187,6 +188,35 @@ def plot_camera_path_2D(file, resolution=1.0, show_rot=True):
 
     plt.axis('equal')
     plt.show()
+
+
+def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, show_rot=True):
+    assert 0 < resolution <= 1
+    step = 1 / resolution
+
+    positions1 = predictions[::step, :3]
+    positions2 = targets[::step, :3]
+
+    quaternions1 = predictions[::step, 3:]
+    quaternions2 = targets[::step, 3:]
+
+    x1, y1, z1 = positions1[:, 0], positions1[:, 1], positions1[:, 2]
+    x2, y2, z2 = positions2[:, 0], positions2[:, 1], positions2[:, 2]
+    plt.plot(x1, y1, 'b', label='Prediction')
+    plt.plot(x2, y2, 'r', label='Ground Truth')
+
+    if show_rot:
+        y_axes1 = get_camera_optical_axes(quaternions1)
+        y_axes2 = get_camera_optical_axes(quaternions2)
+
+        u1, v1, w1 = y_axes1[:, 0], y_axes1[:, 1], y_axes1[:, 2]
+        u2, v2, w2 = y_axes2[:, 0], y_axes2[:, 1], y_axes2[:, 2]
+
+        plt.quiver(x1, y1, u1, v1, units='xy', scale_units='xy', scale=0.5, width=0.05)
+        plt.quiver(x2, y2, u2, v2, units='xy', scale_units='xy', scale=0.5, width=0.05)
+
+    plt.axis('equal')
+    plt.savefig(output_file, bbox_inches='tight')
 
 #s = r'E:\Rockstar Games\Grand Theft Auto V\08.12.2017 - 18.04.57.txt'
 #plot_camera_path_2D(s, 0.07)
