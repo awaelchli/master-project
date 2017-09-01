@@ -42,6 +42,9 @@ class RotationModel(nn.Module):
             for param in self.layers.parameters():
                 param.requires_grad = False
 
+            for param in self.flownet.parameters():
+                param.requires_grad = False
+
         fout = self.flownet_output_size(input_size)
         self.hidden = 100
         self.nlayers = 1
