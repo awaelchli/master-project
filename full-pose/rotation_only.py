@@ -285,7 +285,7 @@ class RotationOnly(BaseExperiment):
 
             # Save flows
             for j, flow in enumerate(flows):
-                flow = flow.data
+                flow = flow.data.squeeze(0)
                 b = torch.zeros(1, flow.size(1), flow.size(2)).cuda()
                 flow = torch.cat((flow, b), 0)
 
