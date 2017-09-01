@@ -12,6 +12,7 @@ import plots
 from GTAV import Subsequence, visualize_predicted_path, FOLDERS
 from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
+from torchvision.utils import save_image
 
 
 class RotationModel(nn.Module):
@@ -20,6 +21,7 @@ class RotationModel(nn.Module):
         super(RotationModel, self).__init__()
 
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
+        self.flownet = flownet
 
         self.layers = torch.nn.Sequential(
             flownet.conv1,
@@ -76,6 +78,7 @@ class RotationModel(nn.Module):
 
         # Using batch mode to forward sequence
         pairs = self.layers(pairs)
+        flows = self.flownet(pairs)
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
         c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
@@ -86,7 +89,7 @@ class RotationModel(nn.Module):
         outputs, _ = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
         predictions = self.fc(outputs.squeeze(0))
 
-        return predictions
+        return predictions, flows
 
     def get_parameters(self):
         params = list(self.lstm.parameters()) + list(self.fc.parameters())
@@ -225,7 +228,7 @@ class RotationOnly(BaseExperiment):
             self.optimizer.zero_grad()
 
             start = time.time()
-            output = self.model(input)
+            output, _ = self.model(input)
             output = self.normalize_output(output)
 
             #print('Prediction: ', output)
@@ -276,7 +279,7 @@ class RotationOnly(BaseExperiment):
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
-            output = self.model(input)
+            output, _ = self.model(input)
             output = self.normalize_output(output)
 
             loss = self.loss_function(output, target[1:])
@@ -304,7 +307,7 @@ class RotationOnly(BaseExperiment):
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
-            output = self.model(input)
+            output, flows = self.model(input)
             output = self.normalize_output(output)
 
             all_predictions.append(output.data)
@@ -317,6 +320,14 @@ class RotationOnly(BaseExperiment):
 
             loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
+
+            # Save flows
+            for j, flow in enumerate(flows):
+                print('Flow shape: ', flow.size())
+                filename = '{}/{}.jpg'.format(i, j)
+                f = self.make_output_filename(filename)
+                save_image(flow, f)
+
 
 
         # Average losses for rotation, translation and combined
