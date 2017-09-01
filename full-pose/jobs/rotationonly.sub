@@ -17,7 +17,7 @@ module load anaconda
 
 # Training
 python full-pose/main.py rotation \
---output rotation_only5_sgd \
+--output rotation_only5_sgd_flow \
 --train \
 --cuda \
 --epochs 50 \
