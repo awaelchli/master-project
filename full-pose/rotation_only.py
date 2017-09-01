@@ -212,6 +212,9 @@ class RotationOnly(BaseExperiment):
         epoch = len(self.training_loss) + 1
         #self.adjust_learning_rate(epoch)
 
+        if epoch == 1:
+            self.save_flow()
+
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
         for i, (images, poses) in enumerate(self.trainingset):
@@ -264,6 +267,19 @@ class RotationOnly(BaseExperiment):
         if epoch == 1:
             self.print_info('Average time for forward and backward operation: {:.4f} seconds'.format(
                 forward_backward_time.average))
+
+    def save_flow(self):
+        for i, (images, poses) in enumerate(self.trainingset):
+            images.squeeze_(0)
+            input = self.to_variable(images, volatile=True)
+            _, flows = self.model(input)
+
+            # Save flows
+            for j, flow in enumerate(flows):
+                print('Flow shape: ', flow.size())
+                filename = '{}/{}.jpg'.format(i, j)
+                f = self.make_output_filename(filename)
+                save_image(flow, f)
 
     def validate(self):
         avg_loss = AverageMeter()
@@ -320,14 +336,6 @@ class RotationOnly(BaseExperiment):
 
             loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
-
-            # Save flows
-            for j, flow in enumerate(flows):
-                print('Flow shape: ', flow.size())
-                filename = '{}/{}.jpg'.format(i, j)
-                f = self.make_output_filename(filename)
-                save_image(flow, f)
-
 
 
         # Average losses for rotation, translation and combined
