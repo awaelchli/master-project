@@ -285,10 +285,14 @@ class RotationOnly(BaseExperiment):
 
             # Save flows
             for j, flow in enumerate(flows):
+                flow = flow.data
+                b = torch.zeros(1, flow.size(1), flow.size(2))
+                flow = torch.cat((flow, b), 0)
+
                 print('Flow: ', flow)
                 filename = '{}/{}.jpg'.format(i, j)
                 f = self.make_output_filename(filename)
-                save_image(flow.data, f)
+                save_image(flow, f)
 
     def validate(self):
         avg_loss = AverageMeter()
