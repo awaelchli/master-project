@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N train_letters
+#$ -N train_classification
 #$ -S /bin/bash
 #$ -cwd
 #$ -j y
@@ -16,7 +16,7 @@
 module load anaconda
 
 # Testing
-python main.py flow \
+python main.py classification \
 --cuda \
 --input flow_classification \
 --output flow_classification/test \
