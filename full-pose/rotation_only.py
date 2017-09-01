@@ -77,7 +77,7 @@ class RotationModel(nn.Module):
         assert pairs.size(0) == n - 1
 
         # Using batch mode to forward sequence
-        pairs = self.layers(pairs)
+        out_pairs = self.layers(pairs)
         flows = self.flownet(pairs)
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
@@ -86,7 +86,7 @@ class RotationModel(nn.Module):
             h0 = h0.cuda()
             c0 = c0.cuda()
 
-        outputs, _ = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
+        outputs, _ = self.lstm(out_pairs.view(1, n - 1, -1), (h0, c0))
         predictions = self.fc(outputs.squeeze(0))
 
         return predictions, flows
