@@ -17,9 +17,10 @@ module load anaconda
 
 # Testing
 python full-pose/main.py rotation \
---input rotation_only2 \
---output rotation_only2/test \
+--input rotation_only5_sgd \
+--output rotation_only5_sgd/test \
 --test \
+--cuda \
 --sequence 20 \
 --workers 4 \
 --print_freq 1 \

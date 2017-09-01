@@ -17,11 +17,11 @@ module load anaconda
 
 # Training
 python full-pose/main.py rotation \
---output rotation_only2 \
+--output rotation_only5_sgd \
 --train \
 --cuda \
 --epochs 50 \
 --sequence 20 \
---lr 0.00005 \
+--lr 0.0005 \
 --workers 8 \
 --print_freq 1 \
