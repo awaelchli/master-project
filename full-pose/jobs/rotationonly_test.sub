@@ -17,8 +17,8 @@ module load anaconda
 
 # Testing
 python full-pose/main.py rotation \
---input rotation_only5_sgd \
---output rotation_only5_sgd/test \
+--input rotation_full_flowmap \
+--output rotation_full_flowmap/test \
 --test \
 --cuda \
 --sequence 20 \
