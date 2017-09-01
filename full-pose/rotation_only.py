@@ -80,6 +80,7 @@ class RotationModel(nn.Module):
         out_pairs = self.layers(pairs)
 
         flows = []
+        self.flownet.train(False)
         for pair in pairs:
             print('Pair: ', pair.size())
             flows.append(self.flownet(pair.unsqueeze(0)))
