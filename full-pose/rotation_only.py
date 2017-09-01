@@ -78,7 +78,12 @@ class RotationModel(nn.Module):
 
         # Using batch mode to forward sequence
         out_pairs = self.layers(pairs)
-        flows = self.flownet(pairs)
+
+        flows = []
+        for pair in pairs:
+            print('Pair: ', pair.size())
+            flows.append(self.flownet(pair))
+        print('Flows: ', len(flows))
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
         c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
