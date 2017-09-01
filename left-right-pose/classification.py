@@ -37,15 +37,18 @@ class FlowNetLSTM(nn.Module):
         temp = self.layers(Variable(torch.zeros(1, 6, input_size[0], input_size[1])))
         self.hidden = 500
         self.nlayers = 3
-        self.lstm = nn.LSTM(input_size=temp.size(1) * temp.size(2) * temp.size(3),
-                            hidden_size=self.hidden,
-                            num_layers=self.nlayers,
-                            batch_first=True)
+        self.lstm = nn.LSTM(
+            input_size=temp.size(1) * temp.size(2) * temp.size(3),
+            hidden_size=self.hidden,
+            num_layers=self.nlayers,
+            batch_first=True
+        )
 
         self.fc = nn.Linear(self.hidden, 2)
 
+        #self.init_weights()
+
     def init_weights(self):
-        # TODO: this is never used!
         self.fc.weight.data.uniform_(-0.1, 0.1)
         self.fc.bias.data.zero_()
 
@@ -127,7 +130,6 @@ class LeftRightPoseClassification(BaseExperiment):
         # For training set
         transform1 = transforms.Compose([
             transforms.RandomHorizontalFlip(),
-            #transforms.Scale(256),
         ])
 
         # After homography is applied to image
@@ -140,31 +142,62 @@ class LeftRightPoseClassification(BaseExperiment):
         sequence = args.sequence
         step = args.step
 
-        train_set = RotationSequence(traindir, sequence_length=sequence, max_angle=args.angle,
-                                     step_angle=step, z_plane=args.zplane,
-                                     transform1=transform1, transform2=transform2, max_size=args.max_size[0])
-        val_set = RotationSequence(valdir, sequence_length=sequence, max_angle=args.angle, step_angle=step,
-                                   z_plane=args.zplane,
-                                   transform1=transform1, transform2=transform2, max_size=args.max_size[1])
-        test_set = RotationSequence(testdir, sequence_length=sequence, max_angle=args.angle, step_angle=step,
-                                    z_plane=args.zplane,
-                                    transform1=transform1, transform2=transform2, max_size=args.max_size[2])
+        train_set = RotationSequence(
+            traindir,
+            sequence_length=sequence,
+            max_angle=args.angle,
+            step_angle=step,
+            z_plane=args.zplane,
+            transform1=transform1,
+            transform2=transform2,
+            max_size=args.max_size[0]
+        )
 
-        # Export some examples from the generated dataset
-        train_set.visualize = self.out_folder
-        inds = random.sample(range(len(train_set)), max(min(10, args.max_size[0]), 1))
-        for i in inds:
-            _ = train_set[i]
-        train_set.visualize = None
+        val_set = RotationSequence(
+            valdir,
+            sequence_length=sequence,
+            max_angle=args.angle,
+            step_angle=step,
+            z_plane=args.zplane,
+            transform1=transform1,
+            transform2=transform2,
+            max_size=args.max_size[1]
+        )
 
-        dataloader_train = DataLoader(train_set, batch_size=1, pin_memory=self.use_cuda,
-                                      shuffle=True, num_workers=args.workers)
+        test_set = RotationSequence(
+            testdir,
+            sequence_length=sequence,
+            max_angle=args.angle,
+            step_angle=step,
+            z_plane=args.zplane,
+            transform1=transform1,
+            transform2=transform2,
+            max_size=args.max_size[2]
+        )
 
-        dataloader_val = DataLoader(val_set, batch_size=1, pin_memory=self.use_cuda,
-                                    shuffle=False, num_workers=args.workers)
+        dataloader_train = DataLoader(
+            train_set,
+            batch_size=1,
+            pin_memory=self.use_cuda,
+            shuffle=True,
+            num_workers=args.workers
+        )
 
-        dataloader_test = DataLoader(test_set, batch_size=1, pin_memory=self.use_cuda,
-                                     shuffle=False, num_workers=args.workers)
+        dataloader_val = DataLoader(
+            val_set,
+            batch_size=1,
+            pin_memory=self.use_cuda,
+            shuffle=False,
+            num_workers=args.workers
+        )
+
+        dataloader_test = DataLoader(
+            test_set,
+            batch_size=1,
+            pin_memory=self.use_cuda,
+            shuffle=False,
+            num_workers=args.workers
+        )
 
         return dataloader_train, dataloader_val, dataloader_test
 
@@ -227,7 +260,7 @@ class LeftRightPoseClassification(BaseExperiment):
         num_predictions = len(dataloader) * (self.sequence_length - 1)
         accuracy = 0
         avg_loss = AverageMeter()
-        for i, (images, poses) in enumerate(dataloader):
+        for i, (images, poses, _) in enumerate(dataloader):
 
             images.squeeze_(0)
             poses.squeeze_(0)

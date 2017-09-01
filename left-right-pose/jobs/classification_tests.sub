@@ -15,20 +15,6 @@
 
 module load anaconda
 
-# Training
-python main.py flow \
---cuda \
---output flow_classification \
---train \
---epochs 120 \
---sequence 20 \
---angle 50 \
---zplane 0.7 \
---lr 0.0001 \
---workers 4 \
---print_freq 1 \
---max_size 10000 300 300
-
 # Testing
 python main.py flow \
 --cuda \
