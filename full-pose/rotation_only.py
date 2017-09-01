@@ -156,9 +156,12 @@ class RotationOnly(BaseExperiment):
         valdir = FOLDERS['standing']['validation']
         testdir = FOLDERS['standing']['test']
 
+
+
         # Image pre-processing
         transform = transforms.Compose([
-            transforms.Scale(args.image_size),
+            transforms.Scale(320),
+            transforms.CenterCrop((320, 448)),
             transforms.ToTensor(),
         ])
 
