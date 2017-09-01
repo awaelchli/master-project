@@ -86,7 +86,11 @@ class FlowNetS(nn.Module):
         flow6       = self.predict_flow6(out_conv6)
         flow6_up    = self.upsampled_flow6_to_5(flow6)
         out_deconv5 = self.deconv5(out_conv6)
-        
+
+        print(out_conv5.size())
+        print(out_deconv5.size())
+        print(flow6_up.size())
+
         concat5 = torch.cat((out_conv5,out_deconv5,flow6_up),1)
         flow5       = self.predict_flow5(concat5)
         flow5_up    = self.upsampled_flow5_to_4(flow5)
