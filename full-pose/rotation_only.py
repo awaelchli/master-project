@@ -1,5 +1,6 @@
 import time
 from math import degrees
+import os
 
 import torch
 import torch.nn as nn
@@ -283,6 +284,7 @@ class RotationOnly(BaseExperiment):
             input = self.to_variable(images, volatile=True)
             _, flows = self.model(input)
 
+            os.mkdir(self.make_output_filename('{}'.format(i)))
             # Save flows
             for j, flow in enumerate(flows):
                 flow = flow.data.squeeze(0)
