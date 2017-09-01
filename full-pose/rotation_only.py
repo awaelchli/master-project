@@ -284,7 +284,7 @@ class RotationOnly(BaseExperiment):
 
             # Save flows
             for j, flow in enumerate(flows):
-                print('Flow shape: ', flow.size())
+                print('Flow: ', flow)
                 filename = '{}/{}.jpg'.format(i, j)
                 f = self.make_output_filename(filename)
                 save_image(flow, f)
