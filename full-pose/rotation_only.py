@@ -23,6 +23,7 @@ class RotationModel(nn.Module):
 
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
         self.flownet = flownet
+        self.flownet.train(False)
 
         self.layers = torch.nn.Sequential(
             flownet.conv1,
@@ -63,7 +64,8 @@ class RotationModel(nn.Module):
         var = Variable(torch.zeros(1, 6, input_size[0], input_size[1]), volatile=True)
         if next(self.layers.parameters()).is_cuda:
             var = var.cuda()
-        out = self.layers(var)
+        #out = self.layers(var)
+        out = self.flownet(var)
         return out.size(0), out.size(1), out.size(2), out.size(3)
 
     def forward(self, input):
@@ -78,14 +80,13 @@ class RotationModel(nn.Module):
         assert pairs.size(0) == n - 1
 
         # Using batch mode to forward sequence
-        out_pairs = self.layers(pairs)
+        #out_pairs = self.layers(pairs)
+
+        out_pairs = self.flownet(pairs)
 
         flows = []
-        self.flownet.train(False)
-        for pair in pairs:
-            print('Pair: ', pair.size())
-            flows.append(self.flownet(pair.unsqueeze(0)))
-        print('Flows: ', len(flows))
+        #for pair in pairs:
+            #flows.append(self.flownet(pair.unsqueeze(0)))
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
         c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
@@ -222,8 +223,8 @@ class RotationOnly(BaseExperiment):
         epoch = len(self.training_loss) + 1
         #self.adjust_learning_rate(epoch)
 
-        if epoch == 1:
-            self.save_flow()
+        #if epoch == 1:
+            #self.save_flow()
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
