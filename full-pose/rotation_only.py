@@ -82,7 +82,7 @@ class RotationModel(nn.Module):
         flows = []
         for pair in pairs:
             print('Pair: ', pair.size())
-            flows.append(self.flownet(pair))
+            flows.append(self.flownet(pair.unsqueeze(0)))
         print('Flows: ', len(flows))
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
