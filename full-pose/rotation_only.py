@@ -294,7 +294,7 @@ class RotationOnly(BaseExperiment):
                 print('Flow: ', flow)
                 filename = '{}/{}.jpg'.format(i, j)
                 f = self.make_output_filename(filename)
-                save_image(flow, f)
+                save_image(flow, f, range=(-3, 3))
 
     def validate(self):
         avg_loss = AverageMeter()
