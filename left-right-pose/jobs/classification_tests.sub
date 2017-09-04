@@ -16,7 +16,7 @@
 module load anaconda
 
 # Testing
-python main.py classification \
+python left-right-pose/main.py classification \
 --cuda \
 --input flow_classification \
 --output flow_classification/test \

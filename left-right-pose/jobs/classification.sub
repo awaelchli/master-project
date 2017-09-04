@@ -16,7 +16,7 @@
 module load anaconda
 
 # Training
-python main.py classification \
+python left-right-pose/main.py classification \
 --cuda \
 --output flow_classification \
 --train \
