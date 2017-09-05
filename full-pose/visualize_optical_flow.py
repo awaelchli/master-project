@@ -87,7 +87,7 @@ def compute_flow():
             valid = torch.ones(flow.size(0), flow.size(1), 1)
             flow = torch.cat((flow, valid), 2)
 
-            flow = flow.numpy()
+            flow = flow.data.numpy()
 
             save = os.path.join(output_folder, '{:04d}-{:02d}.png'.format(i, j))
             visualize_flow(flow, save)
