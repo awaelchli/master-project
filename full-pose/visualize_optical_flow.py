@@ -154,7 +154,9 @@ if __name__ == '__main__':
     output_folder = 'out/flowmaps/'
 
     flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
-    flownet = flownet
     flownet.train(False)
+
+    if use_cuda:
+        flownet.cuda()
 
     compute_flow()
