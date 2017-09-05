@@ -26,7 +26,7 @@ def extract_frames(videofile, fps=30, new_height=None):
     new_height = new_height if new_height else height
 
     original_fps = nframes / duration
-    step = int(original_fps / fps)
+    step = max(int(original_fps / fps), 1)
 
     indices = list(range(0, nframes, step))
     timestamps = [int(1000 * duration * (i / nframes)) for i in indices]
