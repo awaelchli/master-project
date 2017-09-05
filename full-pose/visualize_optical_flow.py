@@ -134,6 +134,7 @@ def visualize_flow(flow, save):
     img[:, :, 2] = img[:, :, 2] * valid
     # show
     plt.imshow(img)
+    plt.title('Max: {}'.format(max_flow))
     plt.savefig(save)
 
 
