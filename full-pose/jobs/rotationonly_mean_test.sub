@@ -17,8 +17,8 @@ module load anaconda
 
 # Testing
 python full-pose/main.py rotation_mean \
---input rotation_only_mean \
---output rotation_only_mean/test \
+--input rotation_only_mean_more_lstm_layers \
+--output rotation_only_mean_more_lstm_layers/test \
 --test \
 --cuda \
 --sequence 20 \

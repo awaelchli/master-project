@@ -47,7 +47,7 @@ class RotationModel(nn.Module):
 
         fout = self.flownet_output_size(input_size)
         self.hidden = 100
-        self.nlayers = 1
+        self.nlayers = 5
         self.lstm = nn.LSTM(
             input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
