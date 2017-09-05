@@ -80,11 +80,12 @@ def compute_flow():
         for j, flow in enumerate(flows):
             flow.squeeze_(0)
             flow = flow.permute(1, 2, 0)
-            valid = torch.ones(flow.size(0), flow.size(1), 1)
-            flow = torch.cat((flow, valid), 2)
 
             if use_cuda:
                 flow = flow.cpu()
+
+            valid = torch.ones(flow.size(0), flow.size(1), 1)
+            flow = torch.cat((flow, valid), 2)
 
             flow = flow.numpy()
 
