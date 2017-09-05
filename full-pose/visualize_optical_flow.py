@@ -134,7 +134,8 @@ def visualize_flow(flow, save):
     img[:, :, 2] = img[:, :, 2] * valid
     # show
     plt.imshow(img)
-    plt.title('Max: {}'.format(max_flow))
+    #plt.title('Max: {}'.format(max_flow))
+    plt.title('Mean flow: ({:.3f}, {:.3f})'.format(du.mean(), dv.mean()))
     plt.savefig(save)
 
 
