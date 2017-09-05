@@ -139,7 +139,7 @@ def visualize_flow(flow, save):
 
 
 if __name__ == '__main__':
-    sequence_length = 30
+    sequence_length = 20
     use_cuda = True
     workers = 8
     output_folder = 'out/flowmaps/'
