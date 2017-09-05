@@ -17,7 +17,7 @@ module load anaconda
 
 # Training
 python full-pose/main.py rotation_mean \
---output rotation_only_mean_more_lstm_layers \
+--output rotation_only_mean_more_lstm_layers_adjust_lr \
 --train \
 --cuda \
 --epochs 50 \
