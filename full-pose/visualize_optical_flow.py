@@ -78,7 +78,7 @@ def compute_flow():
         images.squeeze_(0)
 
         for j, image in enumerate(images):
-            name = 'im-{}-{}.png'.format(i, i)
+            name = 'im-{}-{}.png'.format(i, j)
             save_image(image, os.path.join(output_folder, name))
 
         input = to_variable(images)
