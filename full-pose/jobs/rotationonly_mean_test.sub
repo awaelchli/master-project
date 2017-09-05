@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#$ -N train_gta5_rotation
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Testing
+python full-pose/main.py rotation_mean \
+--input rotation_only_mean \
+--output rotation_only_mean/test \
+--test \
+--cuda \
+--sequence 20 \
+--workers 4 \
+--print_freq 1 \
+--overwrite \

@@ -8,11 +8,13 @@ import torch
 from base import CHECKPOINT_FILENAME
 from fullpose import FullPose7D
 from rotation_only import RotationOnly
+import rotation_only_mean_flow as rot_mean
 
 OUT_ROOT_FOLDER = 'out'
 ARCHS = {
     'pose7D': FullPose7D,
     'rotation': RotationOnly,
+    'rotation_mean': rot_mean.RotationOnly
 }
 
 
