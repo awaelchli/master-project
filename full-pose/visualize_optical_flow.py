@@ -155,6 +155,8 @@ if __name__ == '__main__':
     workers = 8
     output_folder = 'out/flowmaps/'
 
+    os.makedirs(output_folder, exist_ok=True)
+
     flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
     flownet.train(False)
 
