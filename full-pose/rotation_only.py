@@ -47,7 +47,7 @@ class RotationModel(nn.Module):
 
         fout = self.flownet_output_size(input_size)
         self.hidden = 100
-        self.nlayers = 5
+        self.nlayers = 3
         self.lstm = nn.LSTM(
             input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
@@ -105,7 +105,7 @@ class RotationModel(nn.Module):
     def get_parameters(self):
         params = list(self.lstm.parameters()) + list(self.fc.parameters())
         if not self.fix_flownet:
-            params = list(self.layers.parameters()) + params
+            params = list(self.flownet.parameters()) + params
         return params
 
 
@@ -161,8 +161,6 @@ class RotationOnly(BaseExperiment):
         traindir = FOLDERS['standing']['training']
         valdir = FOLDERS['standing']['validation']
         testdir = FOLDERS['standing']['test']
-
-
 
         # Image pre-processing
         transform = transforms.Compose([
@@ -246,7 +244,7 @@ class RotationOnly(BaseExperiment):
 
             start = time.time()
             output, _ = self.model(input)
-            output = self.normalize_output(output)
+            output, avg_norm = self.normalize_output(output)
 
             #print('Prediction: ', output)
             #print('Target:     ', target)
@@ -259,8 +257,8 @@ class RotationOnly(BaseExperiment):
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
-                print('Sample [{:d}/{:d}], Rotation Loss: {:.4f}'
-                      .format(i + 1, num_batches, loss.data[0]))
+                print('Sample [{:d}/{:d}], Rotation Loss: {:.4f}, Avg. quaternion norm: {:.4f}'
+                      .format(i + 1, num_batches, loss.data[0], avg_norm))
 
             training_loss.update(loss.data[0])
 
@@ -315,7 +313,7 @@ class RotationOnly(BaseExperiment):
             target = self.to_variable(poses, volatile=True)
 
             output, _ = self.model(input)
-            output = self.normalize_output(output)
+            output, avg_norm = self.normalize_output(output)
 
             loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
@@ -343,7 +341,7 @@ class RotationOnly(BaseExperiment):
             target = self.to_variable(poses, volatile=True)
 
             output, flows = self.model(input)
-            output = self.normalize_output(output)
+            output, avg_norm = self.normalize_output(output)
 
             all_predictions.append(output.data)
             all_targets.append(target.data[1:])
@@ -416,7 +414,9 @@ class RotationOnly(BaseExperiment):
         q = output
         q_norm = torch.norm(q, 2, dim=1).view(-1, 1)
         q = q / q_norm.expand_as(q)
-        return q
+
+        avg_norm = q_norm.data.sum() / output.size(0)
+        return q, avg_norm
 
     def relative_rotation_angles(self, predictions, targets):
         # Dimensions: [N, 7]
@@ -456,7 +456,7 @@ class RotationOnly(BaseExperiment):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
 
-    def error_distribution(self, errors, start=0.0, stop=10.0, step=1.0):
+    def error_distribution(self, errors, start=0.0, stop=180.0, step=1.0):
         thresholds = list(torch.arange(start, stop, step))
         n = torch.numel(errors)
         distribution = [torch.sum(errors <= t) / n for t in thresholds]

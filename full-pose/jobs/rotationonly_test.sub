@@ -17,8 +17,8 @@ module load anaconda
 
 # Testing
 python full-pose/main.py rotation \
---input rotation_only_half_data \
---output rotation_only_half_data/test \
+--input rotation_only_more_data \
+--output rotation_only_more_data/test \
 --test \
 --cuda \
 --sequence 20 \
