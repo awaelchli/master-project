@@ -13,6 +13,8 @@ import matplotlib.colors as cl
 plt.switch_backend('agg')
 import numpy as np
 
+from torchvision.utils import save_image
+
 
 def to_variable(data, volatile=False):
     var = Variable(data, volatile=volatile)
@@ -61,7 +63,8 @@ def load_dataset():
         batch_size=1,
         pin_memory=use_cuda,
         shuffle=False,
-        num_workers=workers)
+        num_workers=workers
+    )
 
     return dataloader
 
@@ -73,6 +76,10 @@ def compute_flow():
     for i, (images, _) in enumerate(dataloader):
 
         images.squeeze_(0)
+
+        for j, image in enumerate(images):
+            name = 'im-{}-{}.png'.format(i, i)
+            save_image(image, os.path.join(output_folder, name))
 
         input = to_variable(images)
         flows = forward(input)
@@ -89,27 +96,8 @@ def compute_flow():
 
             flow = flow.data.numpy()
 
-            save = os.path.join(output_folder, '{:04d}-{:02d}.png'.format(i, j))
+            save = os.path.join(output_folder, 'fl-{:04d}-{:02d}.png'.format(i, j))
             visualize_flow(flow, save)
-
-
-# def save_flow(self):
-#     for i, (images, poses) in enumerate(self.trainingset):
-#         images.squeeze_(0)
-#         input = self.to_variable(images, volatile=True)
-#         _, flows = self.model(input)
-#
-#         os.mkdir(self.make_output_filename('{}'.format(i)))
-#         # Save flows
-#         for j, flow in enumerate(flows):
-#             flow = flow.data.squeeze(0)
-#             b = torch.zeros(1, flow.size(1), flow.size(2)).cuda()
-#             flow = torch.cat((flow, b), 0)
-#
-#             print('Flow: ', flow)
-#             filename = '{}/{}.jpg'.format(i, j)
-#             f = self.make_output_filename(filename)
-#             save_image(flow, f, range=(-3, 3))
 
 
 # Source: https://github.com/liruoteng/OpticalFlowToolkit/blob/master/lib/flowlib.py

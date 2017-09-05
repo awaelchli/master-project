@@ -5,7 +5,7 @@ import os
 import shutil
 from GTAV import Subsequence, FOLDERS
 
-traindir = FOLDERS['walking']['training']
+traindir = FOLDERS['standing']['training']
 image_size = 256
 sequence = 25
 num_sequences = 5
@@ -34,7 +34,7 @@ dataloader = DataLoader(
     train_set,
     batch_size=1,
     pin_memory=False,
-    shuffle=True,
+    shuffle=False,
     num_workers=1)
 
 g = enumerate(dataloader)
