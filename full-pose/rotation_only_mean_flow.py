@@ -203,7 +203,7 @@ class RotationOnly(BaseExperiment):
             train_set,
             batch_size=1,
             pin_memory=self.use_cuda,
-            shuffle=False,
+            shuffle=True,
             num_workers=args.workers)
 
         dataloader_val = DataLoader(
