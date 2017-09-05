@@ -85,8 +85,9 @@ class RotationModel(nn.Module):
 
         out_pairs = self.flownet(pairs)
 
-        # Shape of out_pairs is: [n - 1, 2, h, w]
-        out_means = out_pairs.mean(2).mean(3).view(-1, 2)
+        # Shape of out_pairs is: [n-1, 2, h, w]
+        out_means = out_pairs.mean(2) # new shape: [n-1, 2, w]
+        out_means = out_means.mean(2) # new shape: [n-1, 2]
         out_means = out_means.unsqueeze(0)
         # Shape: [1, n - 1, 2]
 
