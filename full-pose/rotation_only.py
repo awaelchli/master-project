@@ -57,7 +57,7 @@ class RotationModel(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self.fc.weight.data.uniform_(-0.5, 0.5)
+        self.fc.weight.data.uniform_(-0.2, 0.2)
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
