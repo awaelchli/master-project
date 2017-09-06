@@ -38,12 +38,11 @@ class RotationModel(nn.Module):
         self.flownet = layers
 
         self.fix_flownet = fix_flownet
-        if fix_flownet:
-            for param in self.flownet.parameters():
-                param.requires_grad = False
+        for param in self.flownet.parameters():
+            param.requires_grad = not fix_flownet
 
         fout = self.flownet_output_size(input_size)
-        self.hidden = 1000
+        self.hidden = 100
         self.nlayers = 2
         self.lstm = nn.LSTM(
             input_size=fout[1] * fout[2] * fout[3],
@@ -81,8 +80,12 @@ class RotationModel(nn.Module):
 
         # Using batch mode to forward sequence
         #out_pairs = self.layers(pairs)
+        vol = pairs.volatile
+        pairs.volatile = vol or self.fix_flownet
 
         out_pairs = self.flownet(pairs)
+
+        out_pairs.volatile = vol
 
         flows = []
         #for pair in pairs:
