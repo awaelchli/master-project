@@ -140,6 +140,7 @@ class RotationOnly(BaseExperiment):
         self.print_freq = args.print_freq
         self.sequence_length = args.sequence
         self.training_loss = []
+        self.first_epoch_loss = []
         self.validation_loss = []
 
         self.train_logger.column('Epoch', '{:d}')
@@ -257,6 +258,9 @@ class RotationOnly(BaseExperiment):
                       .format(i + 1, num_batches, loss.data[0], avg_norm))
 
             training_loss.update(loss.data[0])
+
+            if epoch == 1:
+                self.first_epoch_loss.append(loss.data[0])
 
         training_loss = training_loss.average
         self.training_loss.append(training_loss)
@@ -428,6 +432,7 @@ class RotationOnly(BaseExperiment):
             'epoch': len(self.training_loss),
             'training_loss': self.training_loss,
             'validation_loss': self.validation_loss,
+            'first_epoch_loss': self.first_epoch_loss,
             'model': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
@@ -438,6 +443,7 @@ class RotationOnly(BaseExperiment):
         self.validation_loss = checkpoint['validation_loss']
         self.model.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
+        self.first_epoch_loss = checkpoint['first_epoch_loss']
 
     def num_parameters(self):
         return sum([p.numel() for p in self.model.get_parameters()])
@@ -451,6 +457,7 @@ class RotationOnly(BaseExperiment):
     def plot_performance(self):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
+        plots.plot_epoch_loss(checkpoint['first_epoch_loss'], save=self.make_output_filename('first_epoch.pdf'))
 
     def error_distribution(self, errors, start=0.0, stop=180.0, step=1.0):
         thresholds = list(torch.arange(start, stop, step))
