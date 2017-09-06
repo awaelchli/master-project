@@ -22,10 +22,8 @@ class RotationModel(nn.Module):
         super(RotationModel, self).__init__()
 
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
-        self.flownet = flownet
-        self.flownet.train(False)
 
-        self.layers = torch.nn.Sequential(
+        layers = torch.nn.Sequential(
             flownet.conv1,
             flownet.conv2,
             flownet.conv3,
@@ -37,22 +35,22 @@ class RotationModel(nn.Module):
             flownet.conv6,
             flownet.conv6_1,
         )
+        self.flownet = layers
+
         self.fix_flownet = fix_flownet
         if fix_flownet:
-            for param in self.layers.parameters():
-                param.requires_grad = False
-
             for param in self.flownet.parameters():
                 param.requires_grad = False
 
         fout = self.flownet_output_size(input_size)
-        self.hidden = 100
-        self.nlayers = 3
+        self.hidden = 1000
+        self.nlayers = 2
         self.lstm = nn.LSTM(
             input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
             num_layers=self.nlayers,
-            batch_first=True
+            batch_first=True,
+            dropout=0.2
         )
 
         # Output is a quaternion
@@ -65,9 +63,8 @@ class RotationModel(nn.Module):
 
     def flownet_output_size(self, input_size):
         var = Variable(torch.zeros(1, 6, input_size[0], input_size[1]), volatile=True)
-        if next(self.layers.parameters()).is_cuda:
+        if next(self.flownet.parameters()).is_cuda:
             var = var.cuda()
-        #out = self.layers(var)
         out = self.flownet(var)
         return out.size(0), out.size(1), out.size(2), out.size(3)
 
@@ -138,7 +135,7 @@ class RotationOnly(BaseExperiment):
             self.model.cuda()
 
         params = self.model.get_parameters()
-        self.optimizer = torch.optim.SGD(params, self.lr)
+        self.optimizer = torch.optim.Adagrad(params, self.lr)
 
         self.beta = args.beta
         self.print_freq = args.print_freq
