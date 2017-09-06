@@ -60,7 +60,7 @@ class RotationModel(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self.fc.weight.data.uniform_(-0.1, 0.1)
+        self.fc.weight.data.uniform_(-0.5, 0.5)
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
@@ -222,7 +222,7 @@ class RotationOnly(BaseExperiment):
         num_batches = len(self.trainingset)
 
         epoch = len(self.training_loss) + 1
-        #self.adjust_learning_rate(epoch)
+        self.adjust_learning_rate(epoch)
 
         #if epoch == 1:
             #self.save_flow()
@@ -448,7 +448,7 @@ class RotationOnly(BaseExperiment):
 
     def adjust_learning_rate(self, epoch):
         """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-        lr = self.lr * (0.5 ** (epoch // 5))
+        lr = self.lr * (0.5 ** (epoch // 2))
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
 
