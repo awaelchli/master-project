@@ -80,14 +80,8 @@ class RotationModel(nn.Module):
 
         # Using batch mode to forward sequence
         #out_pairs = self.layers(pairs)
-        vol = pairs.volatile
-        if vol or self.fix_flownet:
-            pairs = Variable(pairs.data, volatile=True)
 
         out_pairs = self.flownet(pairs)
-
-        if vol:
-            out_pairs = Variable(pairs.data, volatile=True)
 
         flows = []
         #for pair in pairs:
