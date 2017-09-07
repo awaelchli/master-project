@@ -62,7 +62,7 @@ class FullPose7DModel(nn.Module):
         out = self.layers(var)
         return out.size(0), out.size(1), out.size(2), out.size(3)
 
-    def forward(self, input):
+    def forward(self, input, state=None):
         # Input shape: [sequence, channels, h, w]
         n = input.size(0)
         first = input[:n-1]
@@ -76,16 +76,19 @@ class FullPose7DModel(nn.Module):
         # Using batch mode to forward sequence
         pairs = self.layers(pairs)
 
-        h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
-        c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
-        if input.is_cuda:
-            h0 = h0.cuda()
-            c0 = c0.cuda()
+        if state:
+            h0, c0 = state
+        else:
+            h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
+            c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
+            if input.is_cuda:
+                h0 = h0.cuda()
+                c0 = c0.cuda()
 
-        outputs, _ = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
+        outputs, state = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
         predictions = self.fc(outputs.squeeze(0))
 
-        return predictions
+        return predictions, state
 
     def get_parameters(self):
         params = list(self.lstm.parameters()) + list(self.fc.parameters())
@@ -235,7 +238,27 @@ class FullPose7D(BaseExperiment):
 
             # Forward
             start = time.time()
-            output = self.model(input)
+
+            # Proof of concept: if works, move to forward method and adapt dataloader
+            state = None
+            outputs = []
+            slice_size = 10
+            first, last = 1, slice_size
+            c = 0
+            while first - 2 <= input.size(0):
+                slice = input[first-1:last]
+                print('first {}, last {}'.format(first, last))
+                o, state = self.model.forward(slice, state)
+                outputs.append(o)
+                first += slice_size - 1
+                last += slice_size - 1
+                c += 1
+
+            print(c)
+
+            output = torch.cat(outputs, 0)
+            print(output.size())
+
             forward_time.update(time.time() - start)
 
             # Loss function

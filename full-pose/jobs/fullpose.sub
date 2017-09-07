@@ -17,12 +17,11 @@ module load anaconda
 
 # Training
 python full-pose/main.py pose7D \
---output gta5pose7D_more_data30fps \
+--output gta5pose7D_more_data30fps_long \
 --train \
---resume \
 --cuda \
 --epochs 100 \
---sequence 20 \
+--sequence 50 \
 --lr 0.0001 \
 --beta 0.1 \
 --workers 8 \
