@@ -10,7 +10,7 @@ from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
 import plots
 from GTAV import Subsequence, visualize_predicted_path, FOLDERS
-from base import BaseExperiment, AverageMeter, CHECKPOINT_BEST_FILENAME
+from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 
 
@@ -33,10 +33,9 @@ class FullPose7DModel(nn.Module):
             flownet.conv6,
             flownet.conv6_1,
         )
-        # self.fix_flownet = fix_flownet
-        # if fix_flownet:
+        self.fix_flownet = fix_flownet
         for param in self.layers.parameters():
-            param.requires_grad = False
+            param.requires_grad = not fix_flownet
 
         fout = self.flownet_output_size(input_size)
         self.hidden = 500
@@ -45,7 +44,8 @@ class FullPose7DModel(nn.Module):
             input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
             num_layers=self.nlayers,
-            batch_first=True
+            batch_first=True,
+            dropout=0.3
         )
 
         self.fc = nn.Linear(self.hidden, 7)
@@ -89,8 +89,8 @@ class FullPose7DModel(nn.Module):
 
     def get_parameters(self):
         params = list(self.lstm.parameters()) + list(self.fc.parameters())
-        # if not self.fix_flownet:
-        #     params = list(self.layers.parameters()) + params
+        if not self.fix_flownet:
+            params = list(self.layers.parameters()) + params
         return params
 
 
@@ -123,7 +123,7 @@ class FullPose7D(BaseExperiment):
             self.model.cuda()
 
         params = self.model.get_parameters()
-        self.optimizer = torch.optim.Adam(params, self.lr)
+        self.optimizer = torch.optim.Adagrad(params, self.lr)
 
         self.beta = args.beta
         self.print_freq = args.print_freq
@@ -144,6 +144,10 @@ class FullPose7D(BaseExperiment):
         self.print_info('Number of trainable parameters: {}'.format(self.num_parameters()))
         self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
 
+        self.gradient_logger = Logger(self.make_output_filename('gradient.log'))
+        self.gradient_logger.column('Epoch', '{:d}')
+        self.gradient_logger.column('Gradient Norm', '{:.4f}')
+
     def load_dataset(self, args):
         traindir = FOLDERS['walking']['training']
         valdir = FOLDERS['walking']['validation']
@@ -151,7 +155,9 @@ class FullPose7D(BaseExperiment):
 
         # Image pre-processing
         transform = transforms.Compose([
-            transforms.Scale(args.image_size),
+            #transforms.Scale(args.image_size),
+            transforms.Scale(320),
+            transforms.CenterCrop((320, 448)),
             transforms.ToTensor(),
         ])
 
@@ -204,8 +210,13 @@ class FullPose7D(BaseExperiment):
 
     def train(self):
         training_loss = AverageMeter()
-        forward_backward_time = AverageMeter()
+        forward_time = AverageMeter()
+        backward_time = AverageMeter()
+        loss_time = AverageMeter()
+        gradient_norm = AverageMeter()
+
         num_batches = len(self.trainingset)
+        first_epoch_loss = []
 
         epoch = len(self.training_loss) + 1
         #self.adjust_learning_rate(epoch)
@@ -222,25 +233,46 @@ class FullPose7D(BaseExperiment):
 
             self.optimizer.zero_grad()
 
+            # Forward
             start = time.time()
             output = self.model(input)
+            forward_time.update(time.time() - start)
+
+            # Loss function
+            start = time.time()
             output = self.normalize_output(output)
-
-            #print('Prediction: ', output)
-            #print('Target:     ', target)
-
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
-            loss.backward()
-            self.optimizer.step()
+            loss_time.update(time.time() - start)
 
-            forward_backward_time.update(time.time() - start)
+            # Backward
+            start = time.time()
+            loss.backward()
+            backward_time.update(time.time() - start)
+
+            self.optimizer.step()
+            grad_norm = self.gradient_norm()
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
-                print('Sample [{:d}/{:d}], Combined Loss: {:.4f}, Rotation Loss: {:.4f}, Translation Loss: {:.4f}'
-                      .format(i + 1, num_batches, loss.data[0], r_loss.data[0], t_loss.data[0]))
+                print('Sequence [{:d}/{:d}], '
+                      'Combined Loss: {: .4f}, '
+                      'Rotation Loss: {: .4f}, '
+                      'Translation Loss: {: .4f}, '
+                      'Gradient Norm: {: .4f}'
+                      .format(i + 1, num_batches,
+                              loss.data[0],
+                              r_loss.data[0],
+                              t_loss.data[0],
+                              grad_norm
+                              )
+                      )
 
             training_loss.update(loss.data[0])
+            gradient_norm.update(grad_norm)
+
+            if epoch == 1:
+                first_epoch_loss.append(loss.data[0])
+                plots.plot_epoch_loss(first_epoch_loss, save=self.make_output_filename('first_epoch_loss.pdf'))
 
         training_loss = training_loss.average
         self.training_loss.append(training_loss)
@@ -250,6 +282,7 @@ class FullPose7D(BaseExperiment):
         self.validation_loss.append(validation_loss)
 
         self.train_logger.log(epoch, training_loss, validation_loss, validation_r_loss, validation_t_loss)
+        self.gradient_logger.log(epoch, gradient_norm.average)
 
         # Save extra checkpoint for best validation loss
         if validation_loss < best_validation_loss:
@@ -257,37 +290,42 @@ class FullPose7D(BaseExperiment):
             torch.save(self.make_checkpoint(), self.make_output_filename(CHECKPOINT_BEST_FILENAME))
 
         if epoch == 1:
-            self.print_info('Average time for forward and backward operation: {:.4f} seconds'.format(
-                forward_backward_time.average))
+            self.print_info('Average time for forward operation: {:.4f} seconds'.format(forward_time.average))
+            self.print_info('Average time for backward operation: {:.4f} seconds'.format(backward_time.average))
+            self.print_info('Average time for loss computation: {:.4f} seconds'.format(loss_time.average))
 
     def validate(self):
-        avg_loss = AverageMeter()
-        avg_r_loss = AverageMeter()
-        avg_t_loss = AverageMeter()
+        return self.test(dataloader=self.validationset)
+        # avg_loss = AverageMeter()
+        # avg_r_loss = AverageMeter()
+        # avg_t_loss = AverageMeter()
+        #
+        # for i, (images, poses) in enumerate(self.validationset):
+        #
+        #     images.squeeze_(0)
+        #     poses.squeeze_(0)
+        #
+        #     input = self.to_variable(images, volatile=True)
+        #     target = self.to_variable(poses, volatile=True)
+        #
+        #     output = self.model(input)
+        #     output = self.normalize_output(output)
+        #
+        #     loss, r_loss, t_loss = self.loss_function(output, target[1:])
+        #     avg_loss.update(loss.data[0])
+        #     avg_r_loss.update(r_loss.data[0])
+        #     avg_t_loss.update(t_loss.data[0])
+        #
+        # avg_loss = avg_loss.average
+        # avg_r_loss = avg_r_loss.average
+        # avg_t_loss = avg_t_loss.average
+        #
+        # return avg_loss, avg_r_loss, avg_t_loss
 
-        for i, (images, poses) in enumerate(self.validationset):
+    def test(self, dataloader=None):
+        if not dataloader:
+            dataloader = self.testset
 
-            images.squeeze_(0)
-            poses.squeeze_(0)
-
-            input = self.to_variable(images, volatile=True)
-            target = self.to_variable(poses, volatile=True)
-
-            output = self.model(input)
-            output = self.normalize_output(output)
-
-            loss, r_loss, t_loss = self.loss_function(output, target[1:])
-            avg_loss.update(loss.data[0])
-            avg_r_loss.update(r_loss.data[0])
-            avg_t_loss.update(t_loss.data[0])
-
-        avg_loss = avg_loss.average
-        avg_r_loss = avg_r_loss.average
-        avg_t_loss = avg_t_loss.average
-
-        return avg_loss, avg_r_loss, avg_t_loss
-
-    def test(self):
         avg_loss = AverageMeter()
         avg_rot_loss = AverageMeter()
         avg_trans_loss = AverageMeter()
@@ -296,7 +334,7 @@ class FullPose7D(BaseExperiment):
         all_targets = []
         rel_angle_error_over_time = []
 
-        for i, (images, poses) in enumerate(self.testset):
+        for i, (images, poses) in enumerate(dataloader):
 
             images.squeeze_(0)
             poses.squeeze_(0)
@@ -322,7 +360,7 @@ class FullPose7D(BaseExperiment):
 
             # Visualize predicted path
             of = self.make_output_filename('{:05}-path.png'.format(i))
-            visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=True)
+            visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=False)
 
 
         # Average losses for rotation, translation and combined
@@ -360,7 +398,7 @@ class FullPose7D(BaseExperiment):
         self.test_logger.print(', '.join([str(i) for i in rel_angle_error_over_time]))
         self.test_logger.print()
 
-        return avg_loss
+        return avg_loss, avg_rot_loss, avg_trans_loss
 
     def loss_function(self, output, target):
         # Dimensions: [sequence_length, 7]
@@ -408,23 +446,23 @@ class FullPose7D(BaseExperiment):
 
         return torch.cat((t, q), 1)
 
-    def relative_rotation_angles(self, predictions, targets):
-        # Dimensions: [N, 7]
-        q1 = predictions[:, 3:]
-
-        # Normalize output quaternion
-        #q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
-        #q1 = q1 / q1_norm.expand_as(q1)
-
-        # Convert to numpy
-        q1 = q1.cpu().numpy()
-        q2 = targets[:, 3:].cpu().numpy()
-
-        # Compute the relative rotation
-        rel_q = [qmult(qinverse(r1), r2) for r1, r2 in zip(q1, q2)]
-        rel_angles = [quat2axangle(q)[1] for q in rel_q]
-        rel_angles = [degrees(a) for a in rel_angles]
-        return rel_angles
+    # def relative_rotation_angles(self, predictions, targets):
+    #     # Dimensions: [N, 7]
+    #     q1 = predictions[:, 3:]
+    #
+    #     # Normalize output quaternion
+    #     #q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
+    #     #q1 = q1 / q1_norm.expand_as(q1)
+    #
+    #     # Convert to numpy
+    #     q1 = q1.cpu().numpy()
+    #     q2 = targets[:, 3:].cpu().numpy()
+    #
+    #     # Compute the relative rotation
+    #     rel_q = [qmult(qinverse(r1), r2) for r1, r2 in zip(q1, q2)]
+    #     rel_angles = [quat2axangle(q)[1] for q in rel_q]
+    #     rel_angles = [degrees(a) for a in rel_angles]
+    #     return rel_angles
 
     def relative_rotation_angles2(self, predictions, targets):
         # Dimensions: [N, 7]
@@ -468,7 +506,7 @@ class FullPose7D(BaseExperiment):
         checkpoint = self.load_checkpoint()
         plots.plot_epoch_loss(checkpoint['training_loss'], checkpoint['validation_loss'], save=self.save_loss_plot)
 
-    def error_distribution(self, errors, start=0.0, stop=10.0, step=1.0):
+    def error_distribution(self, errors, start=0.0, stop=180.0, step=1.0):
         thresholds = list(torch.arange(start, stop, step))
         n = torch.numel(errors)
         distribution = [torch.sum(errors <= t) / n for t in thresholds]
@@ -483,3 +521,15 @@ class FullPose7D(BaseExperiment):
 
         elapsed = time.time() - start
         return elapsed / n
+
+    def gradient_norm(self, params=None):
+        if not params:
+            params = self.model.get_parameters()
+        parameters = list(filter(lambda p: p.grad is not None, params))
+        total_norm = 0
+        for p in parameters:
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm ** 2
+
+        total_norm = total_norm ** (1. / 2)
+        return total_norm

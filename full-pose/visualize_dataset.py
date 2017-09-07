@@ -5,8 +5,7 @@ import os
 import shutil
 from GTAV import Subsequence, FOLDERS
 
-traindir = FOLDERS['standing']['training']
-image_size = 256
+traindir = FOLDERS['walking']['training']
 sequence = 25
 num_sequences = 5
 output_folder = 'out/dataset_visualization'
@@ -18,7 +17,8 @@ os.makedirs(output_folder)
 
 # Image pre-processing
 transform = transforms.Compose([
-    transforms.Scale(image_size),
+    transforms.Scale(320),
+    transforms.CenterCrop((320, 448)),
     transforms.ToTensor(),
 ])
 

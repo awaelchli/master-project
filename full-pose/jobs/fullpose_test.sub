@@ -17,12 +17,12 @@ module load anaconda
 
 # Testing
 python full-pose/main.py pose7D \
---input gta5pose7D_exp3_long \
---output gta5pose7D_exp3_long/test \
+--input gta5pose7D_more_data30fps \
+--output gta5pose7D_more_data30fps/test \
 --cuda \
 --test \
---sequence 50 \
+--sequence 20 \
 --beta 0.1 \
---workers 4 \
+--workers 8 \
 --print_freq 1 \
 --overwrite \
