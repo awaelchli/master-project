@@ -219,7 +219,7 @@ class FullPose7D(BaseExperiment):
         first_epoch_loss = []
 
         epoch = len(self.training_loss) + 1
-        #self.adjust_learning_rate(epoch)
+        self.adjust_learning_rate(epoch)
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
@@ -252,23 +252,24 @@ class FullPose7D(BaseExperiment):
             self.optimizer.step()
             grad_norm = self.gradient_norm()
 
+            training_loss.update(loss.data[0])
+            gradient_norm.update(grad_norm)
+
             # Print log info
             if (i + 1) % self.print_freq == 0:
                 print('Sequence [{:d}/{:d}], '
-                      'Combined Loss: {: .4f}, '
+                      'Combined Loss: {: .4f} ({: .4f}), '
                       'Rotation Loss: {: .4f}, '
                       'Translation Loss: {: .4f}, '
                       'Gradient Norm: {: .4f}'
                       .format(i + 1, num_batches,
                               loss.data[0],
+                              training_loss.average,
                               r_loss.data[0],
                               t_loss.data[0],
                               grad_norm
                               )
                       )
-
-            training_loss.update(loss.data[0])
-            gradient_norm.update(grad_norm)
 
             if epoch == 1:
                 first_epoch_loss.append(loss.data[0])
@@ -497,8 +498,7 @@ class FullPose7D(BaseExperiment):
         return sum([p.numel() for p in self.model.get_parameters()])
 
     def adjust_learning_rate(self, epoch):
-        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-        lr = self.lr * (0.5 ** (epoch // 5))
+        lr = self.lr * (0.5 ** (epoch // 1))
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
 
