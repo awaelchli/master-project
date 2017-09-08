@@ -50,10 +50,11 @@ POSE_FILE_EXTENSION = 'txt'
 
 class Subsequence(Dataset):
 
-    def __init__(self, data_folder, pose_folder, sequence_length, transform=None, max_size=None):
+    def __init__(self, data_folder, pose_folder, sequence_length, transform=None, max_size=None, return_filename=False):
         self.sequence_length = sequence_length
         self.transform = transform
         self.index = build_subsequence_index(data_folder, pose_folder, sequence_length)
+        self.return_filename = return_filename
 
         if max_size and max_size < len(self):
             self.index = self.index[:max_size]
@@ -73,7 +74,10 @@ class Subsequence(Dataset):
         pose_vectors = encode_poses(rel_positions, rel_quaternions)
         pose_sequence = torch.from_numpy(pose_vectors).float()
 
-        return image_sequence, pose_sequence
+        if self.return_filename:
+            return image_sequence, pose_sequence, filenames
+        else:
+            return image_sequence, pose_sequence
 
     def load_image(self, filename):
         image = Image.open(filename).convert('RGB')

@@ -1,5 +1,6 @@
 import time
 from math import degrees
+import os
 
 import torch
 import torch.nn as nn
@@ -16,30 +17,34 @@ from flownet.models.FlowNetS import flownets
 
 class FullPose7DModel(nn.Module):
 
-    def __init__(self, input_size, fix_flownet=True):
+    def __init__(self, input_size, hidden=500, nlayers=3, fix_flownet=True):
         super(FullPose7DModel, self).__init__()
 
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
+        flownet.train(False)
 
-        self.layers = torch.nn.Sequential(
-            flownet.conv1,
-            flownet.conv2,
-            flownet.conv3,
-            flownet.conv3_1,
-            flownet.conv4,
-            flownet.conv4_1,
-            flownet.conv5,
-            flownet.conv5_1,
-            flownet.conv6,
-            flownet.conv6_1,
-        )
+        self.layers = flownet
+        # self.layers = torch.nn.Sequential(
+        #     flownet.conv1,
+        #     flownet.conv2,
+        #     flownet.conv3,
+        #     flownet.conv3_1,
+        #     flownet.conv4,
+        #     flownet.conv4_1,
+        #     flownet.conv5,
+        #     flownet.conv5_1,
+        #     flownet.conv6,
+        #     flownet.conv6_1,
+        #
+        # )
+
         self.fix_flownet = fix_flownet
         for param in self.layers.parameters():
             param.requires_grad = not fix_flownet
 
         fout = self.flownet_output_size(input_size)
-        self.hidden = 500
-        self.nlayers = 3
+        self.hidden = hidden
+        self.nlayers = nlayers
         self.lstm = nn.LSTM(
             input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
@@ -107,6 +112,10 @@ class FullPose7D(BaseExperiment):
                             help='The shorter side of the images will be scaled to the given size.')
         parser.add_argument('--beta', type=float, default=1,
                             help='Balance weight for the translation loss')
+        parser.add_argument('--hidden', type=int, default=500,
+                            help='Hidden size of the LSTM')
+        parser.add_argument('--layers', type=int, default=3,
+                            help='Number of layers in the LSTM')
 
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
@@ -116,7 +125,12 @@ class FullPose7D(BaseExperiment):
         self.input_size = (tmp.size(3), tmp.size(4))
 
         # Model
-        self.model = FullPose7DModel(self.input_size, fix_flownet=False)
+        self.model = FullPose7DModel(
+            self.input_size,
+            hidden=args.hidden,
+            nlayers=args.layers,
+            fix_flownet=True,
+        )
 
         if self.use_cuda:
             print('Moving model to GPU ...')
@@ -167,6 +181,7 @@ class FullPose7D(BaseExperiment):
             sequence_length=args.sequence,
             transform=transform,
             max_size=args.max_size[0],
+            return_filename=True,
         )
 
         val_set = Subsequence(
@@ -175,6 +190,7 @@ class FullPose7D(BaseExperiment):
             sequence_length=args.sequence,
             transform=transform,
             max_size=args.max_size[1],
+            return_filename=True,
         )
 
         test_set = Subsequence(
@@ -183,6 +199,7 @@ class FullPose7D(BaseExperiment):
             sequence_length=args.sequence,
             transform=transform,
             max_size=args.max_size[2],
+            return_filename=True,
         )
 
         dataloader_train = DataLoader(
@@ -223,7 +240,7 @@ class FullPose7D(BaseExperiment):
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
-        for i, (images, poses) in enumerate(self.trainingset):
+        for i, (images, poses, _) in enumerate(self.trainingset):
 
             images.squeeze_(0)
             poses.squeeze_(0)
@@ -335,7 +352,7 @@ class FullPose7D(BaseExperiment):
         all_targets = []
         rel_angle_error_over_time = []
 
-        for i, (images, poses) in enumerate(dataloader):
+        for i, (images, poses, filenames) in enumerate(dataloader):
 
             images.squeeze_(0)
             poses.squeeze_(0)
@@ -360,7 +377,7 @@ class FullPose7D(BaseExperiment):
             avg_trans_loss.update(t_loss.data[0])
 
             # Visualize predicted path
-            of = self.make_output_filename('{:05}-path.png'.format(i))
+            of = self.make_output_filename('{}--{:05}.png'.format(filenames[0].replace(os.path.sep, '--'), i))
             visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=False)
 
 
