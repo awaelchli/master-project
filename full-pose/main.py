@@ -117,9 +117,9 @@ if __name__ == '__main__':
         for epoch in range(start_epoch, start_epoch + args.epochs):
             # Train for one epoch
             print('Epoch [{:d}/{:d}]'.format(epoch, start_epoch + args.epochs - 1))
-            start_epoch = time.time()
+            start_epoch_time = time.time()
             experiment.train()
-            elapsed_epoch = time.time() - start_epoch
+            elapsed_epoch = time.time() - start_epoch_time
             experiment.save_checkpoint(experiment.make_checkpoint())
             experiment.plot_performance()
             print('Elapsed time for epoch: {:.4f} hours'.format(elapsed_epoch / 3600))
