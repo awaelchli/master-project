@@ -23,7 +23,7 @@ python full-pose/main.py pose7D \
 --cuda \
 --epochs 100 \
 --sequence 20 \
---lr 0.0001 \
+--lr 0.01 \
 --beta 0.1 \
 --workers 8 \
 --print_freq 1 \

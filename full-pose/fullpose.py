@@ -498,7 +498,7 @@ class FullPose7D(BaseExperiment):
         return sum([p.numel() for p in self.model.get_parameters()])
 
     def adjust_learning_rate(self, epoch):
-        lr = self.lr * (0.5 ** (epoch // 1))
+        lr = self.lr * (0.5 ** (epoch // 5))
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
 

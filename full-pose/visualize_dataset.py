@@ -7,7 +7,7 @@ from GTAV import Subsequence, FOLDERS
 
 traindir = FOLDERS['walking']['training']
 sequence = 25
-num_sequences = 5
+num_sequences = 15
 output_folder = 'out/dataset_visualization'
 
 if os.path.isdir(output_folder):
