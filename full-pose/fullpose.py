@@ -121,7 +121,7 @@ class FullPose7D(BaseExperiment):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
 
         # Determine size of input images
-        _, (tmp, _) = next(enumerate(self.trainingset))
+        _, (tmp, _, _) = next(enumerate(self.trainingset))
         self.input_size = (tmp.size(3), tmp.size(4))
 
         # Model
