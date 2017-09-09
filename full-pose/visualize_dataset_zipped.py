@@ -3,13 +3,12 @@ from torchvision import transforms
 from torchvision.utils import save_image
 import os
 import shutil
-from GTAV import Subsequence, FOLDERS
+from GTAV import ZippedSequence, FOLDERS
 import time
 
-traindir = FOLDERS['walking']['training']
 sequence = 25
 num_sequences = 15
-output_folder = 'out/dataset_visualization'
+output_folder = 'out/dataset_visualization_zipped'
 
 if os.path.isdir(output_folder):
     shutil.rmtree(output_folder)
@@ -23,13 +22,7 @@ transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-train_set = Subsequence(
-    data_folder=traindir['data'],
-    pose_folder=traindir['pose'],
-    sequence_length=sequence,
-    transform=transform,
-    max_size=None,
-)
+train_set = ZippedSequence('../data/testzipsorted.zip', sequence, transform)
 
 dataloader = DataLoader(
     train_set,
@@ -40,6 +33,7 @@ dataloader = DataLoader(
 
 g = enumerate(dataloader)
 
+# Benchmark
 start = time.time()
 for i in range(num_sequences):
     next(g)

@@ -10,7 +10,7 @@ from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
 import plots
-from GTAV import Subsequence, visualize_predicted_path, FOLDERS
+from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 
@@ -175,32 +175,58 @@ class FullPose7D(BaseExperiment):
             transforms.ToTensor(),
         ])
 
-        train_set = Subsequence(
-            data_folder=traindir['data'],
-            pose_folder=traindir['pose'],
-            sequence_length=args.sequence,
-            transform=transform,
-            max_size=args.max_size[0],
-            return_filename=True,
-        )
+        zipped = True
+        if not zipped:
+            train_set = Subsequence(
+                data_folder=traindir['data'],
+                pose_folder=traindir['pose'],
+                sequence_length=args.sequence,
+                transform=transform,
+                max_size=args.max_size[0],
+                return_filename=True,
+            )
 
-        val_set = Subsequence(
-            data_folder=valdir['data'],
-            pose_folder=valdir['pose'],
-            sequence_length=args.sequence,
-            transform=transform,
-            max_size=args.max_size[1],
-            return_filename=True,
-        )
+            val_set = Subsequence(
+                data_folder=valdir['data'],
+                pose_folder=valdir['pose'],
+                sequence_length=args.sequence,
+                transform=transform,
+                max_size=args.max_size[1],
+                return_filename=True,
+            )
 
-        test_set = Subsequence(
-            data_folder=testdir['data'],
-            pose_folder=testdir['pose'],
-            sequence_length=args.sequence,
-            transform=transform,
-            max_size=args.max_size[2],
-            return_filename=True,
-        )
+            test_set = Subsequence(
+                data_folder=testdir['data'],
+                pose_folder=testdir['pose'],
+                sequence_length=args.sequence,
+                transform=transform,
+                max_size=args.max_size[2],
+                return_filename=True,
+            )
+        else:
+            train_set = concat_zip_dataset(
+                [
+                    '/home/adrian/Documents/data/GTA V/walking/train'
+                ],
+                sequence_length=args.sequence,
+                transform=transform,
+                return_filename=True,
+                max_size=args.max_size[0],
+            )
+
+            val_set = concat_zip_dataset(
+                [
+                    '/home/adrian/data/GTA V/walking/test'
+                ],
+                sequence_length=args.sequence,
+                transform=transform,
+                return_filename=True,
+                max_size=args.max_size[1],
+            )
+
+            test_set = val_set
+
+
 
         dataloader_train = DataLoader(
             train_set,
@@ -227,6 +253,8 @@ class FullPose7D(BaseExperiment):
 
     def train(self):
         training_loss = AverageMeter()
+        rotation_loss = AverageMeter()
+        translation_loss = AverageMeter()
         forward_time = AverageMeter()
         backward_time = AverageMeter()
         loss_time = AverageMeter()
@@ -270,20 +298,21 @@ class FullPose7D(BaseExperiment):
             grad_norm = self.gradient_norm()
 
             training_loss.update(loss.data[0])
+            rotation_loss.update(r_loss.data[0])
+            translation_loss.update(t_loss.data[0])
             gradient_norm.update(grad_norm)
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
                 print('Sequence [{:d}/{:d}], '
-                      'Combined Loss: {: .4f} ({: .4f}), '
-                      'Rotation Loss: {: .4f}, '
-                      'Translation Loss: {: .4f}, '
-                      'Gradient Norm: {: .4f}'
+                      'Total Loss: {: .4f} ({: .4f}), '
+                      'R. Loss: {: .4f} ({: .4f}), '
+                      'T. Loss: {: .4f} ({: .4f}), '
+                      'Grad Norm: {: .4f}'
                       .format(i + 1, num_batches,
-                              loss.data[0],
-                              training_loss.average,
-                              r_loss.data[0],
-                              t_loss.data[0],
+                              loss.data[0], training_loss.average,
+                              r_loss.data[0], rotation_loss.average,
+                              t_loss.data[0], translation_loss.average,
                               grad_norm
                               )
                       )
@@ -314,31 +343,6 @@ class FullPose7D(BaseExperiment):
 
     def validate(self):
         return self.test(dataloader=self.validationset)
-        # avg_loss = AverageMeter()
-        # avg_r_loss = AverageMeter()
-        # avg_t_loss = AverageMeter()
-        #
-        # for i, (images, poses) in enumerate(self.validationset):
-        #
-        #     images.squeeze_(0)
-        #     poses.squeeze_(0)
-        #
-        #     input = self.to_variable(images, volatile=True)
-        #     target = self.to_variable(poses, volatile=True)
-        #
-        #     output = self.model(input)
-        #     output = self.normalize_output(output)
-        #
-        #     loss, r_loss, t_loss = self.loss_function(output, target[1:])
-        #     avg_loss.update(loss.data[0])
-        #     avg_r_loss.update(r_loss.data[0])
-        #     avg_t_loss.update(t_loss.data[0])
-        #
-        # avg_loss = avg_loss.average
-        # avg_r_loss = avg_r_loss.average
-        # avg_t_loss = avg_t_loss.average
-        #
-        # return avg_loss, avg_r_loss, avg_t_loss
 
     def test(self, dataloader=None):
         if not dataloader:
@@ -376,8 +380,10 @@ class FullPose7D(BaseExperiment):
             avg_rot_loss.update(r_loss.data[0])
             avg_trans_loss.update(t_loss.data[0])
 
+            #print(filenames[0])
+
             # Visualize predicted path
-            of = self.make_output_filename('{}--{:05}.png'.format(filenames[0].replace(os.path.sep, '--'), i))
+            of = self.make_output_filename('{}--{:05}.png'.format(filenames[0][0].replace(os.path.sep, '--'), i))
             visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=False)
 
 

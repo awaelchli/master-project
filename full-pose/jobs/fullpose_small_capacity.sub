@@ -21,9 +21,9 @@ python full-pose/main.py pose7D \
 --train \
 --cuda \
 --epochs 100 \
---sequence 20 \
+--sequence 100 \
 --hidden 100 \
---layers 2 \
+--layers 5 \
 --lr 0.01 \
 --beta 0.1 \
 --workers 8 \

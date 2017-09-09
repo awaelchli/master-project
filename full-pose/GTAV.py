@@ -2,6 +2,7 @@ import glob
 import os
 from math import radians
 from os import path
+from zipfile import ZipFile
 
 import matplotlib.pyplot as plt
 plt.switch_backend('agg') # For machines without display (e.g. cluster)
@@ -12,6 +13,7 @@ from scipy import interpolate
 from torch.utils.data import Dataset
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import rotate_vector, qinverse, qmult
+from torch.utils.data import ConcatDataset
 
 FOLDERS = {
     'walking': {
@@ -92,8 +94,8 @@ def build_subsequence_index(root_folder, ground_truth_folder, sequence_length):
     subsequences = []
     for filenames, poses in index:
         # Note: If the last sequence ends up to have only a single image, it gets dropped
-        reminder = len(filenames) % sequence_length
-        end = len(filenames) - 1 if reminder == 1 else len(filenames)
+        remainder = len(filenames) % sequence_length
+        end = len(filenames) - 1 if remainder == 1 else len(filenames)
 
         subsequence = [(filenames[i:i + sequence_length], poses[i:i + sequence_length])
                        for i in range(0, end, sequence_length)]
@@ -246,3 +248,117 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
 
     plt.axis('equal')
     plt.savefig(output_file, bbox_inches='tight')
+
+
+
+
+
+
+########################################
+# ZIP
+########################################
+
+
+def concat_zip_dataset(folders, sequence_length, transform=None, return_filename=True, max_size=None):
+    datasets = []
+    current_size = 0
+    for folder in folders:
+        zip_files = [os.path.join(folder, file) for file in glob.glob(os.path.join(folder, '*.zip'))]
+        for zip_file in zip_files:
+            sequence = ZippedSequence(zip_file, sequence_length, transform, return_filename)
+            datasets.append(sequence)
+
+            current_size += len(sequence)
+            if max_size and current_size >= max_size:
+                return ConcatDataset(datasets)
+
+    return ConcatDataset(datasets)
+
+
+def read_poses_from_zip(zip_file):
+    with ZipFile(zip_file, 'r') as archive:
+        with archive.open('poses.txt') as f:
+            lines = [s.split() for s in f.readlines()]
+
+    times = np.array([float(line[1]) for line in lines])
+    poses = np.array([[float(x) for x in line[2:8]] for line in lines])
+
+    return times, poses
+
+
+def build_zipfile_index(zipfile):
+    all_times, all_poses = read_poses_from_zip(zipfile)
+    interpolator = interpolate.interp1d(all_times, all_poses, kind='nearest', axis=0, copy=True,
+                                        fill_value='extrapolate', assume_sorted=True)
+
+    # Sort filenames according to time given in filename
+    with ZipFile(zipfile, 'r') as archive:
+        filenames = [i.filename for i in archive.infolist() if not i.is_dir() and i.filename.endswith('.jpg')]
+
+    time_from_filename = lambda x: int(path.splitext(path.basename(x))[0])
+    filenames.sort(key=time_from_filename)
+
+    # Interpolate at times given by filename
+    query_times = [time_from_filename(f) for f in filenames]
+    poses_interpolated = [interpolator(t) for t in query_times]
+    poses = np.array(poses_interpolated)
+
+    assert len(filenames) == poses.shape[0]
+    return filenames, poses
+
+
+def split_zipfile_index(index, sequence_length):
+    # Makes small chunks out of the large sequence
+    filenames, poses = index
+    # Note: If the last sequence ends up to have only a single image, it gets dropped
+    remainder = len(filenames) % sequence_length
+    end = len(filenames) - 1 if remainder == 1 else len(filenames)
+
+    subsequences = [(filenames[i:i + sequence_length], poses[i:i + sequence_length])
+                   for i in range(0, end, sequence_length)]
+
+    return subsequences
+
+
+class ZippedSequence(Dataset):
+
+    def __init__(self, zip_file, sequence_length, transform=None, return_filename=True):
+        self.zip_file = zip_file
+        self.transform = transform
+        self.return_filename = return_filename
+        index = build_zipfile_index(zip_file)
+        self.sequence_length = len(index[0]) if sequence_length == 0 else min(sequence_length, len(index[0]))
+        self.subsequences = split_zipfile_index(index, self.sequence_length)
+        # Format of subsequences: [(filenames1, poses1), (filenames2, poses2), ...]
+
+    def __len__(self):
+        return len(self.subsequences)
+
+    def __getitem__(self, idx):
+        filenames, poses = self.subsequences[idx]
+        images = [im.unsqueeze(0) for im in self.load_images(filenames)]
+        image_sequence = torch.cat(images, dim=0)
+
+        # Convert raw pose (from text file) to 7D pose vectors (translation + quaternion)
+        positions = get_positions(poses)
+        quaternions = get_quaternions(poses)
+        rel_positions, rel_quaternions = to_relative_pose(positions, quaternions)
+        pose_vectors = encode_poses(rel_positions, rel_quaternions)
+        pose_sequence = torch.from_numpy(pose_vectors).float()
+
+        if self.return_filename:
+            return image_sequence, pose_sequence, [os.path.join(self.zip_file, f) for f in filenames]
+        else:
+            return image_sequence, pose_sequence
+
+    def load_images(self, filenames):
+        images = []
+        with ZipFile(self.zip_file) as archive:
+            for entry in filenames:
+                with archive.open(entry) as file:
+                    image = Image.open(file).convert('RGB')
+                    if self.transform:
+                        image = self.transform(image)
+                    images.append(image)
+
+        return images
