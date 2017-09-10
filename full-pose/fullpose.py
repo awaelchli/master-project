@@ -13,6 +13,7 @@ import plots
 from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
+from convolution_lstm import ConvLSTMShrink
 
 
 class FullPose7DModel(nn.Module):
@@ -45,6 +46,7 @@ class FullPose7DModel(nn.Module):
         fout = self.flownet_output_size(input_size)
         self.hidden = hidden
         self.nlayers = nlayers
+
         self.lstm = nn.LSTM(
             input_size=fout[1] * fout[2] * fout[3],
             hidden_size=self.hidden,
@@ -138,6 +140,7 @@ class FullPose7D(BaseExperiment):
 
         params = self.model.get_parameters()
         self.optimizer = torch.optim.Adagrad(params, self.lr)
+        #self.optimizer = torch.optim.Adam(params, self.lr)
 
         self.beta = args.beta
         self.print_freq = args.print_freq
@@ -206,7 +209,7 @@ class FullPose7D(BaseExperiment):
         else:
             train_set = concat_zip_dataset(
                 [
-                    '/home/adrian/Documents/data/GTA V/walking/train'
+                    '/home/adrian/Documents/data/GTA V/walking_easy/train'
                 ],
                 sequence_length=args.sequence,
                 transform=transform,
@@ -216,7 +219,7 @@ class FullPose7D(BaseExperiment):
 
             val_set = concat_zip_dataset(
                 [
-                    '/home/adrian/data/GTA V/walking/test'
+                    '/home/adrian/data/GTA V/walking_easy/test'
                 ],
                 sequence_length=args.sequence,
                 transform=transform,
@@ -264,10 +267,11 @@ class FullPose7D(BaseExperiment):
         first_epoch_loss = []
 
         epoch = len(self.training_loss) + 1
-        self.adjust_learning_rate(epoch)
+        #self.adjust_learning_rate(epoch)
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
+        self.model.train()
         for i, (images, poses, _) in enumerate(self.trainingset):
 
             images.squeeze_(0)
@@ -356,6 +360,7 @@ class FullPose7D(BaseExperiment):
         all_targets = []
         rel_angle_error_over_time = []
 
+        self.model.eval()
         for i, (images, poses, filenames) in enumerate(dataloader):
 
             images.squeeze_(0)

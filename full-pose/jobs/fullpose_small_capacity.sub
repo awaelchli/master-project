@@ -15,16 +15,19 @@
 
 module load anaconda
 
+
+# Adagrad, adjust lr
 # Training
-python full-pose/main.py pose7D \
+#python full-pose/main.py pose7D \
 --output gta5pose7D_more_data30fps_small \
 --train \
+--resume \
 --cuda \
 --epochs 100 \
 --sequence 100 \
 --hidden 100 \
 --layers 5 \
---lr 0.01 \
+--lr 0.02 \
 --beta 0.1 \
 --workers 8 \
 --print_freq 1 \
