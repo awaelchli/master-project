@@ -94,6 +94,12 @@ class FullPose7DModel(nn.Module):
 
         return predictions
 
+    def train(self, mode=True):
+        self.lstm.train(mode)
+
+    def eval(self):
+        self.lstm.eval()
+
     def get_parameters(self):
         params = list(self.lstm.parameters()) + list(self.fc.parameters())
         if not self.fix_flownet:
@@ -209,7 +215,7 @@ class FullPose7D(BaseExperiment):
         else:
             train_set = concat_zip_dataset(
                 [
-                    '/home/adrian/Documents/data/GTA V/walking_easy/train'
+                    '/home/adrian/Documents/data/GTA V/walking/train'
                 ],
                 sequence_length=args.sequence,
                 transform=transform,
@@ -219,7 +225,7 @@ class FullPose7D(BaseExperiment):
 
             val_set = concat_zip_dataset(
                 [
-                    '/home/adrian/data/GTA V/walking_easy/test'
+                    '/home/adrian/data/GTA V/walking/test'
                 ],
                 sequence_length=args.sequence,
                 transform=transform,
@@ -267,7 +273,7 @@ class FullPose7D(BaseExperiment):
         first_epoch_loss = []
 
         epoch = len(self.training_loss) + 1
-        #self.adjust_learning_rate(epoch)
+        self.adjust_learning_rate(epoch)
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
