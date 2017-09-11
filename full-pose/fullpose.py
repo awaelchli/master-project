@@ -273,7 +273,7 @@ class FullPose7D(BaseExperiment):
         first_epoch_loss = []
 
         epoch = len(self.training_loss) + 1
-        self.adjust_learning_rate(epoch)
+        #self.adjust_learning_rate(epoch)
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
