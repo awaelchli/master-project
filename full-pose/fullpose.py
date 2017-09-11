@@ -20,7 +20,7 @@ from cuda_functional import SRU
 class BatchFirstSRU(SRU):
 
     def __init__(self, *args, **kwargs):
-        super(BatchFirstSRU, self).__init__(*args, *kwargs)
+        super(BatchFirstSRU, self).__init__(*args, **kwargs)
 
     def forward(self, input, c0=None, return_hidden=True):
         # Flip batch dimension
