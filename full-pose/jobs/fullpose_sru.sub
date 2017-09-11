@@ -1,0 +1,33 @@
+#!/bin/bash
+
+#$ -N train_gta5
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+
+# Adagrad, no adjust lr
+# Training
+python full-pose/main.py pose7D \
+--output gta5pose7D_sru_no_dropout \
+--train \
+--cuda \
+--epochs 100 \
+--sequence 100 \
+--hidden 100 \
+--layers 5 \
+--lr 0.02 \
+--beta 0.1 \
+--workers 8 \
+--print_freq 1 \
+
