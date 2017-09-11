@@ -207,7 +207,8 @@ class FullPose7D(BaseExperiment):
             transforms.ToTensor(),
         ])
 
-        zipped = True
+        zipped = False
+        print('Using zipped dataset: ', zipped)
         if not zipped:
             train_set = Subsequence(
                 data_folder=traindir['data'],
