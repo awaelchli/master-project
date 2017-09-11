@@ -14,7 +14,20 @@ from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, FOLD
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 from convolution_lstm import ConvLSTMShrink
+from cuda_functional import SRU
 
+
+class BatchFirstSRU(SRU):
+
+    def __init__(self, *args, *kwargs):
+        super(BatchFirstSRU, self).__init__(*args, *kwargs)
+
+    def forward(self, input, c0=None, return_hidden=True):
+        # Flip batch dimension
+        result = super().forward(input.permute(1, 0, 2), c0, return_hidden)
+        # Undo the flip on the result
+        return result.permute(1, 0, 2)
+        
 
 class FullPose7DModel(nn.Module):
 
@@ -47,13 +60,23 @@ class FullPose7DModel(nn.Module):
         self.hidden = hidden
         self.nlayers = nlayers
 
-        self.lstm = nn.LSTM(
-            input_size=fout[1] * fout[2] * fout[3],
-            hidden_size=self.hidden,
-            num_layers=self.nlayers,
-            batch_first=True,
-            dropout=0.3
-        )
+        sru = True
+        if sru:
+            self.lstm = BatchFirstSRU(
+                input_size=fout[1] * fout[2] * fout[3],
+                hidden_size=self.hidden,
+                num_layers=self.nlayers,
+                dropout=0.0,
+                rnn_dropout=0.0,
+            )
+        else:
+            self.lstm = nn.LSTM(
+                input_size=fout[1] * fout[2] * fout[3],
+                hidden_size=self.hidden,
+                num_layers=self.nlayers,
+                batch_first=True,
+                dropout=0.3
+            )
 
         self.fc = nn.Linear(self.hidden, 7)
         self.init_weights()
