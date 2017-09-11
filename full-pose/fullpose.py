@@ -23,10 +23,18 @@ class BatchFirstSRU(SRU):
         super(BatchFirstSRU, self).__init__(*args, **kwargs)
 
     def forward(self, input, c0=None, return_hidden=True):
+        # New input format is:
+        #   input:  (batch size, length, hidden size * number of directions)
+        #   hidden: (batch size, layers, hidden size * number of directions)
+
         # Flip batch dimension
-        result = super().forward(input.permute(1, 0, 2), c0, return_hidden)
+        input = input.permute(1, 0, 2)
+        c0 = c0.permute(1, 0, 2) if c0 else c0
+
+        output, hidden = super().forward(input, c0, return_hidden)
+
         # Undo the flip on the result
-        return result.permute(1, 0, 2)
+        return output.permute(1, 0, 2), hidden.permute(1, 0, 2)
         
 
 class FullPose7DModel(nn.Module):
@@ -60,8 +68,8 @@ class FullPose7DModel(nn.Module):
         self.hidden = hidden
         self.nlayers = nlayers
 
-        sru = True
-        if sru:
+        self.sru = True
+        if self.sru:
             self.lstm = BatchFirstSRU(
                 input_size=fout[1] * fout[2] * fout[3],
                 hidden_size=self.hidden,
@@ -112,7 +120,9 @@ class FullPose7DModel(nn.Module):
             h0 = h0.cuda()
             c0 = c0.cuda()
 
-        outputs, _ = self.lstm(pairs.view(1, n - 1, -1), (h0, c0))
+        init = None if self.sru else (h0, c0)
+        outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
+
         predictions = self.fc(outputs.squeeze(0))
 
         return predictions
@@ -207,7 +217,7 @@ class FullPose7D(BaseExperiment):
             transforms.ToTensor(),
         ])
 
-        zipped = False
+        zipped = True
         print('Using zipped dataset: ', zipped)
         if not zipped:
             train_set = Subsequence(
