@@ -551,9 +551,11 @@ class FullPose7D(BaseExperiment):
 
         # Only divide by norm if non-zero
         valid = (q_norm > 0.00001).clone()
-        q[valid] = q[valid] / q_norm[valid]
 
-        return torch.cat((t, q), 1)
+        q2 = q.clone()
+        q2[valid] = q[valid] / q_norm[valid]
+
+        return torch.cat((t, q2), 1)
 
     # def relative_rotation_angles(self, predictions, targets):
     #     # Dimensions: [N, 7]
