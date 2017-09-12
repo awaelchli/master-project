@@ -249,7 +249,7 @@ class FullPose7D(BaseExperiment):
         else:
             train_set = concat_zip_dataset(
                 [
-                    '/home/adrian/Documents/data/GTA V/walking/train'
+                    '../data/GTA V/walking/train'
                 ],
                 sequence_length=args.sequence,
                 transform=transform,
@@ -259,7 +259,7 @@ class FullPose7D(BaseExperiment):
 
             val_set = concat_zip_dataset(
                 [
-                    '/home/adrian/data/GTA V/walking/test'
+                    '../data/GTA V/walking/test'
                 ],
                 sequence_length=args.sequence,
                 transform=transform,
