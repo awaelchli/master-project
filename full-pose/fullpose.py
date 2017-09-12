@@ -68,7 +68,7 @@ class FullPose7DModel(nn.Module):
         self.hidden = hidden
         self.nlayers = nlayers
 
-        self.sru = True
+        self.sru = False
         if self.sru:
             self.lstm = BatchFirstSRU(
                 input_size=fout[1] * fout[2] * fout[3],
@@ -499,7 +499,8 @@ class FullPose7D(BaseExperiment):
 
         # Loss for translation
         t_diff = torch.norm(t1 - t2, 2, dim=1)
-        loss2 = torch.log(eps + t_diff)
+        loss2 = t_diff
+        #loss2 = torch.log(eps + t_diff)
         loss2 = loss2.sum() / sequence_length
 
         return loss1 + self.beta * loss2, loss1, loss2
