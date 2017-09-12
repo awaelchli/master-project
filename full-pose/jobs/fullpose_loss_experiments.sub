@@ -27,7 +27,7 @@ python full-pose/main.py pose7D \
 --hidden 100 \
 --layers 5 \
 --lr 0.001 \
---beta 0.02 \
+--beta 0.1 \
 --workers 8 \
 --print_freq 1 \
 

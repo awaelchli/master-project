@@ -428,7 +428,8 @@ class FullPose7D(BaseExperiment):
             #print(filenames[0])
 
             # Visualize predicted path
-            of = self.make_output_filename('{}--{:05}.png'.format(filenames[0][0].replace(os.path.sep, '--'), i))
+            fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
+            of = self.make_output_filename('{}--{:05}.png'.format(fn, i))
             visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=False)
 
 
