@@ -526,17 +526,23 @@ class FullPose7D(BaseExperiment):
         #print(q1)
         #print(q2)
 
+        c = torch.nn.L1Loss(size_average=False)
+
         # Loss for rotation: dot product between quaternions
-        loss1 = torch.norm(q1 - q2, 1, dim=1)
+        #loss1 = torch.norm(q1 - q2, 1, dim=1)
         #loss1 = 1 - (q1 * q2).sum(1) ** 2
-        loss1 = loss1.sum() / sequence_length
+        #loss1 = loss1.sum() / sequence_length
+        loss1 = c(q1, q2)
+        loss1 /= sequence_length
 
         eps = 0.001
 
         # Loss for translation
-        t_diff = torch.norm(t1 - t2, 1, dim=1)
-        loss2 = t_diff
-        loss2 = loss2.sum() / sequence_length
+        #t_diff = torch.norm(t1 - t2, 1, dim=1)
+        #loss2 = t_diff
+        #loss2 = loss2.sum() / sequence_length
+        loss2 = c(t1, t2)
+        loss2 /= sequence_length
 
         return loss1 + self.beta * loss2, loss1, loss2
 
