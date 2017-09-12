@@ -547,7 +547,11 @@ class FullPose7D(BaseExperiment):
 
 
         q_norm = torch.norm(q, 2, dim=1).view(-1, 1)
-        q = q / q_norm.expand_as(q)
+        q_norm = q_norm.expand_as(q)
+
+        # Only divide by norm if non-zero
+        valid = q_norm > 0.00001
+        q[valid] = q[valid] / q_norm[valid]
 
         return torch.cat((t, q), 1)
 
