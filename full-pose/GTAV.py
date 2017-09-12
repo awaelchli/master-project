@@ -263,7 +263,7 @@ def concat_zip_dataset(folders, sequence_length, transform=None, return_filename
     datasets = []
     current_size = 0
     for folder in folders:
-        zip_files = [os.path.join(folder, file) for file in glob.glob(os.path.join(folder, '*.zip'))]
+        zip_files = [file for file in glob.glob(os.path.join(folder, '*.zip'))]
         for zip_file in zip_files:
             sequence = ZippedSequence(zip_file, sequence_length, transform, return_filename)
             datasets.append(sequence)
