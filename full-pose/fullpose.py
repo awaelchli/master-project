@@ -338,8 +338,8 @@ class FullPose7D(BaseExperiment):
             loss.backward()
             backward_time.update(time.time() - start)
 
-            self.optimizer.step()
             grad_norm = self.gradient_norm()
+            self.optimizer.step()
 
             training_loss.update(loss.data[0])
             rotation_loss.update(r_loss.data[0])
