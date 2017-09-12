@@ -178,8 +178,8 @@ class FullPose7D(BaseExperiment):
             self.model.cuda()
 
         params = self.model.get_parameters()
-        self.optimizer = torch.optim.Adagrad(params, self.lr)
-        #self.optimizer = torch.optim.Adam(params, self.lr)
+        #self.optimizer = torch.optim.Adagrad(params, self.lr)
+        self.optimizer = torch.optim.Adam(params, self.lr)
 
         self.beta = args.beta
         self.print_freq = args.print_freq
