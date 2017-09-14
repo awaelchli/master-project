@@ -14,6 +14,7 @@ from torch.utils.data import Dataset
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import rotate_vector, qinverse, qmult
 from torch.utils.data import ConcatDataset
+import random
 
 FOLDERS = {
     'walking': {
@@ -229,24 +230,37 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
     x2, y2, z2 = positions2[:, 0], positions2[:, 1], positions2[:, 2]
 
     plt.clf()
+
+    plt.subplot(121)
     plt.plot(x1, y1, 'b', label='Prediction')
     plt.plot(x2, y2, 'r', label='Ground Truth')
-
-    if show_rot:
-        y_axes1 = get_camera_optical_axes(quaternions1)
-        y_axes2 = get_camera_optical_axes(quaternions2)
-
-        u1, v1, w1 = y_axes1[:, 0], y_axes1[:, 1], y_axes1[:, 2]
-        u2, v2, w2 = y_axes2[:, 0], y_axes2[:, 1], y_axes2[:, 2]
-
-        plt.quiver(x1, y1, u1, v1, units='xy', scale_units='xy', scale=0.9, width=0.01, color='b')
-        plt.quiver(x2, y2, u2, v2, units='xy', scale_units='xy', scale=0.9, width=0.01, color='r')
 
     plt.legend()
     plt.ylabel('y')
     plt.xlabel('x')
-
     plt.axis('equal')
+    plt.title('Top view')
+
+    plt.subplot(122)
+    plt.plot(y1, z1, 'b', label='Prediction')
+    plt.plot(y2, z2, 'r', label='Ground Truth')
+
+    plt.legend()
+    plt.ylabel('y')
+    plt.xlabel('z')
+    plt.axis('Side view (height)')
+
+    # if show_rot:
+    #     y_axes1 = get_camera_optical_axes(quaternions1)
+    #     y_axes2 = get_camera_optical_axes(quaternions2)
+    #
+    #     u1, v1, w1 = y_axes1[:, 0], y_axes1[:, 1], y_axes1[:, 2]
+    #     u2, v2, w2 = y_axes2[:, 0], y_axes2[:, 1], y_axes2[:, 2]
+    #
+    #     plt.quiver(x1, y1, u1, v1, units='xy', scale_units='xy', scale=0.9, width=0.01, color='b')
+    #     plt.quiver(x2, y2, u2, v2, units='xy', scale_units='xy', scale=0.9, width=0.01, color='r')
+
+
     plt.savefig(output_file, bbox_inches='tight')
 
 
@@ -259,13 +273,13 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
 ########################################
 
 
-def concat_zip_dataset(folders, sequence_length, transform=None, return_filename=True, max_size=None):
+def concat_zip_dataset(folders, sequence_length, image_transform=None, sequence_transform=None, return_filename=True, max_size=None):
     datasets = []
     current_size = 0
     for folder in folders:
         zip_files = [file for file in glob.glob(os.path.join(folder, '*.zip'))]
         for zip_file in zip_files:
-            sequence = ZippedSequence(zip_file, sequence_length, transform, return_filename)
+            sequence = ZippedSequence(zip_file, sequence_length, image_transform, sequence_transform, return_filename)
             datasets.append(sequence)
 
             current_size += len(sequence)
@@ -322,9 +336,10 @@ def split_zipfile_index(index, sequence_length):
 
 class ZippedSequence(Dataset):
 
-    def __init__(self, zip_file, sequence_length, transform=None, return_filename=True):
+    def __init__(self, zip_file, sequence_length, image_transform=None, sequence_transform=None, return_filename=True):
         self.zip_file = zip_file
-        self.transform = transform
+        self.image_transform = image_transform
+        self.sequence_transform = sequence_transform
         self.return_filename = return_filename
         index = build_zipfile_index(zip_file)
         self.sequence_length = len(index[0]) if sequence_length == 0 else min(sequence_length, len(index[0]))
@@ -342,6 +357,12 @@ class ZippedSequence(Dataset):
         # Convert raw pose (from text file) to 7D pose vectors (translation + quaternion)
         positions = get_positions(poses)
         quaternions = get_quaternions(poses)
+
+        if self.sequence_transform:
+            image_sequence = self.sequence_transform(image_sequence)
+            positions = self.sequence_transform(positions)
+            quaternions = self.sequence_transform(quaternions)
+
         rel_positions, rel_quaternions = to_relative_pose(positions, quaternions)
         pose_vectors = encode_poses(rel_positions, rel_quaternions)
         pose_sequence = torch.from_numpy(pose_vectors).float()
@@ -357,8 +378,28 @@ class ZippedSequence(Dataset):
             for entry in filenames:
                 with archive.open(entry) as file:
                     image = Image.open(file).convert('RGB')
-                    if self.transform:
-                        image = self.transform(image)
+                    if self.image_transform:
+                        image = self.image_transform(image)
                     images.append(image)
 
         return images
+
+
+class RandomSequenceReversal(object):
+    """ A transform that reverses a sequence randomly with probability 0.5. """
+
+    def __call__(self, sequence):
+        assert isinstance(sequence, torch.Tensor) or isinstance(sequence, np.ndarray), \
+            'Sequence reversal only works for torch tensors or numpy arrays.'
+
+        if random.uniform(0, 1) > 0.5:
+            return sequence
+
+        if isinstance(sequence, np.ndarray):
+            return sequence[::-1]
+
+        elif isinstance(sequence, torch.Tensor):
+            # Currently, pytorch does not support negative step size for slicing
+            idx = [i for i in range(sequence.size(0) - 1, -1, -1)]
+            idx = torch.LongTensor(idx)
+            return sequence.index_select(0, idx)

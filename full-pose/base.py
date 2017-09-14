@@ -95,7 +95,10 @@ class BaseExperiment:
         return var
 
     def make_output_filename(self, filename):
-        return os.path.join(self.out_folder, filename)
+        #return os.path.join(self.out_folder, filename)
+        sub_path, base = os.path.split(filename)
+        os.makedirs(os.path.join(self.out_folder, sub_path), exist_ok=True)
+        return os.path.join(self.out_folder, sub_path, base)
 
     def make_input_filename(self, filename):
         return os.path.join(self.in_folder, filename)

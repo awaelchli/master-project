@@ -1,6 +1,7 @@
 from zipfile import ZipFile
 import os
 import glob
+import argparse
 
 
 def zip_all_folders(data_root, pose_root, destination):
@@ -45,9 +46,19 @@ def zip_one_folder(folder, pose_file, out_name):
 
 
 if __name__ == '__main__':
-    data_root = '/media/adrian/Portable/Datasets/GTA V/walking/test/data'
-    pose_root = '/media/adrian/Portable/Datasets/GTA V/walking/test/poses'
-    destination = '/media/adrian/Portable/Datasets/GTA V/walking_zipped/test'
+    parser = argparse.ArgumentParser('Make Zip Files')
+    parser.add_argument('--data', type=str, default=os.path.join('.', 'data'),
+                        help='Root folder that contains all the subfolders for each video sequence.')
+    parser.add_argument('--poses', type=str, default=os.path.join('.', 'poses'),
+                        help='Root folder of the pose text files.')
+    parser.add_argument('--dest', type=str, default='.',
+                        help='Output directory for the zip files. Default is the current directory.')
+
+    args = parser.parse_args()
+
+    data_root = args.data
+    pose_root = args.poses
+    destination = args.dest
 
     if not os.path.isdir(destination):
         os.makedirs(destination)
