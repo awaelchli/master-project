@@ -562,7 +562,12 @@ class FullPose7D(BaseExperiment):
         q2 = q.clone()
         q2[valid] = q[valid] / q_norm[valid]
 
-        return torch.cat((t, q2), 1)
+        # Check if quaternion on positive hemisphere
+        cos_negative = (q2[:, 0] < 0).view(-1, 1).expand_as(q)
+        q3 = q2
+        q3[cos_negative] *= -1
+
+        return torch.cat((t, q3), 1)
 
     # def relative_rotation_angles(self, predictions, targets):
     #     # Dimensions: [N, 7]
