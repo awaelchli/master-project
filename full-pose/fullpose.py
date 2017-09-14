@@ -10,7 +10,7 @@ from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
 import plots
-from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, FOLDERS
+from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, RandomSequenceReversal, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 from convolution_lstm import ConvLSTMShrink
@@ -217,6 +217,11 @@ class FullPose7D(BaseExperiment):
             transforms.ToTensor(),
         ])
 
+        # Sequence transform
+        seq_transform = transforms.Compose([
+            RandomSequenceReversal()
+        ])
+
         zipped = True
         print('Using zipped dataset: ', zipped)
         if not zipped:
@@ -252,7 +257,8 @@ class FullPose7D(BaseExperiment):
                     '../data/GTA V/walking/train'
                 ],
                 sequence_length=args.sequence,
-                transform=transform,
+                image_transform=transform,
+                sequence_transform=seq_transform,
                 return_filename=True,
                 max_size=args.max_size[0],
             )
@@ -262,7 +268,8 @@ class FullPose7D(BaseExperiment):
                     '../data/GTA V/walking/test'
                 ],
                 sequence_length=args.sequence,
-                transform=transform,
+                image_transform=transform,
+                sequence_transform=seq_transform,
                 return_filename=True,
                 max_size=args.max_size[1],
             )
