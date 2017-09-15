@@ -246,9 +246,10 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
     plt.plot(y2, z2, 'r', label='Ground Truth')
 
     plt.legend()
-    plt.ylabel('y')
-    plt.xlabel('z')
-    plt.axis('Side view (height)')
+    plt.ylabel('z')
+    plt.xlabel('y')
+    plt.axis('equal')
+    plt.title('Side view (height)')
 
     # if show_rot:
     #     y_axes1 = get_camera_optical_axes(quaternions1)

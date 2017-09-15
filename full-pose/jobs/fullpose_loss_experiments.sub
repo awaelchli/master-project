@@ -19,13 +19,12 @@ module load anaconda
 # Adam, no adjust lr
 # Training
 python full-pose/main.py pose7D \
---output gta5pose7D_more_data30fps_loss_experiment \
+--output gta5pose7D_more_data30fps_more_rot_data_random_flip \
 --train \
---resume \
 --cuda \
 --epochs 100 \
 --sequence 100 \
---hidden 100 \
+--hidden 200 \
 --layers 5 \
 --lr 0.001 \
 --beta 0.1 \
