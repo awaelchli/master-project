@@ -181,7 +181,7 @@ def to_relative_pose(translations, quaternions):
     t1 = translations[0]
     q1_inv = qinverse(quaternions[0])
 
-    rel_translations = [rotate_vector(t - t1, q1_inv) for  t in translations]
+    rel_translations = [rotate_vector(t - t1, q1_inv) for t in translations]
     rel_quaternions = [qmult(q1_inv, q) for q in quaternions]
 
     return np.array(rel_translations), np.array(rel_quaternions)
