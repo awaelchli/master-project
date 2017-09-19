@@ -219,7 +219,7 @@ class FullPose7D(BaseExperiment):
 
         # Sequence transform
         seq_transform = transforms.Compose([
-            RandomSequenceReversal()
+            #RandomSequenceReversal()
         ])
 
         zipped = True
@@ -255,7 +255,7 @@ class FullPose7D(BaseExperiment):
             train_set = concat_zip_dataset(
                 [
                     '../data/GTA V/walking/train',
-                    '../data/GTA V/standing/train'
+                    #'../data/GTA V/standing/train'
                 ],
                 sequence_length=args.sequence,
                 image_transform=transform,
@@ -267,7 +267,7 @@ class FullPose7D(BaseExperiment):
             val_set = concat_zip_dataset(
                 [
                     '../data/GTA V/walking/test',
-                    '../data/GTA V/standing/test'
+                    #'../data/GTA V/standing/test'
                 ],
                 sequence_length=args.sequence,
                 image_transform=transform,
