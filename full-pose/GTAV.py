@@ -274,13 +274,13 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, 
 ########################################
 
 
-def concat_zip_dataset(folders, sequence_length, image_transform=None, sequence_transform=None, return_filename=True, max_size=None):
+def concat_zip_dataset(folders, sequence_length, stride=1, image_transform=None, sequence_transform=None, return_filename=True, max_size=None):
     datasets = []
     current_size = 0
     for folder in folders:
         zip_files = [file for file in glob.glob(os.path.join(folder, '*.zip'))]
         for zip_file in zip_files:
-            sequence = ZippedSequence(zip_file, sequence_length, image_transform, sequence_transform, return_filename)
+            sequence = ZippedSequence(zip_file, sequence_length, stride, image_transform, sequence_transform, return_filename)
             datasets.append(sequence)
 
             current_size += len(sequence)
@@ -301,7 +301,7 @@ def read_poses_from_zip(zip_file):
     return times, poses
 
 
-def build_zipfile_index(zipfile):
+def build_zipfile_index(zipfile, stride=1):
     all_times, all_poses = read_poses_from_zip(zipfile)
     interpolator = interpolate.interp1d(all_times, all_poses, kind='nearest', axis=0, copy=True,
                                         fill_value='extrapolate', assume_sorted=True)
@@ -319,7 +319,7 @@ def build_zipfile_index(zipfile):
     poses = np.array(poses_interpolated)
 
     assert len(filenames) == poses.shape[0]
-    return filenames, poses
+    return filenames[::stride], poses[::stride]
 
 
 def split_zipfile_index(index, sequence_length):
@@ -337,12 +337,13 @@ def split_zipfile_index(index, sequence_length):
 
 class ZippedSequence(Dataset):
 
-    def __init__(self, zip_file, sequence_length, image_transform=None, sequence_transform=None, return_filename=True):
+    def __init__(self, zip_file, sequence_length, stride=1, image_transform=None, sequence_transform=None, return_filename=True):
         self.zip_file = zip_file
         self.image_transform = image_transform
         self.sequence_transform = sequence_transform
         self.return_filename = return_filename
-        index = build_zipfile_index(zip_file)
+        self.stride = stride
+        index = build_zipfile_index(zip_file, stride)
         self.sequence_length = len(index[0]) if sequence_length == 0 else min(sequence_length, len(index[0]))
         self.subsequences = split_zipfile_index(index, self.sequence_length)
         # Format of subsequences: [(filenames1, poses1), (filenames2, poses2), ...]

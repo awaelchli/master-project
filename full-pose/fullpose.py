@@ -262,6 +262,7 @@ class FullPose7D(BaseExperiment):
                 sequence_transform=seq_transform,
                 return_filename=True,
                 max_size=args.max_size[0],
+                stride=2,
             )
 
             val_set = concat_zip_dataset(
@@ -274,6 +275,7 @@ class FullPose7D(BaseExperiment):
                 sequence_transform=seq_transform,
                 return_filename=True,
                 max_size=args.max_size[1],
+                stride=2,
             )
 
             test_set = val_set
