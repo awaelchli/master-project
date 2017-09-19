@@ -45,20 +45,20 @@ class FullPose7DModel(nn.Module):
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
         flownet.train(False)
 
-        self.layers = flownet
-        # self.layers = torch.nn.Sequential(
-        #     flownet.conv1,
-        #     flownet.conv2,
-        #     flownet.conv3,
-        #     flownet.conv3_1,
-        #     flownet.conv4,
-        #     flownet.conv4_1,
-        #     flownet.conv5,
-        #     flownet.conv5_1,
-        #     flownet.conv6,
-        #     flownet.conv6_1,
-        #
-        # )
+        #self.layers = flownet
+        self.layers = torch.nn.Sequential(
+            flownet.conv1,
+            flownet.conv2,
+            flownet.conv3,
+            flownet.conv3_1,
+            flownet.conv4,
+            flownet.conv4_1,
+            flownet.conv5,
+            flownet.conv5_1,
+            flownet.conv6,
+            flownet.conv6_1,
+
+        )
 
         self.fix_flownet = fix_flownet
         for param in self.layers.parameters():
@@ -284,7 +284,7 @@ class FullPose7D(BaseExperiment):
             train_set,
             batch_size=1,
             pin_memory=self.use_cuda,
-            shuffle=True,
+            shuffle=False,
             num_workers=args.workers)
 
         dataloader_val = DataLoader(
