@@ -540,10 +540,10 @@ class FullPose7D(BaseExperiment):
 
         # Loss for rotation: dot product between quaternions
         #loss1 = torch.norm(q1 - q2, 1, dim=1)
-        loss1 = 1 - (q1 * q2).sum(1) ** 2
-        loss1 = loss1.sum() / sequence_length
-        #loss1 = c(q1, q2)
-        #loss1 /= sequence_length
+        #loss1 = 1 - (q1 * q2).sum(1) ** 2
+        #loss1 = loss1.sum() / sequence_length
+        loss1 = c(q1, q2)
+        loss1 /= sequence_length
 
         eps = 0.001
 
