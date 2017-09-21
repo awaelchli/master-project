@@ -433,6 +433,6 @@ class Loop(object):
 
         # The new sequence is
         images = torch.cat((images[:-1], reversed_images), 0)
-        poses = np.concatenate((poses[:-1], reversed_poses), 0)
+        poses = torch.cat((poses[:-1], reversed_poses), 0)
 
         return images, poses
