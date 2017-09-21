@@ -360,14 +360,12 @@ class ZippedSequence(Dataset):
         positions = get_positions(poses)
         quaternions = get_quaternions(poses)
 
-        if self.sequence_transform:
-            image_sequence = self.sequence_transform(image_sequence)
-            positions = self.sequence_transform(positions)
-            quaternions = self.sequence_transform(quaternions)
-
         rel_positions, rel_quaternions = to_relative_pose(positions, quaternions)
         pose_vectors = encode_poses(rel_positions, rel_quaternions)
         pose_sequence = torch.from_numpy(pose_vectors).float()
+
+        if self.sequence_transform:
+            image_sequence, pose_sequence = self.sequence_transform(image_sequence, pose_sequence)
 
         if self.return_filename:
             return image_sequence, pose_sequence, [os.path.join(self.zip_file, f) for f in filenames]
@@ -387,21 +385,53 @@ class ZippedSequence(Dataset):
         return images
 
 
-class RandomSequenceReversal(object):
-    """ A transform that reverses a sequence randomly with probability 0.5. """
+# class RandomSequenceReversal(object):
+#     """ A transform that reverses a sequence randomly with probability 0.5. """
+#
+#     def __call__(self, sequence):
+#         assert isinstance(sequence, torch.Tensor) or isinstance(sequence, np.ndarray), \
+#             'Sequence reversal only works for torch tensors or numpy arrays.'
+#
+#         if random.uniform(0, 1) > 0.5:
+#             return sequence
+#
+#         if isinstance(sequence, np.ndarray):
+#             return sequence[::-1]
+#
+#         elif isinstance(sequence, torch.Tensor):
+#             # Currently, pytorch does not support negative step size for slicing
+#             idx = [i for i in range(sequence.size(0) - 1, -1, -1)]
+#             idx = torch.LongTensor(idx)
+#             return sequence.index_select(0, idx)
 
-    def __call__(self, sequence):
-        assert isinstance(sequence, torch.Tensor) or isinstance(sequence, np.ndarray), \
-            'Sequence reversal only works for torch tensors or numpy arrays.'
 
-        if random.uniform(0, 1) > 0.5:
-            return sequence
+class Loop(object):
+    """ A transform that loops the sequence by appending the reversed sequence at the end. """
 
-        if isinstance(sequence, np.ndarray):
-            return sequence[::-1]
+    def __init__(self, min_length, max_length):
+        self.min_length = min_length
+        self.max_length = max_length
 
-        elif isinstance(sequence, torch.Tensor):
-            # Currently, pytorch does not support negative step size for slicing
-            idx = [i for i in range(sequence.size(0) - 1, -1, -1)]
-            idx = torch.LongTensor(idx)
-            return sequence.index_select(0, idx)
+    def truncate_sequence(self, images, poses):
+        # Randomly truncate sequence
+        length = random.randint(self.min_length, self.max_length) + 1
+        return images[:length], poses[:length]
+
+    def __call__(self, images, poses):
+        assert isinstance(images, torch.Tensor), 'The image sequence is expected to be a torch tensor.'
+        assert isinstance(poses, np.ndarray), 'The pose sequence is expected to be a numpy array.'
+        assert len(images) == len(poses), 'Length of image sequence must match length of pose sequence.'
+
+        images, poses = self.truncate_sequence(images, poses)
+
+        idx = [i for i in range(images.size(0) - 1, -1, -1)]
+        idx = torch.LongTensor(idx)
+
+        reversed_images = images.index_select(0, idx)
+        reversed_poses = poses[::-1]
+
+        # The new sequence is
+        images = torch.cat((images[:-1], reversed_images), 0)
+        poses = np.concatenate((poses[:-1], reversed_poses), 0)
+
+        return (images, poses)

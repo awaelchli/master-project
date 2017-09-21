@@ -10,7 +10,7 @@ from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
 import plots
-from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, RandomSequenceReversal, FOLDERS
+from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 
@@ -186,7 +186,8 @@ class FullPose7D(BaseExperiment):
 
         # Sequence transform
         seq_transform = transforms.Compose([
-            #RandomSequenceReversal()
+            #RandomSequenceReversal(),
+            Loop(40, 60),
         ])
 
         zipped = True
