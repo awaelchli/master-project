@@ -421,7 +421,7 @@ class Loop(object):
         images = tuple[0]
         poses = tuple[1]
         assert isinstance(images, torch.Tensor), 'The image sequence is expected to be a torch tensor.'
-        assert isinstance(poses, np.ndarray), 'The pose sequence is expected to be a numpy array.'
+        assert isinstance(poses, torch.Tensor), 'The pose sequence is expected to be a torch tensor.'
         assert len(images) == len(poses), 'Length of image sequence must match length of pose sequence.'
 
         images, poses = self.truncate_sequence(images, poses)
