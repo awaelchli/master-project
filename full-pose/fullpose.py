@@ -242,7 +242,7 @@ class FullPose7D(BaseExperiment):
                 ],
                 sequence_length=args.sequence,
                 image_transform=transform,
-                sequence_transform=seq_transform,
+                sequence_transform=None,
                 return_filename=True,
                 max_size=args.max_size[1],
                 stride=1,
