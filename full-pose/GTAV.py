@@ -428,9 +428,8 @@ class Loop(object):
 
         idx = [i for i in range(images.size(0) - 1, -1, -1)]
         idx = torch.LongTensor(idx)
-
         reversed_images = images.index_select(0, idx)
-        reversed_poses = poses[::-1]
+        reversed_poses = poses.index_select(0, idx)
 
         # The new sequence is
         images = torch.cat((images[:-1], reversed_images), 0)
