@@ -365,6 +365,8 @@ class ZippedSequence(Dataset):
         pose_sequence = torch.from_numpy(pose_vectors).float()
 
         if self.sequence_transform:
+            print(image_sequence)
+            print(pose_sequence)
             image_sequence, pose_sequence = self.sequence_transform(image_sequence, pose_sequence)
 
         if self.return_filename:
@@ -434,4 +436,4 @@ class Loop(object):
         images = torch.cat((images[:-1], reversed_images), 0)
         poses = np.concatenate((poses[:-1], reversed_poses), 0)
 
-        return (images, poses)
+        return images, poses
