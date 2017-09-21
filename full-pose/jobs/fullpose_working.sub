@@ -23,7 +23,7 @@ python full-pose/main.py pose7D \
 --train \
 --cuda \
 --epochs 100 \
---sequence 100 \
+--sequence 50 \
 --hidden 100 \
 --layers 5 \
 --lr 0.001 \
