@@ -365,9 +365,7 @@ class ZippedSequence(Dataset):
         pose_sequence = torch.from_numpy(pose_vectors).float()
 
         if self.sequence_transform:
-            print(len(image_sequence))
-            print(len(pose_sequence))
-            image_sequence, pose_sequence = self.sequence_transform(image_sequence, pose_sequence)
+            image_sequence, pose_sequence = self.sequence_transform((image_sequence, pose_sequence))
 
         if self.return_filename:
             return image_sequence, pose_sequence, [os.path.join(self.zip_file, f) for f in filenames]
@@ -419,7 +417,9 @@ class Loop(object):
         length = random.randint(self.min_length, self.max_length) + 1
         return images[:length], poses[:length]
 
-    def __call__(self, images, poses):
+    def __call__(self, tuple):
+        images = tuple[0]
+        poses = tuple[1]
         assert isinstance(images, torch.Tensor), 'The image sequence is expected to be a torch tensor.'
         assert isinstance(poses, np.ndarray), 'The pose sequence is expected to be a numpy array.'
         assert len(images) == len(poses), 'Length of image sequence must match length of pose sequence.'
