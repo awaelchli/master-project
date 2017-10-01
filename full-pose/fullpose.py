@@ -19,10 +19,10 @@ class FullPose7DModel(nn.Module):
     def __init__(self, input_size, hidden=500, nlayers=3, fix_flownet=True):
         super(FullPose7DModel, self).__init__()
 
-        flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
-        flownet.train(False)
+        #flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
+        #flownet.train(False)
 
-        self.layers = flownet
+        #self.layers = flownet
         # self.layers = torch.nn.Sequential(
         #     flownet.conv1,
         #     flownet.conv2,
@@ -36,6 +36,20 @@ class FullPose7DModel(nn.Module):
         #     flownet.conv6_1,
         #
         # )
+
+        self.layers = torch.nn.Sequential(
+            nn.Conv2d(6, 64, kernel_size=5, stride=2, padding=0, dilation=2, groups=1),
+            nn.LeakyReLU(0.1),
+
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.LeakyReLU(0.1),
+
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.LeakyReLU(0.1),
+
+            nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.LeakyReLU(0.1),
+        )
 
         self.fix_flownet = fix_flownet
         for param in self.layers.parameters():
@@ -137,7 +151,7 @@ class FullPose7D(BaseExperiment):
             self.input_size,
             hidden=args.hidden,
             nlayers=args.layers,
-            fix_flownet=True,
+            fix_flownet=False,
         )
 
         if self.use_cuda:
@@ -450,7 +464,7 @@ class FullPose7D(BaseExperiment):
 
         return avg_loss, avg_rot_loss, avg_trans_loss
 
-    def loss_function_2(self, output, target):
+    def loss_function(self, output, target):
         # Dimensions: [sequence_length, 7]
         sequence_length = output.size(0)
 
@@ -485,7 +499,7 @@ class FullPose7D(BaseExperiment):
 
         return loss1 + self.beta * loss2, loss1, loss2
 
-    def loss_function(self, output, target):
+    def loss_function_L1(self, output, target):
         # Dimensions: [sequence_length, 7]
         sequence_length = output.size(0)
 
