@@ -3,10 +3,10 @@ from torchvision import transforms
 from torchvision.utils import save_image
 import os
 import shutil
-from GTAV import ZippedSequence, FOLDERS
+from GTAV import ZippedSequence, FOLDERS, Loop
 import time
 
-sequence = 25
+sequence = 60
 num_sequences = 15
 output_folder = 'out/dataset_visualization_zipped'
 
@@ -22,7 +22,19 @@ transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-train_set = ZippedSequence('../data/testzipsorted.zip', sequence, transform)
+# Sequence transform
+seq_transform = transforms.Compose([
+    #RandomSequenceReversal(),
+    Loop(40, 60),
+])
+
+train_set = ZippedSequence(
+    '../data/GTA V/walking/test/Grand Theft Auto V 08.13.2017 - 19.53.40.04.zip',
+    sequence,
+    image_transform=transform,
+    sequence_transform=seq_transform,
+    return_filename=False,
+)
 
 dataloader = DataLoader(
     train_set,
