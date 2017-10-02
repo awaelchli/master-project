@@ -210,7 +210,7 @@ class FullPose7D(BaseExperiment):
         #seq_transform = None
         seq_transform = transforms.Compose([
             #RandomSequenceReversal(),
-            Loop(self.sequence_length - 10, self.sequence_length + 10),
+            Loop(args.sequence - 10, args.sequence + 10),
         ])
 
         zipped = True
