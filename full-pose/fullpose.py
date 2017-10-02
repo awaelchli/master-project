@@ -106,7 +106,11 @@ class FullPose7DModel(nn.Module):
             c0 = c0.cuda()
 
         init = (h0, c0)
-        outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
+
+        if pairwise:
+            outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
+        else:
+            outputs, _ = self.lstm(pairs.view(1, n, -1), init)
 
         predictions = self.fc(outputs.squeeze(0))
 
@@ -329,7 +333,7 @@ class FullPose7D(BaseExperiment):
             # Loss function
             start = time.time()
             output = self.normalize_output(output)
-            loss, r_loss, t_loss = self.loss_function(output, target[1:])
+            loss, r_loss, t_loss = self.loss_function(output, target)
             loss_time.update(time.time() - start)
 
             # Backward
@@ -412,14 +416,14 @@ class FullPose7D(BaseExperiment):
             output = self.normalize_output(output)
 
             all_predictions.append(output.data)
-            all_targets.append(target.data[1:])
+            all_targets.append(target.data)
 
             # A few sequences are shorter, don't add them for averaging
-            tmp = self.relative_rotation_angles2(output.data, target.data[1:])
+            tmp = self.relative_rotation_angles2(output.data, target.data)
             if len(tmp) == self.sequence_length - 1:
                 rel_angle_error_over_time.append(tmp)
 
-            loss, r_loss, t_loss = self.loss_function(output, target[1:])
+            loss, r_loss, t_loss = self.loss_function(output, target)
             avg_loss.update(loss.data[0])
             avg_rot_loss.update(r_loss.data[0])
             avg_trans_loss.update(t_loss.data[0])
@@ -429,7 +433,7 @@ class FullPose7D(BaseExperiment):
             # Visualize predicted path
             fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
             of = self.make_output_filename('{}--{:05}.png'.format(fn, i))
-            visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=False)
+            visualize_predicted_path(output.data.cpu().numpy(), target.data.cpu().numpy(), of, show_rot=False)
 
 
         # Average losses for rotation, translation and combined
