@@ -1,0 +1,110 @@
+#!/bin/bash
+
+#$ -N regression_imagenet
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+#################################
+# Testing variation of step angle
+#################################
+
+python left-right-pose/main.py regression \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step5 \
+--cuda \
+--test \
+--sequence 25 \
+--angle 50 \
+--step 5 \
+--noise 2 \
+--zplane 0.7 \
+--workers 4 \
+--print_freq 1 \
+--max_size 0 0 5000 \
+--overwrite
+
+python left-right-pose/main.py regression \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step6 \
+--cuda \
+--test \
+--sequence 25 \
+--angle 50 \
+--step 6 \
+--noise 2 \
+--zplane 0.7 \
+--workers 4 \
+--print_freq 1 \
+--max_size 0 0 5000 \
+--overwrite
+
+python left-right-pose/main.py regression \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step7 \
+--cuda \
+--test \
+--sequence 25 \
+--angle 50 \
+--step 7 \
+--noise 2 \
+--zplane 0.7 \
+--workers 4 \
+--print_freq 1 \
+--max_size 0 0 5000 \
+--overwrite
+
+python left-right-pose/main.py regression \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step8 \
+--cuda \
+--test \
+--sequence 25 \
+--angle 50 \
+--step 8 \
+--noise 2 \
+--zplane 0.7 \
+--workers 4 \
+--print_freq 1 \
+--max_size 0 0 5000 \
+--overwrite
+
+python left-right-pose/main.py regression \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step9 \
+--cuda \
+--test \
+--sequence 25 \
+--angle 50 \
+--step 9 \
+--noise 2 \
+--zplane 0.7 \
+--workers 4 \
+--print_freq 1 \
+--max_size 0 0 5000 \
+--overwrite
+
+python left-right-pose/main.py regression \
+--input regression_imagenet_20k_noise_adjust_lr \
+--output regression_imagenet_20k_noise_adjust_lr/seq25angle50step10 \
+--cuda \
+--test \
+--sequence 25 \
+--angle 50 \
+--step 10 \
+--noise 2 \
+--zplane 0.7 \
+--workers 4 \
+--print_freq 1 \
+--max_size 0 0 5000 \
+--overwrite

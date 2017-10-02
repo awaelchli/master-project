@@ -1,0 +1,47 @@
+#!/bin/bash
+
+#$ -N regression_imagenet
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Training
+python left-right-pose/main.py regression \
+--output regression_imagenet_20k_noise_adjust_lr \
+--cuda \
+--train \
+--epochs 20 \
+--sequence 20 \
+--angle 50 \
+--step 5 \
+--noise 2 \
+--zplane 0.7 \
+--lr 0.0001 \
+--workers 4 \
+--print_freq 1 \
+--max_size 20000 1000 0
+
+# Testing
+python left-right-pose/main.py regression \
+--input regression_imagenet_20k_noise_adjust_lr
+--output regression_imagenet_20k_noise_adjust_lr/test \
+--cuda \
+--test \
+--sequence 25 \
+--angle 50 \
+--step 5 \
+--noise 2 \
+--zplane 0.7 \
+--workers 4 \
+--print_freq 1 \
+--max_size 0 0 5000 \
