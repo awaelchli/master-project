@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#$ -N train_gta5
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+
+# Adam, no adjust lr, dot product loss for rotation, L2 loss for translation
+# Correlation layer, Loop
+# Training
+python full-pose/main.py pose7D \
+--output gta5pose7D_more_data30fps_corr \
+--train \
+--cuda \
+--epochs 100 \
+--sequence 60 \
+--hidden 100 \
+--layers 5 \
+--lr 0.002 \
+--beta 0.1 \
+--workers 8 \
+--print_freq 1 \
+--max_size 10, 30, 30
+

@@ -8,6 +8,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
+from correlation_layer import corr
 
 import plots
 from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
@@ -22,7 +23,7 @@ class FullPose7DModel(nn.Module):
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
         flownet.train(False)
 
-        self.layers = flownet
+        #self.layers = flownet
         # self.layers = torch.nn.Sequential(
         #     flownet.conv1,
         #     flownet.conv2,
@@ -37,11 +38,20 @@ class FullPose7DModel(nn.Module):
         #
         # )
 
+        self.layers = torch.nn.Sequential(
+            torch.nn.Conv2d(3, 64, kernel_size=5, stride=3, padding=0, dilation=2),
+            torch.nn.LeakyReLU(0.1),
+        )
+
         self.fix_flownet = fix_flownet
         for param in self.layers.parameters():
             param.requires_grad = not fix_flownet
 
         fout = self.flownet_output_size(input_size)
+        # After correlation layer
+        fout = (fout[0], fout[2] * fout[3], fout[2], fout[3])
+
+
         self.hidden = hidden
         self.nlayers = nlayers
 
@@ -79,7 +89,11 @@ class FullPose7DModel(nn.Module):
         assert pairs.size(0) == n - 1
 
         # Using batch mode to forward sequence
-        pairs = self.layers(pairs)
+        f1 = self.layers(first)
+        f2 = self.layers(second)
+
+        pairs = corr(f1, f2)
+        print('Corr output', pairs.size())
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
         c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
@@ -137,7 +151,7 @@ class FullPose7D(BaseExperiment):
             self.input_size,
             hidden=args.hidden,
             nlayers=args.layers,
-            fix_flownet=True,
+            fix_flownet=False,
         )
 
         if self.use_cuda:
@@ -450,7 +464,7 @@ class FullPose7D(BaseExperiment):
 
         return avg_loss, avg_rot_loss, avg_trans_loss
 
-    def loss_function_2(self, output, target):
+    def loss_function(self, output, target):
         # Dimensions: [sequence_length, 7]
         sequence_length = output.size(0)
 
@@ -479,13 +493,13 @@ class FullPose7D(BaseExperiment):
         eps = 0.001
 
         # Loss for translation
-        t_diff = torch.norm(t1 - t2, 2, dim=1)
-        loss2 = torch.log(eps + t_diff)
+        loss2 = torch.norm(t1 - t2, 2, dim=1)
+        #loss2 = torch.log(eps + loss2)
         loss2 = loss2.sum() / sequence_length
 
         return loss1 + self.beta * loss2, loss1, loss2
 
-    def loss_function(self, output, target):
+    def loss_function_2(self, output, target):
         # Dimensions: [sequence_length, 7]
         sequence_length = output.size(0)
 
