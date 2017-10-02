@@ -16,7 +16,7 @@
 module load anaconda
 
 
-# Adam, no adjust lr
+# Adam, no adjust lr, L1 loss function for rotation and translation (separate)
 # Training
 python full-pose/main.py pose7D \
 --output gta5pose7D_more_data30fps_working \

@@ -38,16 +38,16 @@ class FullPose7DModel(nn.Module):
         # )
 
         self.layers = torch.nn.Sequential(
-            nn.Conv2d(6, 64, kernel_size=5, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(3, 64, kernel_size=5, stride=3, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(64, 128, kernel_size=3, stride=3, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(128, 256, kernel_size=3, stride=3, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(256, 512, kernel_size=3, stride=3, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
         )
 
@@ -64,7 +64,7 @@ class FullPose7DModel(nn.Module):
             hidden_size=self.hidden,
             num_layers=self.nlayers,
             batch_first=True,
-            dropout=0.3
+            #dropout=0.3
         )
 
         self.fc = nn.Linear(self.hidden, 7)
@@ -75,22 +75,26 @@ class FullPose7DModel(nn.Module):
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
-        var = Variable(torch.zeros(1, 6, input_size[0], input_size[1]), volatile=True)
+        # 6 for pairwise forward, 3 for single image
+        var = Variable(torch.zeros(1, 3, input_size[0], input_size[1]), volatile=True)
         if next(self.layers.parameters()).is_cuda:
             var = var.cuda()
         out = self.layers(var)
         return out.size(0), out.size(1), out.size(2), out.size(3)
 
-    def forward(self, input):
+    def forward(self, input, pairwise=True):
         # Input shape: [sequence, channels, h, w]
         n = input.size(0)
-        first = input[:n-1]
-        second = input[1:]
 
-        # New shape: [sequence - 1, 2 * channels, h, w]
-        pairs = torch.cat((first, second), 1)
+        if pairwise:
+            first = input[:n-1]
+            second = input[1:]
 
-        assert pairs.size(0) == n - 1
+            # New shape: [sequence - 1, 2 * channels, h, w]
+            pairs = torch.cat((first, second), 1)
+            assert pairs.size(0) == n - 1
+        else:
+            pairs = input
 
         # Using batch mode to forward sequence
         pairs = self.layers(pairs)
@@ -102,7 +106,11 @@ class FullPose7DModel(nn.Module):
             c0 = c0.cuda()
 
         init = (h0, c0)
-        outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
+
+        if pairwise:
+            outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
+        else:
+            outputs, _ = self.lstm(pairs.view(1, n, -1), init)
 
         predictions = self.fc(outputs.squeeze(0))
 
@@ -199,11 +207,11 @@ class FullPose7D(BaseExperiment):
         ])
 
         # Sequence transform
-        seq_transform = None
-        # seq_transform = transforms.Compose([
-        #     #RandomSequenceReversal(),
-        #     Loop(40, 60),
-        # ])
+        #seq_transform = None
+        seq_transform = transforms.Compose([
+            #RandomSequenceReversal(),
+            Loop(args.sequence - 10, args.sequence + 10),
+        ])
 
         zipped = True
         print('Using zipped dataset: ', zipped)
@@ -319,13 +327,13 @@ class FullPose7D(BaseExperiment):
 
             # Forward
             start = time.time()
-            output = self.model(input)
+            output = self.model(input, pairwise=False)
             forward_time.update(time.time() - start)
 
             # Loss function
             start = time.time()
             output = self.normalize_output(output)
-            loss, r_loss, t_loss = self.loss_function(output, target[1:])
+            loss, r_loss, t_loss = self.loss_function(output, target)
             loss_time.update(time.time() - start)
 
             # Backward
@@ -404,18 +412,18 @@ class FullPose7D(BaseExperiment):
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
-            output = self.model(input)
+            output = self.model(input, pairwise=False)
             output = self.normalize_output(output)
 
             all_predictions.append(output.data)
-            all_targets.append(target.data[1:])
+            all_targets.append(target.data)
 
             # A few sequences are shorter, don't add them for averaging
-            tmp = self.relative_rotation_angles2(output.data, target.data[1:])
-            if len(tmp) == self.sequence_length - 1:
+            tmp = self.relative_rotation_angles2(output.data, target.data)
+            if len(tmp) == self.sequence_length:
                 rel_angle_error_over_time.append(tmp)
 
-            loss, r_loss, t_loss = self.loss_function(output, target[1:])
+            loss, r_loss, t_loss = self.loss_function(output, target)
             avg_loss.update(loss.data[0])
             avg_rot_loss.update(r_loss.data[0])
             avg_trans_loss.update(t_loss.data[0])
@@ -425,7 +433,7 @@ class FullPose7D(BaseExperiment):
             # Visualize predicted path
             fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
             of = self.make_output_filename('{}--{:05}.png'.format(fn, i))
-            visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=False)
+            visualize_predicted_path(output.data.cpu().numpy(), target.data.cpu().numpy(), of, show_rot=False)
 
 
         # Average losses for rotation, translation and combined

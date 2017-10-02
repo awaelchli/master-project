@@ -13,29 +13,6 @@ import plots
 from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, RandomSequenceReversal, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
-from convolution_lstm import ConvLSTMShrink
-from cuda_functional import SRU
-
-
-class BatchFirstSRU(SRU):
-
-    def __init__(self, *args, **kwargs):
-        super(BatchFirstSRU, self).__init__(*args, **kwargs)
-
-    def forward(self, input, c0=None, return_hidden=True):
-        # New input format is:
-        #   input:  (batch size, length, hidden size * number of directions)
-        #   hidden: (batch size, layers, hidden size * number of directions)
-
-        # Flip batch dimension
-        input = input.permute(1, 0, 2)
-        c0 = c0.permute(1, 0, 2) if c0 else c0
-
-        output, hidden = super().forward(input, c0, return_hidden)
-
-        # Undo the flip on the result
-        return output.permute(1, 0, 2), hidden.permute(1, 0, 2)
-        
 
 class FullPose7DModel(nn.Module):
 
@@ -45,20 +22,20 @@ class FullPose7DModel(nn.Module):
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
         flownet.train(False)
 
-        #self.layers = flownet
-        self.layers = torch.nn.Sequential(
-            flownet.conv1,
-            flownet.conv2,
-            flownet.conv3,
-            flownet.conv3_1,
-            flownet.conv4,
-            flownet.conv4_1,
-            flownet.conv5,
-            flownet.conv5_1,
-            flownet.conv6,
-            flownet.conv6_1,
-
-        )
+        self.layers = flownet
+        # self.layers = torch.nn.Sequential(
+        #     flownet.conv1,
+        #     flownet.conv2,
+        #     flownet.conv3,
+        #     flownet.conv3_1,
+        #     flownet.conv4,
+        #     flownet.conv4_1,
+        #     flownet.conv5,
+        #     flownet.conv5_1,
+        #     flownet.conv6,
+        #     flownet.conv6_1,
+        #
+        # )
 
         self.fix_flownet = fix_flownet
         for param in self.layers.parameters():
@@ -68,23 +45,13 @@ class FullPose7DModel(nn.Module):
         self.hidden = hidden
         self.nlayers = nlayers
 
-        self.sru = False
-        if self.sru:
-            self.lstm = BatchFirstSRU(
-                input_size=fout[1] * fout[2] * fout[3],
-                hidden_size=self.hidden,
-                num_layers=self.nlayers,
-                dropout=0.0,
-                rnn_dropout=0.0,
-            )
-        else:
-            self.lstm = nn.LSTM(
-                input_size=fout[1] * fout[2] * fout[3],
-                hidden_size=self.hidden,
-                num_layers=self.nlayers,
-                batch_first=True,
-                dropout=0.3
-            )
+        self.lstm = nn.LSTM(
+            input_size=fout[1] * fout[2] * fout[3],
+            hidden_size=self.hidden,
+            num_layers=self.nlayers,
+            batch_first=True,
+            dropout=0.3
+        )
 
         self.fc = nn.Linear(self.hidden, 7)
         self.init_weights()
@@ -120,7 +87,7 @@ class FullPose7DModel(nn.Module):
             h0 = h0.cuda()
             c0 = c0.cuda()
 
-        init = None if self.sru else (h0, c0)
+        init = (h0, c0)
         outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
 
         predictions = self.fc(outputs.squeeze(0))
@@ -254,7 +221,7 @@ class FullPose7D(BaseExperiment):
         else:
             train_set = concat_zip_dataset(
                 [
-                    '../data/GTA V/walking/easy/train',
+                    '../data/GTA V/walking/walking/train',
                     #'../data/GTA V/walking/hard/train',
                     #'../data/GTA V/standing/train'
                 ],
@@ -268,7 +235,7 @@ class FullPose7D(BaseExperiment):
 
             val_set = concat_zip_dataset(
                 [
-                    '../data/GTA V/walking/easy/test',
+                    '../data/GTA V/walking/walking/test',
                     #'../data/GTA V/walking/hard/test',
                     #'../data/GTA V/standing/test'
                 ],
@@ -283,12 +250,11 @@ class FullPose7D(BaseExperiment):
             test_set = val_set
 
 
-
         dataloader_train = DataLoader(
             train_set,
             batch_size=1,
             pin_memory=self.use_cuda,
-            shuffle=False,
+            shuffle=True,
             num_workers=args.workers)
 
         dataloader_val = DataLoader(
