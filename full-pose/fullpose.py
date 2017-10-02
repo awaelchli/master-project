@@ -71,7 +71,7 @@ class FullPose7DModel(nn.Module):
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
-        var = Variable(torch.zeros(1, 6, input_size[0], input_size[1]), volatile=True)
+        var = Variable(torch.zeros(1, 3, input_size[0], input_size[1]), volatile=True)
         if next(self.layers.parameters()).is_cuda:
             var = var.cuda()
         out = self.layers(var)
