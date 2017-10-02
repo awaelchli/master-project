@@ -199,10 +199,11 @@ class FullPose7D(BaseExperiment):
         ])
 
         # Sequence transform
-        seq_transform = transforms.Compose([
-            #RandomSequenceReversal(),
-            Loop(40, 60),
-        ])
+        seq_transform = None
+        # seq_transform = transforms.Compose([
+        #     #RandomSequenceReversal(),
+        #     Loop(40, 60),
+        # ])
 
         zipped = True
         print('Using zipped dataset: ', zipped)
@@ -493,8 +494,8 @@ class FullPose7D(BaseExperiment):
         eps = 0.001
 
         # Loss for translation
-        t_diff = torch.norm(t1 - t2, 2, dim=1)
-        loss2 = torch.log(eps + t_diff)
+        loss2 = torch.norm(t1 - t2, 2, dim=1)
+        #loss2 = torch.log(eps + loss2)
         loss2 = loss2.sum() / sequence_length
 
         return loss1 + self.beta * loss2, loss1, loss2
