@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#$ -N train_imagenet_pose
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Training
+python main.py binaryposeconvlstm --cuda --name binaryconvsequence --train --epochs 5 --sequence 12 --angle 40 --zplane 0.7 --lr 0.01 --workers 4 --print_freq 1 --max_size 500 500 0
+
+# Testing
+python main.py binaryposeconvlstm --cuda --name binaryconvsequence --test --sequence 12 --angle 40 --zplane 0.7 --workers 4 --max_size 0 0 500

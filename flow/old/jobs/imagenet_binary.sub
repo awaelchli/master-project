@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#$ -N train_imagenet_pose
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Training
+python main.py binaryflownet --cuda --name binaryFlowNet --train --epochs 5 --angle 25 --zplane 0.7 --batch_size 10 --lr 0.01 --workers 4 --print_freq 1 --max_size 8000 500 0
+
+# Testing
+python main.py binaryflownet --cuda --name binaryFlowNet --test --angle 25 --zplane 0.7 --batch_size 10 --workers 4
