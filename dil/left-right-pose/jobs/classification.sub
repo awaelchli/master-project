@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#$ -N train_classification
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Training
+python left-right-pose/main.py classification \
+--cuda \
+--output flow_classification \
+--train \
+--epochs 120 \
+--sequence 20 \
+--angle 50 \
+--zplane 0.7 \
+--lr 0.0001 \
+--workers 4 \
+--print_freq 1 \
+--max_size 10000 300 300
+

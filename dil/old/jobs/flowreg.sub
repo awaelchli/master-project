@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#$ -N train_flow_regression
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Training
+python main.py flowreg --name flow8rotreg --train --epochs 120 --sequence 20 --angle 50 --zplane 0.7 --lr 0.0001 --workers 4 --print_freq 1 --max_size 4 4 4
+
+# Testing
+#python main.py flowreg --cuda --name flow8rotreg --test --sequence 25 --angle 40 --zplane 0.6 --workers 4 --print_freq 1 --max_size 4 4 4
