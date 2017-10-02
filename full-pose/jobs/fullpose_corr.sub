@@ -31,5 +31,5 @@ python full-pose/main.py pose7D \
 --beta 0.1 \
 --workers 8 \
 --print_freq 1 \
---max_size 10, 30, 30
+--max_size 10 30 30
 
