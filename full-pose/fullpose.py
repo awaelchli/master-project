@@ -38,16 +38,16 @@ class FullPose7DModel(nn.Module):
         # )
 
         self.layers = torch.nn.Sequential(
-            nn.Conv2d(6, 64, kernel_size=5, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(3, 64, kernel_size=5, stride=2, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=0, dilation=2, groups=1),
+            nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
         )
 
@@ -64,7 +64,7 @@ class FullPose7DModel(nn.Module):
             hidden_size=self.hidden,
             num_layers=self.nlayers,
             batch_first=True,
-            dropout=0.3
+            #dropout=0.3
         )
 
         self.fc = nn.Linear(self.hidden, 7)
@@ -75,22 +75,26 @@ class FullPose7DModel(nn.Module):
         self.fc.bias.data.zero_()
 
     def flownet_output_size(self, input_size):
-        var = Variable(torch.zeros(1, 6, input_size[0], input_size[1]), volatile=True)
+        # 6 for pairwise forward, 3 for single image
+        var = Variable(torch.zeros(1, 3, input_size[0], input_size[1]), volatile=True)
         if next(self.layers.parameters()).is_cuda:
             var = var.cuda()
         out = self.layers(var)
         return out.size(0), out.size(1), out.size(2), out.size(3)
 
-    def forward(self, input):
+    def forward(self, input, pairwise=True):
         # Input shape: [sequence, channels, h, w]
         n = input.size(0)
-        first = input[:n-1]
-        second = input[1:]
 
-        # New shape: [sequence - 1, 2 * channels, h, w]
-        pairs = torch.cat((first, second), 1)
+        if pairwise:
+            first = input[:n-1]
+            second = input[1:]
 
-        assert pairs.size(0) == n - 1
+            # New shape: [sequence - 1, 2 * channels, h, w]
+            pairs = torch.cat((first, second), 1)
+            assert pairs.size(0) == n - 1
+        else:
+            pairs = input
 
         # Using batch mode to forward sequence
         pairs = self.layers(pairs)
@@ -319,7 +323,7 @@ class FullPose7D(BaseExperiment):
 
             # Forward
             start = time.time()
-            output = self.model(input)
+            output = self.model(input, pairwise=False)
             forward_time.update(time.time() - start)
 
             # Loss function
@@ -404,7 +408,7 @@ class FullPose7D(BaseExperiment):
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
-            output = self.model(input)
+            output = self.model(input, pairwise=False)
             output = self.normalize_output(output)
 
             all_predictions.append(output.data)
