@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#$ -N train_imagenet_pose
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Training
+python main.py binarypose --cuda --name imagenetpose5_full_dataset --train --epochs 10 --angle 25 --zplane 0.7 --batch_size 10 --lr 0.02 --workers 4 --print_freq 50
+
+# Testing
+python main.py binarypose --cuda --name imagenetpose5_full_dataset --test --angle 25 --zplane 0.7 --batch_size 10 --workers 4

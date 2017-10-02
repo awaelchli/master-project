@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#$ -N train_kitti_conv_lstm
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+
+# Training
+python main.py kitticonvlstm --cuda --name kitticonv1 --train --grayscale --epochs 1 --image_size 100 --lr 0.02 --workers 4 --print_freq 1
