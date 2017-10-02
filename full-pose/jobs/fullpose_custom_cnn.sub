@@ -25,7 +25,7 @@ python full-pose/main.py pose7D \
 --cuda \
 --epochs 100 \
 --sequence 50 \
---hidden 200 \
+--hidden 100 \
 --layers 5 \
 --lr 0.002 \
 --beta 0.1 \
