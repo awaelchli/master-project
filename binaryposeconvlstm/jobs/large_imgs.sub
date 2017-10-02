@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#$ -N train_pose_lstm
+#$ -S /bin/bash
+#$ -cwd
+#$ -j y
+#$ -pe smp 1
+
+# Array job: -t <range>
+#$ -t 1
+
+#$ -l h=node01
+
+#$ -v DISPLAY
+
+module load anaconda
+python main.py --grayscale --cuda --experiment large_imgs --epochs 100 --hidden_size 1000 --layers 2 --sequence 10 --image_size 150 --learning_rate 0.001 --workers 4 --print_freq 10
