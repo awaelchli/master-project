@@ -88,10 +88,10 @@ class BaseExperiment:
     def num_parameters(self):
         pass
 
-    def to_variable(self, data, volatile=False):
+    def to_variable(self, data, device=None, async=True, volatile=False):
         var = Variable(data, volatile=volatile)
         if self.use_cuda:
-            var = var.cuda()
+            var = var.cuda(device, async)
         return var
 
     def make_output_filename(self, filename):
