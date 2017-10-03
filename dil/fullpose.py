@@ -173,6 +173,11 @@ class FullPose7D(BaseExperiment):
         #self.optimizer = torch.optim.Adagrad(params, self.lr)
         self.optimizer = torch.optim.Adam(params, self.lr)
 
+        print('Calculating translation scale...')
+        l1_scale, l2_scale = self.determine_translation_scale()
+        self.scale = l1_scale
+        print('Scale: ', self.scale)
+
         self.loss_function = lsf.InnerL1(args.beta)
 
         self.beta = args.beta
@@ -325,6 +330,9 @@ class FullPose7D(BaseExperiment):
             images.squeeze_(0)
             poses.squeeze_(0)
 
+            # Normalize scale of translation
+            poses[:, :3] /= self.scale
+
             input = self.to_variable(images)
             target = self.to_variable(poses)
 
@@ -414,6 +422,9 @@ class FullPose7D(BaseExperiment):
             images.squeeze_(0)
             poses.squeeze_(0)
 
+            # Normalize scale of translation
+            poses[:, :3] /= self.scale
+
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
@@ -484,7 +495,6 @@ class FullPose7D(BaseExperiment):
         # Normalize quaternion in output to unit quaternion
         t = output[:, :3]
         q = output[:, 3:]
-
 
         q_norm = torch.norm(q, 2, dim=1).view(-1, 1)
         q_norm = q_norm.expand_as(q)
@@ -588,3 +598,17 @@ class FullPose7D(BaseExperiment):
 
         total_norm = total_norm ** (1. / 2)
         return total_norm
+
+    def determine_translation_scale(self):
+        largest_l2_norm = 0
+        largest_l1_norm = 0
+        for i, (_, poses, _) in enumerate(self.trainingset):
+            translation = poses[:, :3]
+
+            l1 = max(torch.norm(translation, p=1, dim=1))
+            l2 = max(torch.norm(translation, p=2, dim=1))
+
+            largest_l1_norm = l1 if l1 > largest_l1_norm else largest_l1_norm
+            largest_l2_norm = l2 if l2 > largest_l2_norm else largest_l2_norm
+
+        return largest_l1_norm, largest_l2_norm
