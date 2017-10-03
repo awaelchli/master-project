@@ -1,0 +1,20 @@
+# Adam, no adjust lr, custon cnn (dilation), dot product rotation loss + L2 for translation loss
+# Single image (not pairwise)
+# Looping
+# Training
+
+module load anaconda
+
+python per_pixel_lstm/main.py pose7D \
+--output 00_per_pixel_lstm \
+--train \
+--cuda \
+--epochs 100 \
+--sequence 10 \
+--hidden 1000 \
+--layers 2 \
+--lr 0.004 \
+--beta 0.1 \
+--workers 8 \
+--print_freq 1 \
+--max_size 100 30 30 \
