@@ -603,12 +603,15 @@ class FullPose7D(BaseExperiment):
         largest_l2_norm = 0
         largest_l1_norm = 0
         for i, (_, poses, _) in enumerate(self.trainingset):
-            translation = poses[:, :3]
+            translation = poses[0, :, :3]
 
             l1 = max(torch.norm(translation, p=1, dim=1))
             l2 = max(torch.norm(translation, p=2, dim=1))
 
             largest_l1_norm = l1 if l1 > largest_l1_norm else largest_l1_norm
             largest_l2_norm = l2 if l2 > largest_l2_norm else largest_l2_norm
+
+            if i % 100 == 0:
+                print('{:d} / {:d}'.format(i, len(self.trainingset)))
 
         return largest_l1_norm, largest_l2_norm
