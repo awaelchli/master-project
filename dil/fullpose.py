@@ -176,7 +176,7 @@ class FullPose7D(BaseExperiment):
         print('Calculating translation scale...')
         #l1_scale, l2_scale = self.determine_translation_scale()
         l1_scale, l2_scale = 15.698, 11.605
-        self.scale = l1_scale
+        self.scale = 1.0 #l1_scale
         print('Scale: ', self.scale)
 
         self.loss_function = lsf.InnerL1(args.beta)
@@ -449,8 +449,12 @@ class FullPose7D(BaseExperiment):
 
             # Visualize predicted path
             fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
-            of = self.make_output_filename('{}--{:05}.png'.format(fn, i))
-            visualize_predicted_path(output.data.cpu().numpy(), target.data.cpu().numpy(), of, show_rot=False)
+            of1 = self.make_output_filename('path/{}--{:05}.png'.format(fn, i))
+            of2 = self.make_output_filename('axis/{}--{:05}.png'.format(fn, i))
+            p = output.data.cpu().numpy()
+            t = target.data.cpu().numpy()
+            visualize_predicted_path(p, t, of1, show_rot=False)
+            plots.plot_xyz_error(p, t, of2)
 
 
         # Average losses for rotation, translation and combined
