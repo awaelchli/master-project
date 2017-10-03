@@ -38,17 +38,17 @@ class FullPose7DModel(nn.Module):
         # )
 
         self.layers = torch.nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=5, stride=3, padding=0, dilation=2),
+            nn.Conv2d(3, 32, kernel_size=5, stride=3, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(64, 128, kernel_size=3, stride=3, padding=0, dilation=2),
-            nn.LeakyReLU(0.1),
+            #nn.Conv2d(64, 128, kernel_size=3, stride=3, padding=0, dilation=2),
+            #nn.LeakyReLU(0.1),
 
-            nn.Conv2d(128, 256, kernel_size=3, stride=3, padding=0, dilation=2),
-            nn.LeakyReLU(0.1),
+            #nn.Conv2d(128, 256, kernel_size=3, stride=3, padding=0, dilation=2),
+            #nn.LeakyReLU(0.1),
 
-            nn.Conv2d(256, 512, kernel_size=3, stride=3, padding=0, dilation=2),
-            nn.LeakyReLU(0.1),
+            #nn.Conv2d(256, 512, kernel_size=3, stride=3, padding=0, dilation=2),
+            #nn.LeakyReLU(0.1),
         )
 
         self.fix_flownet = fix_flownet
