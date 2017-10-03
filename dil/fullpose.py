@@ -13,6 +13,7 @@ import plots
 from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
+import loss_functions as lsf
 
 class FullPose7DModel(nn.Module):
 
@@ -38,17 +39,17 @@ class FullPose7DModel(nn.Module):
         # )
 
         self.layers = torch.nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=5, stride=5, padding=0, dilation=2),
+            nn.Conv2d(3, 64, kernel_size=5, stride=3, padding=0, dilation=2),
             nn.LeakyReLU(0.1),
 
-            #nn.Conv2d(64, 128, kernel_size=3, stride=3, padding=0, dilation=2),
-            #nn.LeakyReLU(0.1),
+            nn.Conv2d(64, 128, kernel_size=3, stride=3, padding=0, dilation=2),
+            nn.LeakyReLU(0.1),
 
-            #nn.Conv2d(128, 256, kernel_size=3, stride=3, padding=0, dilation=2),
-            #nn.LeakyReLU(0.1),
+            nn.Conv2d(128, 256, kernel_size=3, stride=3, padding=0, dilation=2),
+            nn.LeakyReLU(0.1),
 
-            #nn.Conv2d(256, 512, kernel_size=3, stride=3, padding=0, dilation=2),
-            #nn.LeakyReLU(0.1),
+            nn.Conv2d(256, 512, kernel_size=3, stride=3, padding=0, dilation=2),
+            nn.LeakyReLU(0.1),
         )
 
         self.fix_flownet = fix_flownet
@@ -171,6 +172,8 @@ class FullPose7D(BaseExperiment):
         params = self.model.get_parameters()
         #self.optimizer = torch.optim.Adagrad(params, self.lr)
         self.optimizer = torch.optim.Adam(params, self.lr)
+
+        self.loss_function = lsf.InnerL1(args.beta)
 
         self.beta = args.beta
         self.print_freq = args.print_freq
@@ -475,82 +478,7 @@ class FullPose7D(BaseExperiment):
 
         return avg_loss, avg_rot_loss, avg_trans_loss
 
-    def loss_function(self, output, target):
-        # Dimensions: [sequence_length, 7]
-        sequence_length = output.size(0)
 
-        #print(output)
-        #print(target)
-
-        t1 = output[:, :3]
-        t2 = target[:, :3]
-        q1 = output[:, 3:]
-        q2 = target[:, 3:]
-
-        assert q1.size(1) == q2.size(1) == 4
-
-        # Normalize output quaternion
-        #q1_norm = torch.norm(q1, 2, dim=1).view(-1, 1)
-        #q1 = q1 / q1_norm.expand_as(q1)
-
-        #print('Q1, Q2')
-        #print(q1)
-        #print(q2)
-
-        # Loss for rotation: dot product between quaternions
-        loss1 = 1 - (q1 * q2).sum(1) ** 2
-        loss1 = loss1.sum() / sequence_length
-
-        eps = 0.001
-
-        # Loss for translation
-        loss2 = torch.norm(t1 - t2, 2, dim=1)
-        #loss2 = torch.log(eps + loss2)
-        loss2 = loss2.sum() / sequence_length
-
-        return loss1 + self.beta * loss2, loss1, loss2
-
-    def loss_function_L1(self, output, target):
-        # Dimensions: [sequence_length, 7]
-        sequence_length = output.size(0)
-
-        #print(output)
-        #print(target)
-
-        t1 = output[:, :3]
-        t2 = target[:, :3]
-        q1 = output[:, 3:]
-        q2 = target[:, 3:]
-
-        assert q1.size(1) == q2.size(1) == 4
-
-        # Normalize output quaternion
-        #q1_norm = torch.norm(q1, 2, dim=1).view(-1, 1)
-        #q1 = q1 / q1_norm.expand_as(q1)
-
-        #print('Q1, Q2')
-        #print(q1)
-        #print(q2)
-
-        c = torch.nn.L1Loss(size_average=False)
-
-        # Loss for rotation: dot product between quaternions
-        #loss1 = torch.norm(q1 - q2, 1, dim=1)
-        #loss1 = 1 - (q1 * q2).sum(1) ** 2
-        #loss1 = loss1.sum() / sequence_length
-        loss1 = c(q1, q2)
-        loss1 /= sequence_length
-
-        eps = 0.001
-
-        # Loss for translation
-        #t_diff = torch.norm(t1 - t2, 1, dim=1)
-        #loss2 = t_diff
-        #loss2 = loss2.sum() / sequence_length
-        loss2 = c(t1, t2)
-        loss2 /= sequence_length
-
-        return loss1 + self.beta * loss2, loss1, loss2
 
     def normalize_output(self, output):
         # Normalize quaternion in output to unit quaternion
