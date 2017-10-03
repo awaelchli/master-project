@@ -174,7 +174,8 @@ class FullPose7D(BaseExperiment):
         self.optimizer = torch.optim.Adam(params, self.lr)
 
         print('Calculating translation scale...')
-        l1_scale, l2_scale = self.determine_translation_scale()
+        #l1_scale, l2_scale = self.determine_translation_scale()
+        l1_scale, l2_scale = 15.698, 11.605
         self.scale = l1_scale
         print('Scale: ', self.scale)
 
