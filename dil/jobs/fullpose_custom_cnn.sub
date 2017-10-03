@@ -18,6 +18,7 @@ module load anaconda
 
 # Adam, no adjust lr, custon cnn (dilation), dot product rotation loss + L2 for translation loss
 # Single image (not pairwise)
+# Looping
 # Training
 python full-pose/main.py pose7D \
 --output gta5pose7D_more_data30fps_custom_cnn_single \
@@ -25,10 +26,10 @@ python full-pose/main.py pose7D \
 --cuda \
 --epochs 100 \
 --sequence 50 \
---hidden 100 \
---layers 5 \
---lr 0.002 \
+--hidden 1000 \
+--layers 2 \
+--lr 0.004 \
 --beta 0.1 \
 --workers 8 \
 --print_freq 1 \
-
+--max_size 100 30 30 \
