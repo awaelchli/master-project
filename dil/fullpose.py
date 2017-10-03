@@ -613,5 +613,7 @@ class FullPose7D(BaseExperiment):
 
             if i % 100 == 0:
                 print('{:d} / {:d}'.format(i, len(self.trainingset)))
+                print('Largest scale (L1): {:.3f}'.format(largest_l1_norm))
+                print('Largest scale (L2): {:.3f}'.format(largest_l2_norm))
 
         return largest_l1_norm, largest_l2_norm
