@@ -56,6 +56,8 @@ class FullPose7DModel(nn.Module):
             param.requires_grad = not fix_flownet
 
         fout = self.flownet_output_size(input_size)
+        print('CNN output size: ', fout)
+
         self.hidden = hidden
         self.nlayers = nlayers
 
@@ -254,7 +256,7 @@ class FullPose7D(BaseExperiment):
                 sequence_transform=seq_transform,
                 return_filename=True,
                 max_size=args.max_size[0],
-                stride=1,
+                stride=2,
             )
 
             val_set = concat_zip_dataset(
@@ -268,7 +270,7 @@ class FullPose7D(BaseExperiment):
                 sequence_transform=None,
                 return_filename=True,
                 max_size=args.max_size[1],
-                stride=1,
+                stride=2,
             )
 
             test_set = val_set
