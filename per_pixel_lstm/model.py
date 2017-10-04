@@ -129,6 +129,8 @@ class FullPose7DModel(nn.Module):
         torch.arange(num_feat_per_frame, n * num_feat_per_frame + 1, num_feat_per_frame, out=output_inds)
         outputs = outputs.squeeze(0).index_select(0, Variable(output_inds))
 
+        print('outputs: ', outputs.size())
+
         assert outputs.size(0) == n
         predictions = self.fc(outputs)
 
