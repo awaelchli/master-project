@@ -24,9 +24,6 @@ class FullPose7DModel(nn.Module):
 
         self.pool1 = nn.MaxPool2d(kernel_size=9, stride=9, return_indices=True)
 
-        # The 2D with normalized coordinates (2 channels)
-        self.grid = self.generate_grid(h, w)
-
         # LSTM
         lstm_input_size = 32 + 2 * 32 + 1
 
@@ -53,9 +50,12 @@ class FullPose7DModel(nn.Module):
         x /= w - 1
         y /= h - 1
 
-        # Output shape: [2, h, w]
-        grid = torch.cat((x, y), 0)
-        return grid
+        if next(self.get_parameters()).is_cuda:
+            x = x.cuda()
+            y = y.cuda()
+
+        # Output shape: [h, w]
+        return x, y
 
     def flownet_output_size(self, input_size):
         # 6 for pairwise forward, 3 for single image
@@ -68,8 +68,7 @@ class FullPose7DModel(nn.Module):
     def forward(self, input):
         # Input shape: [sequence, channels, h, w]
         n = input.size(0)
-
-        print('grid cuda:', self.grid.is_cuda)
+        h, w = input.size(2), input.size(3)
 
         # Using batch mode to forward sequence
         # Feature shape: [sequence, feat_channels, h, w]
@@ -77,8 +76,10 @@ class FullPose7DModel(nn.Module):
         feat_channels = features.size(1)
 
         # TODO: is copy of data needed here (or expand suffices?)
-        xgrid = self.grid[0].unsqueeze(0).repeat(n, feat_channels, 1, 1)
-        ygrid = self.grid[1].unsqueeze(0).repeat(n, feat_channels, 1, 1)
+        # The 2D with normalized coordinates (2 channels)
+        x, y = self.generate_grid(h, w)
+        xgrid = x.unsqueeze(0).repeat(n, feat_channels, 1, 1)
+        ygrid = y.unsqueeze(0).repeat(n, feat_channels, 1, 1)
 
         pool1, ind1 = self.pool1(features)
 
