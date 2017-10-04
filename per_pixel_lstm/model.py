@@ -82,7 +82,7 @@ class FullPose7DModel(nn.Module):
         pool_out, ind = self.pool(features[:, 0, :, :].unsqueeze(1))
 
         # Gather the all channels based on the index of the first channel pooling
-        i = ind.data.view(n, 1, -1).repeat(1, feat_channels, 1)
+        i = Variable(ind.data.view(n, 1, -1).repeat(1, feat_channels, 1))
         f = features.view(n, feat_channels, -1)
         gp = torch.gather(f, 2, i).view(n, feat_channels, pool_out.size(2), pool_out.size(3))
 
