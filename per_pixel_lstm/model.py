@@ -81,12 +81,16 @@ class FullPose7DModel(nn.Module):
         # Apply pooling to the first channel only!
         pool_out, ind = self.pool(features[:, 0, :, :].unsqueeze(1))
 
+        # Gather the all channels based on the index of the first channel pooling
+        i = ind.data.view(n, 1, -1).repeat(1, feat_channels, -1)
+        gp = torch.gather(features, 2, i).view(n, feat_channels, pool_out.size(2), pool_out.size(3))
+
+        # Gather the x- and y coordinates from the indices returned by the pooling layer
         x1 = xgrid.view(n, -1)
         y1 = ygrid.view(n, -1)
-        i1 = ind.data.view(n, -1)
-
-        gx1 = torch.gather(x1, 1, i1).view(n, 1, pool_out.size(2), pool_out.size(3))
-        gy1 = torch.gather(y1, 1, i1).view(n, 1, pool_out.size(2), pool_out.size(3))
+        i = ind.data.view(n, -1)
+        gx1 = torch.gather(x1, 1, i).view(n, 1, pool_out.size(2), pool_out.size(3))
+        gy1 = torch.gather(y1, 1, i).view(n, 1, pool_out.size(2), pool_out.size(3))
 
         # Gathered x- and y coordinates tensor shape: [sequence, 1, pool1_h, pool1_w]
         assert gx1.size() == gy1.size() == pool_out.size()
@@ -97,7 +101,7 @@ class FullPose7DModel(nn.Module):
             tgrid = tgrid.cuda()
 
         # concatenate along channels
-        lstm_input_tensor = torch.cat((pool_out, gx1, gy1, tgrid), 1)
+        lstm_input_tensor = torch.cat((gp, gx1, gy1, tgrid), 1)
 
         # Re-arrange dimensions to: [sequence, ph, pw, channels]
         lstm_input_tensor = lstm_input_tensor.permute(0, 2, 3, 1).contiguous()
