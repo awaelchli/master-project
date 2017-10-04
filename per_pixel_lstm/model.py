@@ -74,7 +74,7 @@ class FullPose7DModel(nn.Module):
         # TODO: is copy of data needed here (or expand suffices?)
         # The 2D with normalized coordinates (2 channels)
         x, y = self.generate_grid(h, w)
-        if self.get_parameters()[0].is_cuda:
+        if input.is_cuda:
             x = x.cuda()
             y = y.cuda()
 
@@ -96,20 +96,16 @@ class FullPose7DModel(nn.Module):
 
 
         tgrid = torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3))
-        if self.get_parameters()[0].is_cuda:
+        if input.is_cuda:
             tgrid = tgrid.cuda()
 
         # concatenate along channels
-        print(pool1)
-        print(gx1)
-        print(gy1)
-        print(tgrid)
         lstm_input_tensor = torch.cat((pool1, gx1, gy1, tgrid), 1)
 
         # Re-arrange dimensions to: [sequence, ph, pw, channels]
         lstm_input_tensor = lstm_input_tensor.permute(0, 2, 3, 1).contiguous()
         lstm_input_tensor = lstm_input_tensor.view(n * num_feat_per_frame, -1)
-        lstm_input_tensor.unsqueeze_(0)
+        lstm_input_tensor = lstm_input_tensor.unsqueeze(0)
         # LSTM input shape [1, all_features, channels]
 
         print('Total sequence length: {:d}'.format(lstm_input_tensor.size(1)))
