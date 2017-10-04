@@ -101,11 +101,11 @@ class FullPose7D(BaseExperiment):
         ])
 
         # Sequence transform
-        #seq_transform = None
-        seq_transform = transforms.Compose([
+        seq_transform = None
+        #seq_transform = transforms.Compose([
             #RandomSequenceReversal(),
-            Loop(args.sequence - 10, args.sequence + 10),
-        ])
+            #Loop(args.sequence - 10, args.sequence + 10),
+        #])
 
         zipped = True
         print('Using zipped dataset: ', zipped)
