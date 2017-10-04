@@ -22,7 +22,7 @@ class FullPose7DModel(nn.Module):
             nn.LeakyReLU(0.1),
         )
 
-        self.pool1 = nn.MaxPool2d(kernel_size=9, stride=9, return_indices=True)
+        self.pool1 = nn.MaxPool2d(kernel_size=20, stride=20, return_indices=True)
 
         # LSTM
         lstm_input_size = 32 + 2 * 32 + 1
