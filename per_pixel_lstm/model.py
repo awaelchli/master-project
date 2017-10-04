@@ -23,7 +23,7 @@ class FullPose7DModel(nn.Module):
             nn.LeakyReLU(0.1),
         )
 
-        self.pool1 = nn.MaxPool2d(kernel_size=20, stride=20, return_indices=True)
+        self.pool = nn.MaxPool2d(kernel_size=20, stride=20, return_indices=True)
 
         # LSTM
         lstm_input_size = out_channels + 2 + 1
@@ -79,25 +79,25 @@ class FullPose7DModel(nn.Module):
         ygrid = y.repeat(n, 1, 1, 1)
 
         # Apply pooling to the first channel only!
-        pool1, ind1 = self.pool1(features[:, 0, :, :].unsqueeze(1))
+        pool_out, ind = self.pool(features[:, 0, :, :].unsqueeze(1))
 
         x1 = xgrid.view(n, -1)
         y1 = ygrid.view(n, -1)
-        i1 = ind1.data.view(n, -1)
+        i1 = ind.data.view(n, -1)
 
-        gx1 = torch.gather(x1, 1, i1).view(n, 1, pool1.size(2), pool1.size(3))
-        gy1 = torch.gather(y1, 1, i1).view(n, 1, pool1.size(2), pool1.size(3))
+        gx1 = torch.gather(x1, 1, i1).view(n, 1, pool_out.size(2), pool_out.size(3))
+        gy1 = torch.gather(y1, 1, i1).view(n, 1, pool_out.size(2), pool_out.size(3))
 
         # Gathered x- and y coordinates tensor shape: [sequence, 1, pool1_h, pool1_w]
-        assert gx1.size() == gy1.size() == pool1.size()
-        num_feat_per_frame = pool1.size(2) * pool1.size(3)
+        assert gx1.size() == gy1.size() == pool_out.size()
+        num_feat_per_frame = pool_out.size(2) * pool_out.size(3)
 
-        tgrid = Variable(torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3)))
+        tgrid = Variable(torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool_out.size(2), pool_out.size(3)))
         if input.is_cuda:
             tgrid = tgrid.cuda()
 
         # concatenate along channels
-        lstm_input_tensor = torch.cat((pool1, gx1, gy1, tgrid), 1)
+        lstm_input_tensor = torch.cat((pool_out, gx1, gy1, tgrid), 1)
 
         # Re-arrange dimensions to: [sequence, ph, pw, channels]
         lstm_input_tensor = lstm_input_tensor.permute(0, 2, 3, 1).contiguous()
