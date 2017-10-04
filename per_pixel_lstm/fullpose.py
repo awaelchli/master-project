@@ -13,6 +13,7 @@ import plots
 from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 import loss_functions as lsf
+from model import FullPose7DModel
 
 
 class FullPose7D(BaseExperiment):
@@ -45,7 +46,6 @@ class FullPose7D(BaseExperiment):
             self.input_size,
             hidden=args.hidden,
             nlayers=args.layers,
-            fix_flownet=False,
         )
 
         if self.use_cuda:

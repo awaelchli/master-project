@@ -22,13 +22,13 @@ class FullPose7DModel(nn.Module):
             nn.LeakyReLU(0.1),
         )
 
+        self.pool1 = nn.MaxPool2d(kernel_size=9, stride=9, return_indices=True)
+
         # The 2D with normalized coordinates (2 channels)
         self.grid = self.generate_grid(h, w)
 
         # LSTM
-
-        # TODO: reduce with pooling!
-        lstm_input_size = h * w * (32 + 2 + 1)
+        lstm_input_size = 32 + 2 * 32 + 1
 
         self.hidden = hidden
         self.nlayers = nlayers
@@ -70,17 +70,41 @@ class FullPose7DModel(nn.Module):
         n = input.size(0)
 
         # Using batch mode to forward sequence
+        # Feature shape: [sequence, feat_channels, h, w]
         features = self.feature_extraction(input)
+        feat_channels = features.size(1)
 
-        # Add 2D coordinates
-        grid = self.grid.copy().unsqueeze(0).repeat(n, 1, 1, 1)
+        # TODO: is copy of data needed here (or expand suffices?)
+        xgrid = self.grid[0].unsqueeze(0).repeat(n, feat_channels, 1, 1)
+        ygrid = self.grid[1].unsqueeze(0).repeat(n, feat_channels, 1, 1)
 
-        # TODO: continue
-        nn.MaxPool2d(kernel_size=9, stride=9, return_indices=True)
+        pool1, ind1 = self.pool1(features)
 
-        features = torch.cat((features, grid), 1) # concatenate along channels
+        x1 = xgrid.view(n, feat_channels, -1)
+        y1 = ygrid.view(n, feat_channels, -1)
+        i1 = ind1.data.view(n, feat_channels, -1)
+
+        gx1 = torch.gather(x1, 2, i1).view(n, feat_channels, pool1.size(2), pool1.size(3))
+        gy1 = torch.gather(y1, 2, i1).view(n, feat_channels, pool1.size(2), pool1.size(3))
+
+        # Gathered x- and y coordinates tensor shape: [sequence, feat_channels, pool1_h, pool1_w]
+        assert gx1.size() == gy1.size() == pool1.size()
+        num_feat_per_frame = pool1.size(2) * pool1.size(3)
 
 
+        tgrid = torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3))
+
+        # concatenate along channels
+        lstm_input_tensor = torch.cat((pool1, gx1, gy1, tgrid), 1)
+
+        # Re-arrange dimensions to: [sequence, ph, pw, channels]
+        lstm_input_tensor = lstm_input_tensor.permute(0, 2, 3, 1).contiguous()
+        lstm_input_tensor = lstm_input_tensor.view(n * num_feat_per_frame, -1)
+        lstm_input_tensor.unsqueeze_(0)
+        # LSTM input shape [1, all_features, channels]
+
+        print('Total sequence length: {:d}'.format(lstm_input_tensor.size(1)))
+        print('Num features per frame: {:d}'.format(num_feat_per_frame))
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
         c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
@@ -89,13 +113,17 @@ class FullPose7DModel(nn.Module):
             c0 = c0.cuda()
 
         init = (h0, c0)
+        outputs, _ = self.lstm(lstm_input_tensor, init)
 
-        if pairwise:
-            outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
-        else:
-            outputs, _ = self.lstm(pairs.view(1, n, -1), init)
+        # Not all outputs are needed. Only the last output per frame.
+        assert outputs.size(1) == n * num_feat_per_frame
 
-        predictions = self.fc(outputs.squeeze(0))
+        output_inds = torch.LongTensor(n)
+        torch.arange(num_feat_per_frame, n * num_feat_per_frame + 1, num_feat_per_frame, out=output_inds)
+        outputs = outputs.squeeze(0).index_select(0, output_inds)
+
+        assert outputs.size(0) == n
+        predictions = self.fc(outputs)
 
         return predictions
 
