@@ -224,7 +224,7 @@ class FullPose7D(BaseExperiment):
 
             # Forward
             start = time.time()
-            output = self.model(input, pairwise=False)
+            output = self.model(input)
             forward_time.update(time.time() - start)
 
             # Loss function
@@ -312,7 +312,7 @@ class FullPose7D(BaseExperiment):
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
-            output = self.model(input, pairwise=False)
+            output = self.model(input)
             output = self.normalize_output(output)
 
             all_predictions.append(output.data)
