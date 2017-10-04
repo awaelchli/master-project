@@ -130,6 +130,8 @@ class FullPose7DModel(nn.Module):
         outputs = outputs.squeeze(0).index_select(0, Variable(output_inds))
 
         print('outputs: ', outputs.size())
+        print(outputs)
+        print('cont', outputs.is_contiguous())
 
         assert outputs.size(0) == n
         predictions = self.fc(outputs)
