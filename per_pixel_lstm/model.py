@@ -26,7 +26,7 @@ class FullPose7DModel(nn.Module):
         self.pool1 = nn.MaxPool2d(kernel_size=20, stride=20, return_indices=True)
 
         # LSTM
-        lstm_input_size = out_channels + 2 * out_channels + 1
+        lstm_input_size = out_channels + 2 + 1
 
         self.hidden = hidden
         self.nlayers = nlayers
@@ -75,22 +75,22 @@ class FullPose7DModel(nn.Module):
             x = x.cuda()
             y = y.cuda()
 
-        xgrid = x.unsqueeze(0).repeat(n, feat_channels, 1, 1)
-        ygrid = y.unsqueeze(0).repeat(n, feat_channels, 1, 1)
+        xgrid = x.repeat(n, 1, 1, 1)
+        ygrid = y.repeat(n, 1, 1, 1)
 
-        pool1, ind1 = self.pool1(features)
+        # Apply pooling to the first channel only!
+        pool1, ind1 = self.pool1(features[:, 0, :, :].unsqueeze(1))
 
-        x1 = xgrid.view(n, feat_channels, -1)
-        y1 = ygrid.view(n, feat_channels, -1)
-        i1 = ind1.data.view(n, feat_channels, -1)
+        x1 = xgrid.view(n, -1)
+        y1 = ygrid.view(n, -1)
+        i1 = ind1.data.view(n, -1)
 
-        gx1 = torch.gather(x1, 2, i1).view(n, feat_channels, pool1.size(2), pool1.size(3))
-        gy1 = torch.gather(y1, 2, i1).view(n, feat_channels, pool1.size(2), pool1.size(3))
+        gx1 = torch.gather(x1, 1, i1).view(n, 1, pool1.size(2), pool1.size(3))
+        gy1 = torch.gather(y1, 1, i1).view(n, 1, pool1.size(2), pool1.size(3))
 
-        # Gathered x- and y coordinates tensor shape: [sequence, feat_channels, pool1_h, pool1_w]
+        # Gathered x- and y coordinates tensor shape: [sequence, 1, pool1_h, pool1_w]
         assert gx1.size() == gy1.size() == pool1.size()
         num_feat_per_frame = pool1.size(2) * pool1.size(3)
-
 
         tgrid = Variable(torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3)))
         if input.is_cuda:
