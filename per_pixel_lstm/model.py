@@ -11,6 +11,7 @@ class FullPose7DModel(nn.Module):
         h, w = input_size[0], input_size[1]
 
         # Per-pixel feature extraction (padding)
+        out_channels = 32
         self.feature_extraction = torch.nn.Sequential(
             nn.Conv2d(3, 16, kernel_size=7, stride=1, padding=3),
             nn.LeakyReLU(0.1),
@@ -18,14 +19,14 @@ class FullPose7DModel(nn.Module):
             nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(32, out_channels, kernel_size=3, stride=1, padding=1),
             nn.LeakyReLU(0.1),
         )
 
         self.pool1 = nn.MaxPool2d(kernel_size=20, stride=20, return_indices=True)
 
         # LSTM
-        lstm_input_size = 32 + 2 * 32 + 1
+        lstm_input_size = out_channels + 2 * out_channels + 1
 
         self.hidden = hidden
         self.nlayers = nlayers
@@ -42,13 +43,9 @@ class FullPose7DModel(nn.Module):
         self.fc = nn.Linear(self.hidden, 7)
 
     def generate_grid(self, h, w):
-        x = torch.arange(0, w).view(1, -1).repeat(h, 1).unsqueeze(0)
-        y = torch.arange(0, h).view(-1, 1).repeat(1, w).unsqueeze(0)
+        x = torch.linspace(-1, 1, w).view(1, -1).repeat(h, 1).unsqueeze(0)
+        y = torch.arange(-1, 1, h).view(-1, 1).repeat(1, w).unsqueeze(0)
         assert x.size() == y.size()
-
-        # Normalize
-        x /= w - 1
-        y /= h - 1
 
         # Output shape: [h, w]
         return Variable(x), Variable(y)

@@ -127,46 +127,46 @@ class L1L1:
 
 
 
-
-
-def loss_function_L1(self, output, target):
-    # Dimensions: [sequence_length, 7]
-    sequence_length = output.size(0)
-
-    # print(output)
-    # print(target)
-
-    t1 = output[:, :3]
-    t2 = target[:, :3]
-    q1 = output[:, 3:]
-    q2 = target[:, 3:]
-
-    assert q1.size(1) == q2.size(1) == 4
-
-    # Normalize output quaternion
-    # q1_norm = torch.norm(q1, 2, dim=1).view(-1, 1)
-    # q1 = q1 / q1_norm.expand_as(q1)
-
-    # print('Q1, Q2')
-    # print(q1)
-    # print(q2)
-
-    c = torch.nn.L1Loss(size_average=False)
-
-    # Loss for rotation: dot product between quaternions
-    # loss1 = torch.norm(q1 - q2, 1, dim=1)
-    # loss1 = 1 - (q1 * q2).sum(1) ** 2
-    # loss1 = loss1.sum() / sequence_length
-    loss1 = c(q1, q2)
-    loss1 /= sequence_length
-
-    eps = 0.001
-
-    # Loss for translation
-    # t_diff = torch.norm(t1 - t2, 1, dim=1)
-    # loss2 = t_diff
-    # loss2 = loss2.sum() / sequence_length
-    loss2 = c(t1, t2)
-    loss2 /= sequence_length
-
-    return loss1 + self.beta * loss2, loss1, loss2
+#
+#
+# def loss_function_L1(self, output, target):
+#     # Dimensions: [sequence_length, 7]
+#     sequence_length = output.size(0)
+#
+#     # print(output)
+#     # print(target)
+#
+#     t1 = output[:, :3]
+#     t2 = target[:, :3]
+#     q1 = output[:, 3:]
+#     q2 = target[:, 3:]
+#
+#     assert q1.size(1) == q2.size(1) == 4
+#
+#     # Normalize output quaternion
+#     # q1_norm = torch.norm(q1, 2, dim=1).view(-1, 1)
+#     # q1 = q1 / q1_norm.expand_as(q1)
+#
+#     # print('Q1, Q2')
+#     # print(q1)
+#     # print(q2)
+#
+#     c = torch.nn.L1Loss(size_average=False)
+#
+#     # Loss for rotation: dot product between quaternions
+#     # loss1 = torch.norm(q1 - q2, 1, dim=1)
+#     # loss1 = 1 - (q1 * q2).sum(1) ** 2
+#     # loss1 = loss1.sum() / sequence_length
+#     loss1 = c(q1, q2)
+#     loss1 /= sequence_length
+#
+#     eps = 0.001
+#
+#     # Loss for translation
+#     # t_diff = torch.norm(t1 - t2, 1, dim=1)
+#     # loss2 = t_diff
+#     # loss2 = loss2.sum() / sequence_length
+#     loss2 = c(t1, t2)
+#     loss2 /= sequence_length
+#
+#     return loss1 + self.beta * loss2, loss1, loss2
