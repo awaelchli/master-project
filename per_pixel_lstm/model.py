@@ -98,6 +98,10 @@ class FullPose7DModel(nn.Module):
         tgrid = torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3))
 
         # concatenate along channels
+        print(pool1)
+        print(gx1)
+        print(gy1)
+        print(tgrid)
         lstm_input_tensor = torch.cat((pool1, gx1, gy1, tgrid), 1)
 
         # Re-arrange dimensions to: [sequence, ph, pw, channels]
