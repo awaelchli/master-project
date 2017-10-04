@@ -50,7 +50,7 @@ class FullPose7DModel(nn.Module):
         x /= w - 1
         y /= h - 1
 
-        if next(self.get_parameters()).is_cuda:
+        if self.get_parameters()[0].is_cuda:
             x = x.cuda()
             y = y.cuda()
 
