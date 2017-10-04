@@ -10,9 +10,9 @@ python per_pixel_lstm/main.py pose7D \
 --train \
 --cuda \
 --epochs 100 \
---sequence 2 \
+--sequence 15 \
 --hidden 100 \
---layers 2 \
+--layers 5 \
 --lr 0.004 \
 --beta 0.1 \
 --workers 8 \
