@@ -50,10 +50,6 @@ class FullPose7DModel(nn.Module):
         x /= w - 1
         y /= h - 1
 
-        if self.get_parameters()[0].is_cuda:
-            x = x.cuda()
-            y = y.cuda()
-
         # Output shape: [h, w]
         return x, y
 
@@ -78,6 +74,10 @@ class FullPose7DModel(nn.Module):
         # TODO: is copy of data needed here (or expand suffices?)
         # The 2D with normalized coordinates (2 channels)
         x, y = self.generate_grid(h, w)
+        if self.get_parameters()[0].is_cuda:
+            x = x.cuda()
+            y = y.cuda()
+
         xgrid = x.unsqueeze(0).repeat(n, feat_channels, 1, 1)
         ygrid = y.unsqueeze(0).repeat(n, feat_channels, 1, 1)
 
@@ -96,6 +96,8 @@ class FullPose7DModel(nn.Module):
 
 
         tgrid = torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3))
+        if self.get_parameters()[0].is_cuda:
+            tgrid = tgrid.cuda()
 
         # concatenate along channels
         print(pool1)
