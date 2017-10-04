@@ -43,8 +43,8 @@ class FullPose7DModel(nn.Module):
         self.fc = nn.Linear(self.hidden, 7)
 
     def generate_grid(self, h, w):
-        x = torch.linspace(-1, 1, w).view(1, -1).repeat(h, 1).unsqueeze(0)
-        y = torch.arange(-1, 1, h).view(-1, 1).repeat(1, w).unsqueeze(0)
+        x = torch.linspace(-1, 1, w).view(1, -1).repeat(h, 1)
+        y = torch.linspace(-1, 1, h).view(-1, 1).repeat(1, w)
         assert x.size() == y.size()
 
         # Output shape: [h, w]
