@@ -126,13 +126,14 @@ class FullPose7DModel(nn.Module):
         output_inds = torch.LongTensor(n)
         if input.is_cuda:
             output_inds = output_inds.cuda()
-        torch.arange(num_feat_per_frame, n * num_feat_per_frame + 1, num_feat_per_frame, out=output_inds)
-        outputs = outputs.squeeze(0).index_select(0, Variable(output_inds))
-
-        print('cont', outputs.is_contiguous())
+        torch.arange(num_feat_per_frame - 1, n * num_feat_per_frame, num_feat_per_frame, out=output_inds)
         print('outputs: ', outputs.size())
-        print(outputs)
+        outputs = outputs.squeeze(0)
+        print('outputs: ', outputs.size())
+        print('arange:', output_inds)
+        outputs = outputs.index_select(0, Variable(output_inds))
 
+        print(outputs)
 
         assert outputs.size(0) == n
         predictions = self.fc(outputs)
