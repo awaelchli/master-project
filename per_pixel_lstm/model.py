@@ -134,7 +134,5 @@ class FullPose7DModel(nn.Module):
         self.lstm.eval()
 
     def get_parameters(self):
-        params = list(self.lstm.parameters()) + list(self.fc.parameters())
-        if not self.fix_flownet:
-            params = list(self.feature_extraction.parameters()) + params
+        params = list(self.lstm.parameters()) + list(self.fc.parameters()) + list(self.feature_extraction.parameters())
         return params
