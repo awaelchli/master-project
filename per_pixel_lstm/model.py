@@ -108,8 +108,8 @@ class FullPose7DModel(nn.Module):
         lstm_input_tensor = lstm_input_tensor.unsqueeze(0)
         # LSTM input shape [1, all_features, channels]
 
-        print('Total sequence length: {:d}'.format(lstm_input_tensor.size(1)))
-        print('Num features per frame: {:d}'.format(num_feat_per_frame))
+        #print('Total sequence length: {:d}'.format(lstm_input_tensor.size(1)))
+        #print('Num features per frame: {:d}'.format(num_feat_per_frame))
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
         c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
