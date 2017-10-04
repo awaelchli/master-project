@@ -6,7 +6,7 @@
 module load anaconda
 
 python per_pixel_lstm/main.py pose7D \
---output 00_per_pixel_lstm \
+--output 01_per_pixel_lstm \
 --train \
 --cuda \
 --epochs 100 \
