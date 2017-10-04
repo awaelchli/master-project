@@ -118,6 +118,9 @@ class FullPose7DModel(nn.Module):
             c0 = c0.cuda()
 
         init = (h0, c0)
+
+        print('input lstm', lstm_input_tensor)
+
         outputs, _ = self.lstm(lstm_input_tensor, init)
 
         # Not all outputs are needed. Only the last output per frame.
