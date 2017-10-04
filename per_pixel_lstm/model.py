@@ -124,6 +124,8 @@ class FullPose7DModel(nn.Module):
         assert outputs.size(1) == n * num_feat_per_frame
 
         output_inds = torch.LongTensor(n)
+        if input.is_cuda:
+            output_inds = output_inds.cuda()
         torch.arange(num_feat_per_frame, n * num_feat_per_frame + 1, num_feat_per_frame, out=output_inds)
         outputs = outputs.squeeze(0).index_select(0, output_inds)
 
