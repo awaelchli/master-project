@@ -69,6 +69,8 @@ class FullPose7DModel(nn.Module):
         # Input shape: [sequence, channels, h, w]
         n = input.size(0)
 
+        print('grid cuda:', self.grid.is_cuda)
+
         # Using batch mode to forward sequence
         # Feature shape: [sequence, feat_channels, h, w]
         features = self.feature_extraction(input)
