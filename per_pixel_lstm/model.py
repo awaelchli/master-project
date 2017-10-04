@@ -51,7 +51,7 @@ class FullPose7DModel(nn.Module):
         y /= h - 1
 
         # Output shape: [h, w]
-        return x, y
+        return Variable(x), Variable(y)
 
     def flownet_output_size(self, input_size):
         # 6 for pairwise forward, 3 for single image
@@ -95,7 +95,7 @@ class FullPose7DModel(nn.Module):
         num_feat_per_frame = pool1.size(2) * pool1.size(3)
 
 
-        tgrid = torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3))
+        tgrid = Variable(torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool1.size(2), pool1.size(3)))
         if input.is_cuda:
             tgrid = tgrid.cuda()
 
@@ -119,7 +119,7 @@ class FullPose7DModel(nn.Module):
 
         init = (h0, c0)
 
-        print('input lstm', lstm_input_tensor)
+        #print('input lstm', lstm_input_tensor)
 
         outputs, _ = self.lstm(lstm_input_tensor, init)
 
@@ -130,13 +130,13 @@ class FullPose7DModel(nn.Module):
         if input.is_cuda:
             output_inds = output_inds.cuda()
         torch.arange(num_feat_per_frame - 1, n * num_feat_per_frame, num_feat_per_frame, out=output_inds)
-        print('outputs: ', outputs.size())
+        #print('outputs: ', outputs.size())
         outputs = outputs.squeeze(0)
-        print('outputs: ', outputs.size())
-        print('arange:', output_inds)
+        #print('outputs: ', outputs.size())
+        #print('arange:', output_inds)
         outputs = outputs.index_select(0, Variable(output_inds))
 
-        print(outputs)
+        #print(outputs)
 
         assert outputs.size(0) == n
         predictions = self.fc(outputs)
