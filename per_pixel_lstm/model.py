@@ -83,7 +83,8 @@ class FullPose7DModel(nn.Module):
 
         # Gather the all channels based on the index of the first channel pooling
         i = ind.data.view(n, 1, -1).repeat(1, feat_channels, 1)
-        gp = torch.gather(features, 2, i).view(n, feat_channels, pool_out.size(2), pool_out.size(3))
+        f = features.view(n, feat_channels, -1)
+        gp = torch.gather(f, 2, i).view(n, feat_channels, pool_out.size(2), pool_out.size(3))
 
         # Gather the x- and y coordinates from the indices returned by the pooling layer
         x1 = xgrid.view(n, -1)
