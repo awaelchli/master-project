@@ -23,7 +23,7 @@ class FullPose7DModel(nn.Module):
             nn.Conv2d(64, out_channels, kernel_size=5, stride=1, padding=2),
             nn.LeakyReLU(0.1),
         )
-        pool_size = 20
+        pool_size = 50
         self.pool = nn.MaxPool2d(kernel_size=pool_size, stride=pool_size, return_indices=True)
 
         # LSTM
