@@ -95,8 +95,8 @@ class FullPose7D(BaseExperiment):
         # Image pre-processing
         transform = transforms.Compose([
             #transforms.Scale(args.image_size),
-            transforms.Scale(320),
-            transforms.CenterCrop((320, 448)),
+            #transforms.Scale(320),
+            #transforms.CenterCrop((320, 448)),
             transforms.ToTensor(),
         ])
 

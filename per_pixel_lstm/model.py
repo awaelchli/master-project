@@ -11,19 +11,19 @@ class FullPose7DModel(nn.Module):
         h, w = input_size[0], input_size[1]
 
         # Per-pixel feature extraction (padding)
-        out_channels = 32
+        out_channels = 64
         self.feature_extraction = torch.nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=7, stride=1, padding=3),
+            nn.Conv2d(3, 32, kernel_size=15, stride=1, padding=7),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(32, 64, kernel_size=7, stride=1, padding=3),
             nn.LeakyReLU(0.1),
 
-            nn.Conv2d(32, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(64, out_channels, kernel_size=5, stride=1, padding=2),
             nn.LeakyReLU(0.1),
         )
-
-        self.pool = nn.MaxPool2d(kernel_size=20, stride=20, return_indices=True)
+        pool_size = 80
+        self.pool = nn.MaxPool2d(kernel_size=pool_size, stride=pool_size, return_indices=True)
 
         # LSTM
         lstm_input_size = out_channels + 2 + 1
