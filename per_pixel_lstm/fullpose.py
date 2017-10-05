@@ -340,7 +340,7 @@ class FullPose7D(BaseExperiment):
             plots.plot_xyz_error(p, t, of2)
 
             # Visualize keypoints
-            filename = self.make_output_filename('out/keypoints/{:4d}.png'.format(i))
+            filename = self.make_output_filename('keypoints/{:4d}.png'.format(i))
             plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
 
 
