@@ -69,6 +69,8 @@ class FullPose7DModel(nn.Module):
         features = self.feature_extraction(input)
         feat_channels = features.size(1)
 
+        print('Feature selection')
+
         # TODO: is copy of data needed here (or expand suffices?)
         # The 2D with normalized coordinates (2 channels)
         x, y = self.generate_grid(h, w)
