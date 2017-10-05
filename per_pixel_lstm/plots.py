@@ -136,8 +136,8 @@ def plot_extracted_keypoints(images, keypoints, save='keypoints.png'):
 
     # Undo normalization of keypoints
     # Map range [-1, 1] to range [0, w] and [0, h] respectively
-    keypoints[:, 0] = w * (keypoints[0] + 1) / 2
-    keypoints[:, 1] = h * (keypoints[1] + 1) / 2
+    keypoints[:, 0] = w * (keypoints[:, 0] + 1) / 2
+    keypoints[:, 1] = h * (keypoints[:, 1] + 1) / 2
 
     tf = ToPILImage()
 
