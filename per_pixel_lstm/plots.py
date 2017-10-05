@@ -130,23 +130,24 @@ def plot_extracted_keypoints(images, keypoints, save='keypoints.png'):
     # keypoints shape: [batch, 2, hk, wk]
     assert images.size(0) == keypoints.size(0)
     n = images.size(0)
+    h, w = images.size(2), images.size(3)
 
     keypoints = keypoints.view(n, 2, -1).numpy()
-    tf = ToPILImage()
 
-    #print(images.size())
-    #print(keypoints)
+    # Undo normalization of keypoints
+    # Map range [-1, 1] to range [0, w] and [0, h] respectively
+    keypoints[:, 0] = w * (keypoints[0] + 1) / 2
+    keypoints[:, 1] = h * (keypoints[1] + 1) / 2
+
+    tf = ToPILImage()
 
     plt.clf()
     for i in range(n):
         image, keys = images[i], keypoints[i]
-        #print(keys)
-        #print(image)
 
         image = tf(image)
         plt.subplot(1, n, i + 1)
         plt.imshow(image)
         plt.scatter(keys[0], keys[1], c='r', marker='x')
-
 
     plt.savefig(save, bbox_inches='tight')
