@@ -65,6 +65,7 @@ class FullPose7DModel(nn.Module):
 
         # Using batch mode to forward sequence
         # Feature shape: [sequence, feat_channels, h, w]
+        print('Feature extraction')
         features = self.feature_extraction(input)
         feat_channels = features.size(1)
 
@@ -122,7 +123,7 @@ class FullPose7DModel(nn.Module):
         init = (h0, c0)
 
         #print('input lstm', lstm_input_tensor)
-
+        print('Feature tracking (lstm)')
         outputs, _ = self.lstm(lstm_input_tensor, init)
 
         # Not all outputs are needed. Only the last output per frame.
