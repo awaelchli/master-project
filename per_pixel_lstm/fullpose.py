@@ -224,7 +224,7 @@ class FullPose7D(BaseExperiment):
 
             # Forward
             start = time.time()
-            output = self.model(input)
+            output, keypoints = self.model(input, return_keypoints=True)
             forward_time.update(time.time() - start)
 
             # Loss function
@@ -264,6 +264,10 @@ class FullPose7D(BaseExperiment):
             if epoch == 1:
                 first_epoch_loss.append(loss.data[0])
                 plots.plot_epoch_loss(first_epoch_loss, save=self.make_output_filename('first_epoch_loss.pdf'))
+
+                # Visualize keypoints
+                filename = self.make_output_filename('keypoints/{:4d}.png'.format(i))
+                plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
 
         training_loss = training_loss.average
         self.training_loss.append(training_loss)
