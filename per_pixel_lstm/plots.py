@@ -145,10 +145,9 @@ def plot_extracted_keypoints(images, keypoints, save='keypoints.png'):
     print(image)
 
     image = tf(image)
-    plt.subplot(1, n, i + 1)
+    #plt.subplot(1, n, i + 1)
     #plt.imshow(image)
     #plt.scatter(keys[0], keys[1], c='r', marker='x')
     plt.scatter([1, 2], [3, 4])
-
-
-    plt.savefig(save, bbox_inches='tight')
+    plt.savefig(save)
+    print('saved')

@@ -266,7 +266,7 @@ class FullPose7D(BaseExperiment):
                 plots.plot_epoch_loss(first_epoch_loss, save=self.make_output_filename('first_epoch_loss.pdf'))
 
                 # Visualize keypoints
-                filename = self.make_output_filename('keypoints/{:4d}.pdf'.format(i))
+                filename = self.make_output_filename('keypoints/{:40d}.pdf'.format(i))
                 plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
 
         training_loss = training_loss.average
