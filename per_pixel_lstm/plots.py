@@ -137,6 +137,7 @@ def plot_extracted_keypoints(images, keypoints, save='keypoints.png'):
     plt.clf()
     for i, (image, keys) in enumerate(zip(images, keypoints)):
         image = tf(image)
+        print(image.shape)
         plt.subplot(1, n, i + 1)
         plt.imshow(image)
         plt.scatter(keys[0], keys[1], c='r', marker='x')
