@@ -135,7 +135,7 @@ def plot_extracted_keypoints(images, keypoints, save='keypoints.png'):
     tf = ToPILImage()
 
     print(images.size())
-    print(keypoints.size())
+    print(keypoints)
 
     plt.clf()
     for i, (image, keys) in enumerate(zip(images, keypoints)):
