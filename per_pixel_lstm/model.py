@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+import plots
 
 
 class FullPose7DModel(nn.Module):
@@ -58,7 +59,7 @@ class FullPose7DModel(nn.Module):
         out = self.feature_extraction(var)
         return out.size(0), out.size(1), out.size(2), out.size(3)
 
-    def forward(self, input):
+    def forward(self, input, return_keypoints=False):
         # Input shape: [sequence, channels, h, w]
         n = input.size(0)
         h, w = input.size(2), input.size(3)
@@ -146,7 +147,11 @@ class FullPose7DModel(nn.Module):
         assert outputs.size(0) == n
         predictions = self.fc(outputs)
 
-        return predictions
+        if return_keypoints:
+            keypoints = torch.cat((gx1, gy1), 1).data
+            return predictions, keypoints
+        else:
+            return predictions
 
     def train(self, mode=True):
         self.lstm.train(mode)

@@ -312,7 +312,7 @@ class FullPose7D(BaseExperiment):
             input = self.to_variable(images, volatile=True)
             target = self.to_variable(poses, volatile=True)
 
-            output = self.model(input)
+            output, keypoints = self.model(input, return_keypoints=True)
             output = self.normalize_output(output)
 
             all_predictions.append(output.data)
@@ -338,6 +338,10 @@ class FullPose7D(BaseExperiment):
             t = target.data.cpu().numpy()
             visualize_predicted_path(p, t, of1, show_rot=False)
             plots.plot_xyz_error(p, t, of2)
+
+            # Visualize keypoints
+            filename = self.make_output_filename('out/keypoints/{:4d}.png'.format(i))
+            plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
 
 
         # Average losses for rotation, translation and combined

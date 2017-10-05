@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from torchvision.transforms import ToPILImage
 plt.switch_backend('agg') # For machines without display (e.g. cluster)
 
 
@@ -122,3 +123,23 @@ def plot_xyz_error(predictions, targets, output_file):
     plt.xlabel('Time')
 
     plt.savefig(output_file, bbox_inches='tight')
+
+
+def plot_extracted_keypoints(images, keypoints, save='keypoints.png'):
+    # images shape: [batch, 3, h, w]
+    # keypoints shape: [batch, 2, hk, wk]
+    assert images.size(0) == keypoints.size(0)
+    n = images.size(0)
+
+    keypoints = keypoints.view(n, 2, -1).numpy()
+    tf = ToPILImage()
+
+    plt.clf()
+    for i, (image, keys) in enumerate(zip(images, keypoints)):
+        image = tf(image)
+        plt.subplot(1, n, i + 1)
+        plt.imshow(image)
+        plt.scatter(keys[0], keys[1], c='r', marker='x')
+
+
+    plt.savefig(save, bbox_inches='tight')
