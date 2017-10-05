@@ -134,10 +134,12 @@ def plot_extracted_keypoints(images, keypoints, save='keypoints.png'):
     keypoints = keypoints.view(n, 2, -1).numpy()
     tf = ToPILImage()
 
+    print(images.size())
+    print(keypoints.size())
+
     plt.clf()
     for i, (image, keys) in enumerate(zip(images, keypoints)):
         image = tf(image)
-        print(image.size)
         plt.subplot(1, n, i + 1)
         plt.imshow(image)
         plt.scatter(keys[0], keys[1], c='r', marker='x')
