@@ -5,9 +5,9 @@
 
 module load anaconda
 
-CUDA_VISIBLE_DEVICES=0 \
+CUDA_VISIBLE_DEVICES=2 \
 python per_pixel_lstm/main.py pose7D \
---output gpu00_04_per_pixel_lstm \
+--output gpu02_04_per_pixel_lstm \
 --train \
 --cuda
 --epochs 100 \
