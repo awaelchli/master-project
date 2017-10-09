@@ -140,8 +140,9 @@ class FullPose7D(BaseExperiment):
             train_set = concat_zip_dataset(
                 [
                     #'../data/GTA V/walking/hard/train',
-                    '../data/GTA V/walking/train',
+                    #'../data/GTA V/walking/train',
                     #'../data/GTA V/standing/train'
+                    '../data_test'
                 ],
                 sequence_length=args.sequence,
                 image_transform=transform,
@@ -154,8 +155,9 @@ class FullPose7D(BaseExperiment):
             val_set = concat_zip_dataset(
                 [
                     #'../data/GTA V/walking/hard/test',
-                    '../data/GTA V/walking/test',
+                    #'../data/GTA V/walking/test',
                     #'../data/GTA V/standing/test'
+                    '../data_test'
                 ],
                 sequence_length=args.sequence,
                 image_transform=transform,
@@ -261,13 +263,13 @@ class FullPose7D(BaseExperiment):
                               )
                       )
 
-            if epoch == 1:
-                first_epoch_loss.append(loss.data[0])
-                plots.plot_epoch_loss(first_epoch_loss, save=self.make_output_filename('first_epoch_loss.pdf'))
-
-                # Visualize keypoints
-                filename = self.make_output_filename('keypoints/{:04d}.png'.format(i))
-                plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
+            # if epoch == 1:
+            #     first_epoch_loss.append(loss.data[0])
+            #     plots.plot_epoch_loss(first_epoch_loss, save=self.make_output_filename('first_epoch_loss.pdf'))
+            #
+            #     # Visualize keypoints
+            #     filename = self.make_output_filename('keypoints/{:04d}.png'.format(i))
+            #     plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
 
         training_loss = training_loss.average
         self.training_loss.append(training_loss)
