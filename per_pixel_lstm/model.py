@@ -136,6 +136,10 @@ class FullPose7DModel(nn.Module):
         if input.is_cuda:
             output_inds = output_inds.cuda()
         torch.arange(num_feat_per_frame - 1, n * num_feat_per_frame, num_feat_per_frame, out=output_inds)
+
+        # Do not select the first output (canonical coordinate frame)
+        output_inds = output_inds[1:]
+
         #print('outputs: ', outputs.size())
         outputs = outputs.squeeze(0)
         #print('outputs: ', outputs.size())
@@ -144,7 +148,7 @@ class FullPose7DModel(nn.Module):
 
         #print(outputs)
 
-        assert outputs.size(0) == n
+        assert outputs.size(0) == n - 1
         predictions = self.fc(outputs)
 
         if return_keypoints:

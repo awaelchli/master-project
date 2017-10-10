@@ -7,15 +7,15 @@ module load anaconda
 
 CUDA_VISIBLE_DEVICES=0 \
 python per_pixel_lstm/main.py pose7D \
---output gpu00_04_per_pixel_lstm \
+--output gpu00_05_per_pixel_lstm_skip_id \
 --train \
---cuda
+--cuda \
 --epochs 100 \
---sequence 15 \
---hidden 100 \
+--sequence 2 \
+--hidden 1000 \
 --layers 5 \
 --lr 0.004 \
 --beta 0.1 \
 --workers 4 \
 --print_freq 1 \
---max_size 100 30 30 \
+#--max_size 100 30 30 \

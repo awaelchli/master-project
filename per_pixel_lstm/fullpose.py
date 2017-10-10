@@ -94,7 +94,7 @@ class FullPose7D(BaseExperiment):
 
         # Image pre-processing
         transform = transforms.Compose([
-            transforms.Scale(args.image_size),
+            #transforms.Scale(args.image_size),
             transforms.Scale(320),
             transforms.CenterCrop((320, 448)),
             transforms.ToTensor(),
@@ -140,9 +140,11 @@ class FullPose7D(BaseExperiment):
             train_set = concat_zip_dataset(
                 [
                     #'../data/GTA V/walking/hard/train',
+                    '../data/GTA V/zipped/walking/hard/train',
+                    '../data/GTA V/zipped/walking/easy/train'
                     #'../data/GTA V/walking/train',
                     #'../data/GTA V/standing/train'
-                    '../data_test'
+                    #'../data_test'
                 ],
                 sequence_length=args.sequence,
                 image_transform=transform,
@@ -155,9 +157,11 @@ class FullPose7D(BaseExperiment):
             val_set = concat_zip_dataset(
                 [
                     #'../data/GTA V/walking/hard/test',
+                    '../data/GTA V/zipped/walking/hard/test',
+                    '../data/GTA V/zipped/walking/easy/test'
                     #'../data/GTA V/walking/test',
                     #'../data/GTA V/standing/test'
-                    '../data_test'
+                    #'../data_test'
                 ],
                 sequence_length=args.sequence,
                 image_transform=transform,
@@ -220,7 +224,7 @@ class FullPose7D(BaseExperiment):
             poses[:, :3] /= self.scale
 
             input = self.to_variable(images)
-            target = self.to_variable(poses)
+            target = self.to_variable(poses[1:])
 
             self.optimizer.zero_grad()
 
@@ -316,7 +320,7 @@ class FullPose7D(BaseExperiment):
             poses[:, :3] /= self.scale
 
             input = self.to_variable(images, volatile=True)
-            target = self.to_variable(poses, volatile=True)
+            target = self.to_variable(poses[1:], volatile=True)
 
             output, keypoints = self.model(input, return_keypoints=True)
             output = self.normalize_output(output)

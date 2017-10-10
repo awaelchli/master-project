@@ -9,7 +9,7 @@ CUDA_VISIBLE_DEVICES=3 \
 python per_pixel_lstm/main.py pose7D \
 --output gpu03_04_per_pixel_lstm \
 --train \
---cuda
+--cuda \
 --epochs 100 \
 --sequence 15 \
 --hidden 100 \
