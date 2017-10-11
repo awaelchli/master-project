@@ -6,10 +6,10 @@
 module load anaconda
 
 CUDA_VISIBLE_DEVICES=0 \
-python per_pixel_lstm/main.py pose7D \
---output gpu00_04_per_pixel_lstm \
+python point_cloud/main.py pose7D \
+--output gpu00_04_point_cloud \
 --train \
---cuda
+--cuda \
 --epochs 100 \
 --sequence 15 \
 --hidden 100 \

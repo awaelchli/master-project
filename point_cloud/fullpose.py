@@ -8,6 +8,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
+import cloud
 
 import plots
 from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
@@ -20,7 +21,7 @@ class FullPose7D(BaseExperiment):
 
     @staticmethod
     def submit_arguments(parser):
-        parser.add_argument('--max_size', type=int, nargs=3, default=[0, 0, 0],
+        parser.add_argument('--max_size', type=int, nargs=3, default=[10000, 100, 100],
                             help="""Clips training-, validation-, and testset at the given size. 
                             A zero signalizes that the whole dataset should be used.""")
         parser.add_argument('--sequence', type=int, default=10,
@@ -33,17 +34,14 @@ class FullPose7D(BaseExperiment):
                             help='Hidden size of the LSTM')
         parser.add_argument('--layers', type=int, default=3,
                             help='Number of layers in the LSTM')
+        parser.add_argument('--keypoints', type=int, default=50,
+                            help='Number of keypoints per frame')
 
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
 
-        # Determine size of input images
-        _, (tmp, _, _) = next(enumerate(self.trainingset))
-        self.input_size = (tmp.size(3), tmp.size(4))
-
         # Model
         self.model = FullPose7DModel(
-            self.input_size,
             hidden=args.hidden,
             nlayers=args.layers,
         )
@@ -56,13 +54,14 @@ class FullPose7D(BaseExperiment):
         #self.optimizer = torch.optim.Adagrad(params, self.lr)
         self.optimizer = torch.optim.Adam(params, self.lr)
 
-        print('Calculating translation scale...')
+        #print('Calculating translation scale...')
         #l1_scale, l2_scale = self.determine_translation_scale()
-        l1_scale, l2_scale = 15.698, 11.605
-        self.scale = 1.0 #l1_scale
-        print('Scale: ', self.scale)
+        #l1_scale, l2_scale = 15.698, 11.605
+        #self.scale = 1.0 #l1_scale
+        #print('Scale: ', self.scale)
 
-        self.loss_function = lsf.InnerL1(args.beta)
+        self.loss_function = lsf.InnerL2(args.beta)
+        self.loss_function = lsf.TranslationL2()
 
         self.beta = args.beta
         self.print_freq = args.print_freq
@@ -77,119 +76,45 @@ class FullPose7D(BaseExperiment):
         self.train_logger.column('Validation Loss (translation)', '{:.4f}')
 
         self.print_info(self.model)
-        self.print_info('Input size: {} x {}'.format(self.input_size[0], self.input_size[1]))
-        _, c, h, w = self.model.flownet_output_size(self.input_size)
-        self.print_info('FlowNet output shape: {} x {} x {}'.format(c, h, w))
-        self.print_info('Number of trainable parameters: {}'.format(self.num_parameters()))
-        self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
+        #self.print_info('Input size: {} x {}'.format(self.input_size[0], self.input_size[1]))
+        #_, c, h, w = self.model.flownet_output_size(self.input_size)
+        #self.print_info('FlowNet output shape: {} x {} x {}'.format(c, h, w))
+        #self.print_info('Number of trainable parameters: {}'.format(self.num_parameters()))
+        #self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
 
         self.gradient_logger = Logger(self.make_output_filename('gradient.log'))
         self.gradient_logger.column('Epoch', '{:d}')
         self.gradient_logger.column('Gradient Norm', '{:.4f}')
 
     def load_dataset(self, args):
-        traindir = FOLDERS['walking']['training']
-        valdir = FOLDERS['walking']['validation']
-        testdir = FOLDERS['walking']['test']
+        # Data is loaded into RAM
+        print('Generating dataset. Loading to RAM...')
 
-        # Image pre-processing
-        transform = transforms.Compose([
-            transforms.Scale(args.image_size),
-            transforms.Scale(320),
-            transforms.CenterCrop((320, 448)),
-            transforms.ToTensor(),
-        ])
+        train_size = args.max_size[0]
+        val_size = args.max_size[1]
+        test_size = args.max_size[2]
 
-        # Sequence transform
-        seq_transform = None
-        #seq_transform = transforms.Compose([
-            #RandomSequenceReversal(),
-            #Loop(args.sequence - 10, args.sequence + 10),
-        #])
+        dataloader_train = []#torch.zeros(train_size, args.sequence, args.keypoints, 2)
+        dataloader_val = []#torch.zeros(val_size, args.sequence, args.keypoints, 2)
+        dataloader_test = []#torch.zeros(test_size, args.sequence, args.keypoints, 2)
 
-        zipped = True
-        print('Using zipped dataset: ', zipped)
-        if not zipped:
-            train_set = Subsequence(
-                data_folder=traindir['data'],
-                pose_folder=traindir['pose'],
-                sequence_length=args.sequence,
-                transform=transform,
-                max_size=args.max_size[0],
-                return_filename=True,
-            )
+        for i in range(train_size):
+            c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
+            p = cloud.projection_matrix(60, 1)
+            feature_tracks, poses = cloud.animate_z_translation(c, p, frames=args.sequence, num_points=args.keypoints)
+            dataloader_train.append((feature_tracks, poses))
 
-            val_set = Subsequence(
-                data_folder=valdir['data'],
-                pose_folder=valdir['pose'],
-                sequence_length=args.sequence,
-                transform=transform,
-                max_size=args.max_size[1],
-                return_filename=True,
-            )
+        for i in range(val_size):
+            c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
+            p = cloud.projection_matrix(60, 1)
+            feature_tracks, poses = cloud.animate_z_translation(c, p, frames=args.sequence, num_points=args.keypoints)
+            dataloader_val.append((feature_tracks, poses))
 
-            test_set = Subsequence(
-                data_folder=testdir['data'],
-                pose_folder=testdir['pose'],
-                sequence_length=args.sequence,
-                transform=transform,
-                max_size=args.max_size[2],
-                return_filename=True,
-            )
-        else:
-            train_set = concat_zip_dataset(
-                [
-                    #'../data/GTA V/walking/hard/train',
-                    #'../data/GTA V/walking/train',
-                    #'../data/GTA V/standing/train'
-                    '../data_test'
-                ],
-                sequence_length=args.sequence,
-                image_transform=transform,
-                sequence_transform=seq_transform,
-                return_filename=True,
-                max_size=args.max_size[0],
-                stride=5,
-            )
-
-            val_set = concat_zip_dataset(
-                [
-                    #'../data/GTA V/walking/hard/test',
-                    #'../data/GTA V/walking/test',
-                    #'../data/GTA V/standing/test'
-                    '../data_test'
-                ],
-                sequence_length=args.sequence,
-                image_transform=transform,
-                sequence_transform=None,
-                return_filename=True,
-                max_size=args.max_size[1],
-                stride=5,
-            )
-
-            test_set = val_set
-
-
-        dataloader_train = DataLoader(
-            train_set,
-            batch_size=1,
-            pin_memory=self.use_cuda,
-            shuffle=True,
-            num_workers=args.workers)
-
-        dataloader_val = DataLoader(
-            val_set,
-            batch_size=1,
-            pin_memory=self.use_cuda,
-            shuffle=False,
-            num_workers=args.workers)
-
-        dataloader_test = DataLoader(
-            test_set,
-            batch_size=1,
-            pin_memory=self.use_cuda,
-            shuffle=False,
-            num_workers=args.workers)
+        for i in range(test_size):
+            c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
+            p = cloud.projection_matrix(60, 1)
+            feature_tracks, poses = cloud.animate_z_translation(c, p, frames=args.sequence, num_points=args.keypoints)
+            dataloader_test.append((feature_tracks, poses))
 
         return dataloader_train, dataloader_val, dataloader_test
 
@@ -211,23 +136,27 @@ class FullPose7D(BaseExperiment):
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
         self.model.train()
-        for i, (images, poses, _) in enumerate(self.trainingset):
+        for i, (keypoints, poses) in enumerate(self.trainingset):
 
-            images.squeeze_(0)
-            poses.squeeze_(0)
+            #keypoints.squeeze_(0)
+            #poses.squeeze_(0)
 
             # Normalize scale of translation
-            poses[:, :3] /= self.scale
+            #poses[:, :3] /= self.scale
 
-            input = self.to_variable(images)
-            target = self.to_variable(poses)
+            input = self.to_variable(keypoints)
+            target = self.to_variable(poses[1:])
+
+            print(target)
 
             self.optimizer.zero_grad()
 
             # Forward
             start = time.time()
-            output, keypoints = self.model(input, return_keypoints=True)
+            output = self.model(input)
             forward_time.update(time.time() - start)
+
+            print(output)
 
             # Loss function
             start = time.time()
@@ -307,18 +236,18 @@ class FullPose7D(BaseExperiment):
         rel_angle_error_over_time = []
 
         self.model.eval()
-        for i, (images, poses, filenames) in enumerate(dataloader):
+        for i, (keypoints, poses) in enumerate(dataloader):
 
-            images.squeeze_(0)
-            poses.squeeze_(0)
+            #keypoints.squeeze_(0)
+            #poses.squeeze_(0)
 
             # Normalize scale of translation
-            poses[:, :3] /= self.scale
+            #poses[:, :3] /= self.scale
 
-            input = self.to_variable(images, volatile=True)
-            target = self.to_variable(poses, volatile=True)
+            input = self.to_variable(keypoints, volatile=True)
+            target = self.to_variable(poses[1:], volatile=True)
 
-            output, keypoints = self.model(input, return_keypoints=True)
+            output = self.model(input)
             output = self.normalize_output(output)
 
             all_predictions.append(output.data)
@@ -326,8 +255,7 @@ class FullPose7D(BaseExperiment):
 
             # A few sequences are shorter, don't add them for averaging
             tmp = self.relative_rotation_angles2(output.data, target.data)
-            if len(tmp) == self.sequence_length:
-                rel_angle_error_over_time.append(tmp)
+            rel_angle_error_over_time.append(tmp)
 
             loss, r_loss, t_loss = self.loss_function(output, target)
             avg_loss.update(loss.data[0])
@@ -337,17 +265,17 @@ class FullPose7D(BaseExperiment):
             #print(filenames[0])
 
             # Visualize predicted path
-            fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
-            of1 = self.make_output_filename('path/{}--{:05}.png'.format(fn, i))
-            of2 = self.make_output_filename('axis/{}--{:05}.png'.format(fn, i))
-            p = output.data.cpu().numpy()
-            t = target.data.cpu().numpy()
-            visualize_predicted_path(p, t, of1, show_rot=False)
-            plots.plot_xyz_error(p, t, of2)
+            # fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
+            # of1 = self.make_output_filename('path/{}--{:05}.png'.format(fn, i))
+            # of2 = self.make_output_filename('axis/{}--{:05}.png'.format(fn, i))
+            # p = output.data.cpu().numpy()
+            # t = target.data.cpu().numpy()
+            # visualize_predicted_path(p, t, of1, show_rot=False)
+            # plots.plot_xyz_error(p, t, of2)
 
             # Visualize keypoints
-            filename = self.make_output_filename('keypoints/{:4d}.png'.format(i))
-            plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
+            # filename = self.make_output_filename('keypoints/{:4d}.png'.format(i))
+            # plots.plot_extracted_keypoints(keypoints, keypoints.cpu(), save=filename)
 
 
         # Average losses for rotation, translation and combined

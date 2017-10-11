@@ -6,8 +6,8 @@
 module load anaconda
 
 CUDA_VISIBLE_DEVICES=3 \
-python per_pixel_lstm/main.py pose7D \
---output gpu03_04_per_pixel_lstm \
+python point_cloud/main.py pose7D \
+--output gpu03_04_point_cloud \
 --train \
 --cuda \
 --epochs 100 \

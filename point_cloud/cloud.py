@@ -5,6 +5,7 @@ from math import tan
 from time import sleep
 import random
 import matplotlib.pyplot as plt
+from utils import to_relative_poses, matrix_to_quaternion_pose_vector
 
 
 def distribute_points_on_sphere(num_points):
@@ -83,17 +84,18 @@ def animate_z_translation(init_camera_matrix, projection_matrix, frames=20, num_
     points = distribute_points_on_sphere(num_points)
 
     feature_tracks = torch.zeros(frames, num_points, 2)
+    matrices = []
     c = init_camera_matrix
     z_step = 0.2
 
     for i in range(frames):
 
-        if random.uniform(0, 1) < 0.1:
+        if random.uniform(0, 1) < 0.5:
             z_step *= -1
 
         # Apply the new matrix after translation
         c = torch.mm(translation_matrix((0, 0, z_step)), c)
-        print(c[2, 3])
+        #print(c[2, 3])
         transform = torch.mm(projection_matrix, c)
         proj_points = project_points_to_screen(points, transform)
 
@@ -101,28 +103,39 @@ def animate_z_translation(init_camera_matrix, projection_matrix, frames=20, num_
         feature_tracks[i, :, 0] = proj_points[0]
         feature_tracks[i, :, 1] = proj_points[1]
 
-    # Output shape: [frames, num_points, 2]
+        # Collect matrices to convert the pose later
+        matrices.append(c[:3])
+
+    # Convert all matrices to relative pose
+    matrices = to_relative_poses(matrices)
+    poses = [matrix_to_quaternion_pose_vector(m) for m in matrices]
+    poses = torch.cat(poses, 0)
+
     assert feature_tracks.size(0) == frames
     assert feature_tracks.size(1) == num_points
     assert feature_tracks.size(2) == 2
+    assert poses.size(0) == frames
 
-    return feature_tracks
-
-
-c = camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
-p = projection_matrix(60, 1)
-feature_tracks = animate_z_translation(c, p, frames=20, num_points=100)
+    # Output shape for feature tracks: [frames, num_points, 2]
+    # Output shape for poses: [frames, 7]
+    return feature_tracks, poses
 
 
-plt.ion()
-for i in range(20):
+if __name__ == '__main__':
 
-    plt.clf()
-    x = feature_tracks[i, :, 0].numpy()
-    y = feature_tracks[i, :, 1].numpy()
-    plt.axis('equal')
-    plt.axis([-1, 1, -1, 1])
-    plt.scatter(x, y)
-    plt.show()
-    plt.pause(0.01)
+    c = camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
+    p = projection_matrix(60, 1)
+    feature_tracks, _ = animate_z_translation(c, p, frames=20, num_points=50)
+
+    plt.ion()
+    for i in range(20):
+
+        plt.clf()
+        x = feature_tracks[i, :, 0].numpy()
+        y = feature_tracks[i, :, 1].numpy()
+        plt.axis('equal')
+        plt.axis([-1, 1, -1, 1])
+        plt.scatter(x, y)
+        plt.show()
+        plt.pause(0.01)
 

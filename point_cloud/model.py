@@ -6,28 +6,14 @@ import plots
 
 class FullPose7DModel(nn.Module):
 
-    def __init__(self, input_size, hidden=500, nlayers=3):
+    def __init__(self, hidden=500, nlayers=3):
         super(FullPose7DModel, self).__init__()
 
-        h, w = input_size[0], input_size[1]
-
         # Per-pixel feature extraction (padding)
-        out_channels = 64
-        self.feature_extraction = torch.nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=15, stride=1, padding=7),
-            nn.LeakyReLU(0.1),
-
-            nn.Conv2d(32, 64, kernel_size=7, stride=1, padding=3),
-            nn.LeakyReLU(0.1),
-
-            nn.Conv2d(64, out_channels, kernel_size=5, stride=1, padding=2),
-            nn.LeakyReLU(0.1),
-        )
-        pool_size = 50
-        self.pool = nn.MaxPool2d(kernel_size=pool_size, stride=pool_size, return_indices=True)
+        self.feat_channels = 60
 
         # LSTM
-        lstm_input_size = out_channels + 2 + 1
+        lstm_input_size = self.feat_channels + 2
 
         self.hidden = hidden
         self.nlayers = nlayers
@@ -43,79 +29,47 @@ class FullPose7DModel(nn.Module):
         # Output transform
         self.fc = nn.Linear(self.hidden, 7)
 
-    def generate_grid(self, h, w):
-        x = torch.linspace(-1, 1, w).view(1, -1).repeat(h, 1)
-        y = torch.linspace(-1, 1, h).view(-1, 1).repeat(1, w)
-        assert x.size() == y.size()
+    def forward(self, input):
+        # Input shape: [sequence, num_points, 2]
 
-        # Output shape: [h, w]
-        return Variable(x), Variable(y)
-
-    def flownet_output_size(self, input_size):
-        # 6 for pairwise forward, 3 for single image
-        var = Variable(torch.zeros(1, 3, input_size[0], input_size[1]), volatile=True)
-        if next(self.feature_extraction.parameters()).is_cuda:
-            var = var.cuda()
-        out = self.feature_extraction(var)
-        return out.size(0), out.size(1), out.size(2), out.size(3)
-
-    def forward(self, input, return_keypoints=False):
-        # Input shape: [sequence, channels, h, w]
         n = input.size(0)
-        h, w = input.size(2), input.size(3)
+        feat_channels = self.feat_channels
+        num_points = input.size(1)
 
-        # Using batch mode to forward sequence
-        # Feature shape: [sequence, feat_channels, h, w]
-        print('Feature extraction')
-        features = self.feature_extraction(input)
-        feat_channels = features.size(1)
+        # tgrid = Variable(torch.arange(0, n).view(n, 1, 1).repeat(1, num_points, 1))
+        # if input.is_cuda:
+        #     tgrid = tgrid.cuda()
 
-        print('Feature selection')
-
-        # TODO: is copy of data needed here (or expand suffices?)
-        # The 2D with normalized coordinates (2 channels)
-        x, y = self.generate_grid(h, w)
+        # Each keypoint has a random (unique) identity, constant over time
+        random_features = Variable(torch.rand(1, num_points, feat_channels).repeat(n, 1, 1))
         if input.is_cuda:
-            x = x.cuda()
-            y = y.cuda()
+            random_features = random_features.cuda()
 
-        xgrid = x.repeat(n, 1, 1, 1)
-        ygrid = y.repeat(n, 1, 1, 1)
+        # Concatenate along channels
+        lstm_input_tensor = torch.cat((random_features, input), 2)
 
-        # Apply pooling to the first channel only!
-        pool_out, ind = self.pool(features[:, 0, :, :].unsqueeze(1))
+        # Re-arrange dimensions to: [sequence * num_points, channels]
+        lstm_input_tensor = lstm_input_tensor.view(n * num_points, -1)
 
-        # Gather the all channels based on the index of the first channel pooling
-        i = Variable(ind.data.view(n, 1, -1).repeat(1, feat_channels, 1))
-        f = features.view(n, feat_channels, -1)
-        gp = torch.gather(f, 2, i).view(n, feat_channels, pool_out.size(2), pool_out.size(3))
-
-        # Gather the x- and y coordinates from the indices returned by the pooling layer
-        x1 = xgrid.view(n, -1)
-        y1 = ygrid.view(n, -1)
-        i = ind.data.view(n, -1)
-        gx1 = torch.gather(x1, 1, i).view(n, 1, pool_out.size(2), pool_out.size(3))
-        gy1 = torch.gather(y1, 1, i).view(n, 1, pool_out.size(2), pool_out.size(3))
-
-        # Gathered x- and y coordinates tensor shape: [sequence, 1, pool1_h, pool1_w]
-        assert gx1.size() == gy1.size() == pool_out.size()
-        num_feat_per_frame = pool_out.size(2) * pool_out.size(3)
-
-        tgrid = Variable(torch.arange(0, n).view(n, 1, 1, 1).repeat(1, 1, pool_out.size(2), pool_out.size(3)))
+        # Split tensor into chunks, add a special end-of-frame token after each chunk
+        token = Variable(torch.zeros(1, lstm_input_tensor.size(1)))
         if input.is_cuda:
-            tgrid = tgrid.cuda()
+            token = token.cuda()
 
-        # concatenate along channels
-        lstm_input_tensor = torch.cat((gp, gx1, gy1, tgrid), 1)
+        input_chunks = lstm_input_tensor.chunk(n, 0)
+        input_chunks_and_tok = []
+        for c in input_chunks:
+            input_chunks_and_tok.append(c)
+            input_chunks_and_tok.append(token)
 
-        # Re-arrange dimensions to: [sequence, ph, pw, channels]
-        lstm_input_tensor = lstm_input_tensor.permute(0, 2, 3, 1).contiguous()
-        lstm_input_tensor = lstm_input_tensor.view(n * num_feat_per_frame, -1)
+        lstm_input_tensor = torch.cat(input_chunks_and_tok, 0)
+
+        # Add batch dimension
         lstm_input_tensor = lstm_input_tensor.unsqueeze(0)
-        # LSTM input shape [1, all_features, channels]
 
+        # LSTM input shape [1, all_features + n, channels]
         #print('Total sequence length: {:d}'.format(lstm_input_tensor.size(1)))
-        #print('Num features per frame: {:d}'.format(num_feat_per_frame))
+        #print('Num features per frame: {:d}'.format(num_points))
 
         h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
         c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
@@ -126,16 +80,19 @@ class FullPose7DModel(nn.Module):
         init = (h0, c0)
 
         #print('input lstm', lstm_input_tensor)
-        print('Feature tracking (lstm)')
+        #print('Feature tracking (lstm)')
         outputs, _ = self.lstm(lstm_input_tensor, init)
 
-        # Not all outputs are needed. Only the last output per frame.
-        assert outputs.size(1) == n * num_feat_per_frame
-
+        # Not all outputs are needed. Only the last output per frame (at end-of-frame token)
+        assert outputs.size(1) == n * (num_points + 1)
         output_inds = torch.LongTensor(n)
         if input.is_cuda:
             output_inds = output_inds.cuda()
-        torch.arange(num_feat_per_frame - 1, n * num_feat_per_frame, num_feat_per_frame, out=output_inds)
+        torch.arange(num_points, n * (num_points + 1), num_points + 1, out=output_inds)
+
+        # Do not select the first output (canonical coordinate frame)
+        output_inds = output_inds[1:]
+
         #print('outputs: ', outputs.size())
         outputs = outputs.squeeze(0)
         #print('outputs: ', outputs.size())
@@ -144,14 +101,10 @@ class FullPose7DModel(nn.Module):
 
         #print(outputs)
 
-        assert outputs.size(0) == n
+        assert outputs.size(0) == n - 1
         predictions = self.fc(outputs)
 
-        if return_keypoints:
-            keypoints = torch.cat((gx1, gy1), 1).data
-            return predictions, keypoints
-        else:
-            return predictions
+        return predictions
 
     def train(self, mode=True):
         self.lstm.train(mode)
@@ -160,5 +113,5 @@ class FullPose7DModel(nn.Module):
         self.lstm.eval()
 
     def get_parameters(self):
-        params = list(self.lstm.parameters()) + list(self.fc.parameters()) + list(self.feature_extraction.parameters())
+        params = list(self.lstm.parameters()) + list(self.fc.parameters())
         return params
