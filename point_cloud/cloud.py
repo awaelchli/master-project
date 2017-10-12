@@ -45,18 +45,34 @@ def camera_matrix(position=(0, 0, 0), up=(0, 1, 0), look_at=(0, 0, 1)):
 
 
 def projection_matrix(fov, aspect):
+    # fov = radians(fov)
+    #
+    # mat = torch.zeros(4, 4)
+    #
+    # mat[0, 0] = 1 / (aspect * tan(fov / 2))
+    # mat[1, 1] = 1 / tan(fov / 2)
+    # mat[2, 2] = 1 # (near + far) / (near - far)
+    # mat[2, 3] = -2# 2 * near * far / (near - far)
+    # mat[3, 2] = -1
+
+
     fov = radians(fov)
+    top = tan(fov / 2)
+    right = aspect * top
+
+    width = 1
+    height = 1
 
     mat = torch.zeros(4, 4)
 
-    mat[0, 0] = 1 / (aspect * tan(fov / 2))
-    mat[1, 1] = 1 / tan(fov / 2)
-    mat[2, 2] = 1 # (near + far) / (near - far)
-    mat[2, 3] = -2# 2 * near * far / (near - far)
-    mat[3, 2] = -1
+    mat[0, 0] = 2 * right / width
+    mat[0, 2] = right
+    mat[1, 1] = 2 * top / height
+    mat[1, 2] = top
+    mat[2, 2] = 1
+    mat[3, 3] = 1
 
-    return mat
-
+    return mat.inverse()
 
 def translation_matrix(vector):
     t = torch.eye(4, 4)
@@ -80,21 +96,25 @@ def project_points_to_screen(points, transform):
     return homogeneous_division(torch.mm(transform, points))
 
 
-def animate_z_translation(init_camera_matrix, projection_matrix, frames=20, num_points=50):
-    points = distribute_points_on_sphere(num_points)
+def animate_translation(init_camera_matrix, projection_matrix, points=None, frames=20, num_points=50, max_step=0.2, p_turn=0.5):
+    assert 0 <= p_turn <= 1
+    assert frames > 0 and num_points > 0
+
+    if points is None:
+        points = distribute_points_on_sphere(num_points)
 
     feature_tracks = torch.zeros(frames, num_points, 2)
     matrices = []
     c = init_camera_matrix
-    z_step = 0.2
 
     for i in range(frames):
 
-        if random.uniform(0, 1) < 0.5:
-            z_step *= -1
+        step = random.uniform(0, max_step)
+        if random.uniform(0, 1) < p_turn:
+            step *= -1
 
         # Apply the new matrix after translation
-        c = torch.mm(translation_matrix((0, 0, z_step)), c)
+        c = torch.mm(translation_matrix((step, 0, 0)), c)
         #print(c[2, 3])
         transform = torch.mm(projection_matrix, c)
         proj_points = project_points_to_screen(points, transform)
@@ -125,7 +145,7 @@ if __name__ == '__main__':
 
     c = camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
     p = projection_matrix(60, 1)
-    feature_tracks, _ = animate_z_translation(c, p, frames=20, num_points=50)
+    feature_tracks, _ = animate_translation(c, p, frames=1000, num_points=8, max_step=1, p_turn=0.5)
 
     plt.ion()
     for i in range(20):
@@ -134,8 +154,7 @@ if __name__ == '__main__':
         x = feature_tracks[i, :, 0].numpy()
         y = feature_tracks[i, :, 1].numpy()
         plt.axis('equal')
-        plt.axis([-1, 1, -1, 1])
+        plt.axis([-5, 5, -5, 5])
         plt.scatter(x, y)
         plt.show()
         plt.pause(0.01)
-

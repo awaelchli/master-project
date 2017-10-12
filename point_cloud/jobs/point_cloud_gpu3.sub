@@ -1,21 +1,20 @@
-# Adam, no adjust lr, custon cnn (dilation), dot product rotation loss + L2 for translation loss
-# Single image (not pairwise)
-# Looping
+# Adam, no adjust lr, L2 loss for rotation only, LSTM only with generated point cloud features
 # Training
 
 module load anaconda
 
 CUDA_VISIBLE_DEVICES=3 \
 python point_cloud/main.py pose7D \
---output gpu03_04_point_cloud \
+--output gpu03_00_point_cloud_two_points_left_right_lr=0.001_points=32 \
 --train \
 --cuda \
---epochs 100 \
---sequence 15 \
---hidden 100 \
---layers 5 \
---lr 0.004 \
+--epochs 10 \
+--sequence 2 \
+--keypoints 32 \
+--hidden 1000 \
+--layers 2 \
+--lr 0.001 \
 --beta 0.1 \
 --workers 4 \
 --print_freq 1 \
---max_size 100 30 30 \
+--max_size 10000 100 100 \

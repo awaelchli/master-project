@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import Parameter
 from torch.autograd import Variable
 import plots
 
@@ -10,7 +11,7 @@ class FullPose7DModel(nn.Module):
         super(FullPose7DModel, self).__init__()
 
         # Per-pixel feature extraction (padding)
-        self.feat_channels = 60
+        self.feat_channels = 1
 
         # LSTM
         lstm_input_size = self.feat_channels + 2
@@ -26,13 +27,23 @@ class FullPose7DModel(nn.Module):
             #dropout=0.3
         )
 
+        # The initial state of the LSTM is a learnable parameter
+        self.h0 = Parameter(torch.zeros(self.nlayers, 1, self.hidden))
+        self.c0 = Parameter(torch.zeros(self.nlayers, 1, self.hidden))
+        self.eof_token = Variable(torch.zeros(1, lstm_input_size)).cuda()
+
         # Output transform
-        self.fc = nn.Linear(self.hidden, 7)
+        self.fc = nn.Linear(self.hidden, 1)
+
+        self.init_weights()
 
     def forward(self, input):
         # Input shape: [sequence, num_points, 2]
 
+        print('Input', input)
+
         n = input.size(0)
+
         feat_channels = self.feat_channels
         num_points = input.size(1)
 
@@ -52,32 +63,34 @@ class FullPose7DModel(nn.Module):
         lstm_input_tensor = lstm_input_tensor.view(n * num_points, -1)
 
         # Split tensor into chunks, add a special end-of-frame token after each chunk
-        token = Variable(torch.zeros(1, lstm_input_tensor.size(1)))
-        if input.is_cuda:
-            token = token.cuda()
+        #token = Variable(torch.zeros(1, lstm_input_tensor.size(1)))
+        #if input.is_cuda:
+        #    token = token.cuda()
 
         input_chunks = lstm_input_tensor.chunk(n, 0)
         input_chunks_and_tok = []
         for c in input_chunks:
             input_chunks_and_tok.append(c)
-            input_chunks_and_tok.append(token)
+            input_chunks_and_tok.append(self.eof_token)
 
         lstm_input_tensor = torch.cat(input_chunks_and_tok, 0)
 
         # Add batch dimension
         lstm_input_tensor = lstm_input_tensor.unsqueeze(0)
 
+        print('LSTM input', lstm_input_tensor)
+
         # LSTM input shape [1, all_features + n, channels]
         #print('Total sequence length: {:d}'.format(lstm_input_tensor.size(1)))
         #print('Num features per frame: {:d}'.format(num_points))
 
-        h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
-        c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
-        if input.is_cuda:
-            h0 = h0.cuda()
-            c0 = c0.cuda()
+        #h0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
+        #c0 = Variable(torch.zeros(self.nlayers, 1, self.hidden))
+        #if input.is_cuda:
+            #h0 = h0.cuda()
+            #c0 = c0.cuda()
 
-        init = (h0, c0)
+        init = (self.h0, self.c0)
 
         #print('input lstm', lstm_input_tensor)
         #print('Feature tracking (lstm)')
@@ -104,6 +117,8 @@ class FullPose7DModel(nn.Module):
         assert outputs.size(0) == n - 1
         predictions = self.fc(outputs)
 
+        #print(self.eof_token.sum().data[0])
+
         return predictions
 
     def train(self, mode=True):
@@ -112,6 +127,11 @@ class FullPose7DModel(nn.Module):
     def eval(self):
         self.lstm.eval()
 
+    def init_weights(self):
+        #self.fc.weight.data.uniform_(-0.0, 0.0)
+        #self.fc.bias.data.fill_(0)
+        pass
+
     def get_parameters(self):
-        params = list(self.lstm.parameters()) + list(self.fc.parameters())
+        params = list(self.lstm.parameters()) + list(self.fc.parameters()) + [self.h0, self.c0]
         return params

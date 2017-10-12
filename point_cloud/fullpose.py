@@ -15,7 +15,7 @@ from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 import loss_functions as lsf
 from model import FullPose7DModel
-
+import torch.nn.parallel
 
 class FullPose7D(BaseExperiment):
 
@@ -98,24 +98,29 @@ class FullPose7D(BaseExperiment):
         dataloader_val = []#torch.zeros(val_size, args.sequence, args.keypoints, 2)
         dataloader_test = []#torch.zeros(test_size, args.sequence, args.keypoints, 2)
 
+        max_step = 0.2
+        turn_probability = 1 / args.sequence
+
+        points = None#cloud.distribute_points_on_sphere(args.keypoints)
         for i in range(train_size):
             c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
             p = cloud.projection_matrix(60, 1)
-            feature_tracks, poses = cloud.animate_z_translation(c, p, frames=args.sequence, num_points=args.keypoints)
+
+            feature_tracks, poses = cloud.animate_translation(c, p, points=points, frames=args.sequence, num_points=args.keypoints, max_step=max_step, p_turn=turn_probability)
             dataloader_train.append((feature_tracks, poses))
+
+        points = None#cloud.distribute_points_on_sphere(args.keypoints)
 
         for i in range(val_size):
             c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
             p = cloud.projection_matrix(60, 1)
-            feature_tracks, poses = cloud.animate_z_translation(c, p, frames=args.sequence, num_points=args.keypoints)
+
+            feature_tracks, poses = cloud.animate_translation(c, p, points=points, frames=args.sequence, num_points=args.keypoints, max_step=max_step, p_turn=turn_probability)
+
+
             dataloader_val.append((feature_tracks, poses))
 
-        for i in range(test_size):
-            c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
-            p = cloud.projection_matrix(60, 1)
-            feature_tracks, poses = cloud.animate_z_translation(c, p, frames=args.sequence, num_points=args.keypoints)
-            dataloader_test.append((feature_tracks, poses))
-
+        dataloader_test = dataloader_val
         return dataloader_train, dataloader_val, dataloader_test
 
     def train(self):
@@ -145,9 +150,9 @@ class FullPose7D(BaseExperiment):
             #poses[:, :3] /= self.scale
 
             input = self.to_variable(keypoints)
-            target = self.to_variable(poses[1:])
+            target = self.to_variable(poses[1:, 0].contiguous())
 
-            print(target)
+            #print(target)
 
             self.optimizer.zero_grad()
 
@@ -156,12 +161,16 @@ class FullPose7D(BaseExperiment):
             output = self.model(input)
             forward_time.update(time.time() - start)
 
-            print(output)
+            print('Output', output)
 
             # Loss function
             start = time.time()
-            output = self.normalize_output(output)
-            loss, r_loss, t_loss = self.loss_function(output, target)
+            #output = self.normalize_output(output)
+
+            loss = torch.abs(output - target)
+            loss = loss.sum() #/ self.sequence_length
+
+            loss, r_loss, t_loss = loss, loss, loss
             loss_time.update(time.time() - start)
 
             # Backward
@@ -180,13 +189,13 @@ class FullPose7D(BaseExperiment):
             # Print log info
             if (i + 1) % self.print_freq == 0:
                 print('Sequence [{:d}/{:d}], '
-                      'Total Loss: {: .4f} ({: .4f}), '
-                      'R. Loss: {: .4f} ({: .4f}), '
+                      #'Total Loss: {: .4f} ({: .4f}), '
+                      #'R. Loss: {: .4f} ({: .4f}), '
                       'T. Loss: {: .4f} ({: .4f}), '
                       'Grad Norm: {: .4f}'
                       .format(i + 1, num_batches,
-                              loss.data[0], training_loss.average,
-                              r_loss.data[0], rotation_loss.average,
+                              #loss.data[0], training_loss.average,
+                              #r_loss.data[0], rotation_loss.average,
                               t_loss.data[0], translation_loss.average,
                               grad_norm
                               )
