@@ -41,16 +41,24 @@ class FullPose7D(BaseExperiment):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
 
         # Model
+
         self.model = FullPose7DModel(
             hidden=args.hidden,
             nlayers=args.layers,
         )
+        params = self.model.get_parameters()
+
+        #self.model = torch.nn.DataParallel(
+        #    self.model,
+        #    device_ids=[0, 1]
+        #)
+
 
         if self.use_cuda:
             print('Moving model to GPU ...')
             self.model.cuda()
 
-        params = self.model.get_parameters()
+
         #self.optimizer = torch.optim.Adagrad(params, self.lr)
         self.optimizer = torch.optim.Adam(params, self.lr)
 
@@ -60,8 +68,7 @@ class FullPose7D(BaseExperiment):
         #self.scale = 1.0 #l1_scale
         #print('Scale: ', self.scale)
 
-        self.loss_function = lsf.InnerL2(args.beta)
-        self.loss_function = lsf.TranslationL2()
+        self.loss_function = nn.CrossEntropyLoss()
 
         self.beta = args.beta
         self.print_freq = args.print_freq
@@ -106,8 +113,8 @@ class FullPose7D(BaseExperiment):
             c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
             p = cloud.projection_matrix(60, 1)
 
-            feature_tracks, poses = cloud.animate_translation(c, p, points=points, frames=args.sequence, num_points=args.keypoints, max_step=max_step, p_turn=turn_probability)
-            dataloader_train.append((feature_tracks, poses))
+            feature_tracks, poses, bin = cloud.animate_translation(c, p, points=points, frames=args.sequence, num_points=args.keypoints, max_step=max_step, p_turn=turn_probability)
+            dataloader_train.append((feature_tracks, poses, bin))
 
         points = None#cloud.distribute_points_on_sphere(args.keypoints)
 
@@ -115,10 +122,10 @@ class FullPose7D(BaseExperiment):
             c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
             p = cloud.projection_matrix(60, 1)
 
-            feature_tracks, poses = cloud.animate_translation(c, p, points=points, frames=args.sequence, num_points=args.keypoints, max_step=max_step, p_turn=turn_probability)
+            feature_tracks, poses, bin = cloud.animate_translation(c, p, points=points, frames=args.sequence, num_points=args.keypoints, max_step=max_step, p_turn=turn_probability)
 
 
-            dataloader_val.append((feature_tracks, poses))
+            dataloader_val.append((feature_tracks, poses, bin))
 
         dataloader_test = dataloader_val
         return dataloader_train, dataloader_val, dataloader_test
@@ -127,10 +134,8 @@ class FullPose7D(BaseExperiment):
         training_loss = AverageMeter()
         rotation_loss = AverageMeter()
         translation_loss = AverageMeter()
-        forward_time = AverageMeter()
-        backward_time = AverageMeter()
-        loss_time = AverageMeter()
         gradient_norm = AverageMeter()
+        accuracy = AverageMeter()
 
         num_batches = len(self.trainingset)
         first_epoch_loss = []
@@ -141,7 +146,7 @@ class FullPose7D(BaseExperiment):
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
         self.model.train()
-        for i, (keypoints, poses) in enumerate(self.trainingset):
+        for i, (keypoints, poses, binary_poses) in enumerate(self.trainingset):
 
             #keypoints.squeeze_(0)
             #poses.squeeze_(0)
@@ -150,84 +155,65 @@ class FullPose7D(BaseExperiment):
             #poses[:, :3] /= self.scale
 
             input = self.to_variable(keypoints)
-            target = self.to_variable(poses[1:, 0].contiguous())
+            #target = self.to_variable(poses[1:, 0].contiguous())
+            target = self.to_variable(binary_poses[1:].contiguous())
 
             #print(target)
 
             self.optimizer.zero_grad()
 
             # Forward
-            start = time.time()
             output = self.model(input)
-            forward_time.update(time.time() - start)
 
-            print('Output', output)
+            #print('Output', output)
 
             # Loss function
-            start = time.time()
             #output = self.normalize_output(output)
 
-            loss = torch.abs(output - target)
-            loss = loss.sum() #/ self.sequence_length
-
-            loss, r_loss, t_loss = loss, loss, loss
-            loss_time.update(time.time() - start)
+            #loss = torch.abs(output - target)
+            #loss = loss.sum() #/ self.sequence_length
+            loss = self.loss_function(output, target)
 
             # Backward
-            start = time.time()
             loss.backward()
-            backward_time.update(time.time() - start)
+
 
             grad_norm = self.gradient_norm()
             self.optimizer.step()
 
             training_loss.update(loss.data[0])
-            rotation_loss.update(r_loss.data[0])
-            translation_loss.update(t_loss.data[0])
             gradient_norm.update(grad_norm)
+            accuracy.update(self.num_correct_predictions(output, target) / output.size(0))
+
 
             # Print log info
             if (i + 1) % self.print_freq == 0:
                 print('Sequence [{:d}/{:d}], '
-                      #'Total Loss: {: .4f} ({: .4f}), '
-                      #'R. Loss: {: .4f} ({: .4f}), '
                       'T. Loss: {: .4f} ({: .4f}), '
+                      'Accuracy: {: .4f}, '
                       'Grad Norm: {: .4f}'
                       .format(i + 1, num_batches,
-                              #loss.data[0], training_loss.average,
-                              #r_loss.data[0], rotation_loss.average,
-                              t_loss.data[0], translation_loss.average,
+                              loss.data[0], training_loss.average,
+                              accuracy.average,
                               grad_norm
                               )
                       )
-
-            # if epoch == 1:
-            #     first_epoch_loss.append(loss.data[0])
-            #     plots.plot_epoch_loss(first_epoch_loss, save=self.make_output_filename('first_epoch_loss.pdf'))
-            #
-            #     # Visualize keypoints
-            #     filename = self.make_output_filename('keypoints/{:04d}.png'.format(i))
-            #     plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
 
         training_loss = training_loss.average
         self.training_loss.append(training_loss)
 
         # Validate after each epoch
-        validation_loss, validation_r_loss, validation_t_loss = self.validate()
+        validation_loss, accuracy = self.validate()
         self.validation_loss.append(validation_loss)
 
-        self.train_logger.log(epoch, training_loss, validation_loss, validation_r_loss, validation_t_loss)
+        print('Accuracy on validation set: {: .4f}'.format(accuracy))
+
         self.gradient_logger.log(epoch, gradient_norm.average)
 
         # Save extra checkpoint for best validation loss
         if validation_loss < best_validation_loss:
             best_validation_loss = validation_loss
             torch.save(self.make_checkpoint(), self.make_output_filename(CHECKPOINT_BEST_FILENAME))
-
-        if epoch == 1:
-            self.print_info('Average time for forward operation: {:.4f} seconds'.format(forward_time.average))
-            self.print_info('Average time for backward operation: {:.4f} seconds'.format(backward_time.average))
-            self.print_info('Average time for loss computation: {:.4f} seconds'.format(loss_time.average))
 
     def validate(self):
         return self.test(dataloader=self.validationset)
@@ -237,15 +223,14 @@ class FullPose7D(BaseExperiment):
             dataloader = self.testset
 
         avg_loss = AverageMeter()
-        avg_rot_loss = AverageMeter()
-        avg_trans_loss = AverageMeter()
 
         all_predictions = []
         all_targets = []
-        rel_angle_error_over_time = []
+
+        accuracy = 0
 
         self.model.eval()
-        for i, (keypoints, poses) in enumerate(dataloader):
+        for i, (keypoints, poses, binary_poses) in enumerate(dataloader):
 
             #keypoints.squeeze_(0)
             #poses.squeeze_(0)
@@ -255,75 +240,40 @@ class FullPose7D(BaseExperiment):
 
             input = self.to_variable(keypoints, volatile=True)
             target = self.to_variable(poses[1:], volatile=True)
+            target = self.to_variable(binary_poses[1:].contiguous())
 
             output = self.model(input)
-            output = self.normalize_output(output)
+
+            # Correct predictions in the batch
+            accuracy += self.num_correct_predictions(output, target)
+
 
             all_predictions.append(output.data)
             all_targets.append(target.data)
 
-            # A few sequences are shorter, don't add them for averaging
-            tmp = self.relative_rotation_angles2(output.data, target.data)
-            rel_angle_error_over_time.append(tmp)
 
-            loss, r_loss, t_loss = self.loss_function(output, target)
+
+            loss = self.loss_function(output, target)
             avg_loss.update(loss.data[0])
-            avg_rot_loss.update(r_loss.data[0])
-            avg_trans_loss.update(t_loss.data[0])
-
-            #print(filenames[0])
-
-            # Visualize predicted path
-            # fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
-            # of1 = self.make_output_filename('path/{}--{:05}.png'.format(fn, i))
-            # of2 = self.make_output_filename('axis/{}--{:05}.png'.format(fn, i))
-            # p = output.data.cpu().numpy()
-            # t = target.data.cpu().numpy()
-            # visualize_predicted_path(p, t, of1, show_rot=False)
-            # plots.plot_xyz_error(p, t, of2)
-
-            # Visualize keypoints
-            # filename = self.make_output_filename('keypoints/{:4d}.png'.format(i))
-            # plots.plot_extracted_keypoints(keypoints, keypoints.cpu(), save=filename)
 
 
-        # Average losses for rotation, translation and combined
+
+        accuracy /= len(dataloader) * (self.sequence_length - 1)
         avg_loss = avg_loss.average
-        avg_rot_loss = avg_rot_loss.average
-        avg_trans_loss = avg_trans_loss.average
 
-        all_predictions = torch.cat(all_predictions, 0)
-        all_targets = torch.cat(all_targets, 0)
-        rel_angle_error_over_time = torch.Tensor(rel_angle_error_over_time).mean(0).view(-1)
-
-        # Relative rotation angle between estimated and target rotation
-        rot_error_logger = self.make_logger('relative_rotation_angles.log')
-        rot_error_logger.clear()
-        rot_error_logger.column('Relative rotation angle between prediction and target', format='{:.4f}')
-        pose_errors = self.relative_rotation_angles2(all_predictions, all_targets)
-        for err in pose_errors:
-            rot_error_logger.log(err)
-
-        # The distribution of relative rotation angle
-        thresholds, cdf = self.error_distribution(torch.Tensor(pose_errors))
-        plots.plot_error_distribution(thresholds, cdf, self.make_output_filename('rotation_error_distribution.pdf'))
-        self.test_logger.clear()
-        self.test_logger.print('Cumulative distribution of rotation error:')
-        self.test_logger.print('Threshold: ' + ', '.join([str(t) for t in thresholds]))
-        self.test_logger.print('Fraction:  ' + ', '.join([str(p) for p in cdf]))
-        self.test_logger.print()
         self.test_logger.print('Average combined loss on testset: {:.4f}'.format(avg_loss))
-        self.test_logger.print('Average rotation loss on testset: {:.4f}'.format(avg_rot_loss))
-        self.test_logger.print('Average translation loss on testset: {:.4f}'.format(avg_trans_loss))
-
-        plots.plot_sequence_error(list(rel_angle_error_over_time), self.make_output_filename('average_rotation_error_over_time.pdf'))
         self.test_logger.clear()
-        self.test_logger.print('Average relative rotation error over time:')
-        self.test_logger.print(', '.join([str(i) for i in rel_angle_error_over_time]))
+        self.test_logger.print('Accuracy on testset: {:.4f}'.format(accuracy))
         self.test_logger.print()
 
-        return avg_loss, avg_rot_loss, avg_trans_loss
+        return avg_loss, accuracy
 
+    def num_correct_predictions(self, output, target):
+        # argmax = predicted class
+        _, ind = torch.max(output.data, 1)
+
+        # Correct predictions in the batch
+        return torch.sum(torch.eq(ind, target.data))
 
 
     def normalize_output(self, output):

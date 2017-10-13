@@ -105,6 +105,7 @@ def animate_translation(init_camera_matrix, projection_matrix, points=None, fram
 
     feature_tracks = torch.zeros(frames, num_points, 2)
     matrices = []
+    binary_pose = []
     c = init_camera_matrix
 
     for i in range(frames):
@@ -125,20 +126,25 @@ def animate_translation(init_camera_matrix, projection_matrix, points=None, fram
 
         # Collect matrices to convert the pose later
         matrices.append(c[:3])
+        binary_pose.append(0 if step < 0 else 1)
 
     # Convert all matrices to relative pose
     matrices = to_relative_poses(matrices)
     poses = [matrix_to_quaternion_pose_vector(m) for m in matrices]
     poses = torch.cat(poses, 0)
 
+
     assert feature_tracks.size(0) == frames
     assert feature_tracks.size(1) == num_points
     assert feature_tracks.size(2) == 2
     assert poses.size(0) == frames
 
+    binary_poses = torch.LongTensor(binary_pose)
+
     # Output shape for feature tracks: [frames, num_points, 2]
     # Output shape for poses: [frames, 7]
-    return feature_tracks, poses
+    # Output shape for binary_poses: [frames, 1]
+    return feature_tracks, poses, binary_poses
 
 
 if __name__ == '__main__':

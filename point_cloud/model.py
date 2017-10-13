@@ -11,7 +11,7 @@ class FullPose7DModel(nn.Module):
         super(FullPose7DModel, self).__init__()
 
         # Per-pixel feature extraction (padding)
-        self.feat_channels = 1
+        self.feat_channels = 100
 
         # LSTM
         lstm_input_size = self.feat_channels + 2
@@ -33,14 +33,14 @@ class FullPose7DModel(nn.Module):
         self.eof_token = Variable(torch.zeros(1, lstm_input_size)).cuda()
 
         # Output transform
-        self.fc = nn.Linear(self.hidden, 1)
+        self.fc = nn.Linear(self.hidden, 2)
 
         self.init_weights()
 
     def forward(self, input):
         # Input shape: [sequence, num_points, 2]
 
-        print('Input', input)
+        #print('Input', input)
 
         n = input.size(0)
 
@@ -78,7 +78,7 @@ class FullPose7DModel(nn.Module):
         # Add batch dimension
         lstm_input_tensor = lstm_input_tensor.unsqueeze(0)
 
-        print('LSTM input', lstm_input_tensor)
+        #print('LSTM input', lstm_input_tensor)
 
         # LSTM input shape [1, all_features + n, channels]
         #print('Total sequence length: {:d}'.format(lstm_input_tensor.size(1)))
