@@ -45,17 +45,6 @@ def camera_matrix(position=(0, 0, 0), up=(0, 1, 0), look_at=(0, 0, 1)):
 
 
 def projection_matrix(fov, aspect):
-    # fov = radians(fov)
-    #
-    # mat = torch.zeros(4, 4)
-    #
-    # mat[0, 0] = 1 / (aspect * tan(fov / 2))
-    # mat[1, 1] = 1 / tan(fov / 2)
-    # mat[2, 2] = 1 # (near + far) / (near - far)
-    # mat[2, 3] = -2# 2 * near * far / (near - far)
-    # mat[3, 2] = -1
-
-
     fov = radians(fov)
     top = tan(fov / 2)
     right = aspect * top
@@ -73,6 +62,7 @@ def projection_matrix(fov, aspect):
     mat[3, 3] = 1
 
     return mat.inverse()
+
 
 def translation_matrix(vector):
     t = torch.eye(4, 4)

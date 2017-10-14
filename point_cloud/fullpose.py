@@ -14,7 +14,7 @@ import plots
 from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 import loss_functions as lsf
-from model import FullPose7DModel
+from models import BinaryTranslationModel
 import torch.nn.parallel
 
 class FullPose7D(BaseExperiment):
@@ -42,7 +42,7 @@ class FullPose7D(BaseExperiment):
 
         # Model
 
-        self.model = FullPose7DModel(
+        self.model = BinaryTranslationModel(
             hidden=args.hidden,
             nlayers=args.layers,
         )
@@ -106,7 +106,7 @@ class FullPose7D(BaseExperiment):
         dataloader_test = []#torch.zeros(test_size, args.sequence, args.keypoints, 2)
 
         max_step = 0.2
-        turn_probability = 1 / args.sequence
+        turn_probability = 0.5
 
         points = None#cloud.distribute_points_on_sphere(args.keypoints)
         for i in range(train_size):

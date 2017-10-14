@@ -3,18 +3,18 @@
 
 module load anaconda
 
-
+CUDA_VISIBLE_DEVICES=1 \
 python point_cloud/main.py pose7D \
---output gpu01_00_point_cloud_two_points_left_right_lr=0.001_points=8 \
+--output gpu1_temp \
 --train \
 --cuda \
---epochs 10 \
---sequence 1000 \
---keypoints 10 \
+--epochs 50 \
+--sequence 100 \
+--keypoints 8 \
 --hidden 100 \
---layers 1 \
---lr 0.001 \
+--layers 4 \
+--lr 0.0001 \
 --beta 0.1 \
 --workers 4 \
 --print_freq 1 \
---max_size 10 10 2 \
+--max_size 100 10 10 \
