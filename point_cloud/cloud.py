@@ -46,22 +46,16 @@ def camera_matrix(position=(0, 0, 0), up=(0, 1, 0), look_at=(0, 0, 1)):
 
 def projection_matrix(fov, aspect):
     fov = radians(fov)
-    top = tan(fov / 2)
-    right = aspect * top
-
-    width = 1
-    height = 1
 
     mat = torch.zeros(4, 4)
 
-    mat[0, 0] = 2 * right / width
-    mat[0, 2] = right
-    mat[1, 1] = 2 * top / height
-    mat[1, 2] = top
+    mat[0, 0] = 1 / (aspect * tan(fov / 2))
+    mat[1, 1] = 1 / tan(fov / 2)
     mat[2, 2] = 1
-    mat[3, 3] = 1
+    mat[2, 3] = -2
+    mat[3, 2] = -1
 
-    return mat.inverse()
+    return mat
 
 
 def translation_matrix(vector):
@@ -137,20 +131,101 @@ def animate_translation(init_camera_matrix, projection_matrix, points=None, fram
     return feature_tracks, poses, binary_poses
 
 
+def translation_for_classification(init_camera_matrix, projection_matrix, num_classes, points=None, frames=20, num_points=50, bounds=(0, 1)):
+    assert bounds[0] < bounds[1]
+    assert frames > 0 and num_points > 0
+
+    if points is None:
+        points = distribute_points_on_sphere(num_points)
+
+    rng = bounds[1] - bounds[0]
+    step = rng / num_classes
+
+    def add_noise(s):
+        return s + 0.1 * random.uniform(-s, s)
+
+    feature_tracks = torch.zeros(frames, num_points, 2)
+    c = init_camera_matrix
+    current_translation = 0
+    translations = []
+
+    for i in range(frames):
+        delta = add_noise(step)
+        current_translation = min(max(current_translation + delta, bounds[0]), bounds[1])
+
+        # Apply the new matrix after translation
+        c = torch.mm(translation_matrix((delta, 0, 0)), c)
+
+        transform = torch.mm(projection_matrix, c)
+        proj_points = project_points_to_screen(points, transform)
+
+        # Collect 2D points for each frame
+        feature_tracks[i, :, 0] = proj_points[0]
+        feature_tracks[i, :, 1] = proj_points[1]
+
+        translations.append(current_translation)
+
+    t = torch.Tensor(translations)
+    classes = torch.floor((t - bounds[0]) * num_classes / (bounds[1] - bounds[0]))
+    classes[classes >= num_classes] = num_classes - 1
+
+    assert feature_tracks.size(0) == frames
+    assert feature_tracks.size(1) == num_points
+    assert feature_tracks.size(2) == 2
+    assert classes.size(0) == frames
+
+    # Output shape for feature tracks: [frames, num_points, 2]
+    # Output shape for classes: [frames]
+    return feature_tracks, classes.long()
+
+class Animator(object):
+
+    def __init__(self):
+        pass
+
+    @property
+    def position(self):
+        pass
+
+    @position.setter
+    def position(self, pos):
+        pass
+
+
 if __name__ == '__main__':
 
     c = camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
     p = projection_matrix(60, 1)
-    feature_tracks, _ = animate_translation(c, p, frames=1000, num_points=8, max_step=1, p_turn=0.5)
+
+    #feature_tracks, _, _ = animate_translation(c, p, frames=10, num_points=100, max_step=0.1, p_turn=0.5)
+    feature_tracks, classes = translation_for_classification(c, p, num_classes=10, frames=100, num_points=8, max_step=0.1, bounds=(-0.5, 0.5), p_turn=0.5)
+
+    print(classes)
 
     plt.ion()
+
+    #print(feature_tracks[:, :, 0])
     for i in range(20):
 
         plt.clf()
         x = feature_tracks[i, :, 0].numpy()
         y = feature_tracks[i, :, 1].numpy()
         plt.axis('equal')
-        plt.axis([-5, 5, -5, 5])
+        plt.axis([-1, 1, -1, 1])
         plt.scatter(x, y)
         plt.show()
         plt.pause(0.01)
+
+
+
+    # c = camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
+    # p = projection_matrix(60, 1)
+    # points = distribute_points_on_sphere(100)
+    # points2D = project_points_to_screen(points, torch.mm(p, c))
+    #
+    # x = points2D[0].numpy()
+    # y = points2D[1].numpy()
+    # plt.axis('equal')
+    # plt.axis([-1, 1, -1, 1])
+    # plt.scatter(x, y)
+    # plt.show()

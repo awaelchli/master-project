@@ -89,9 +89,7 @@ class Multiclass1DTranslation(BaseExperiment):
                 num_classes=args.classes,
                 frames=args.sequence,
                 num_points=args.keypoints,
-                max_step=max_step,
                 bounds=bounds,
-                p_turn=turn_probability
             )
             dataloader_train.append((feature_tracks, classes))
 
@@ -105,9 +103,7 @@ class Multiclass1DTranslation(BaseExperiment):
                 num_classes=args.classes,
                 frames=args.sequence,
                 num_points=args.keypoints,
-                max_step=max_step,
                 bounds=bounds,
-                p_turn=turn_probability
             )
             dataloader_val.append((feature_tracks, classes))
 
