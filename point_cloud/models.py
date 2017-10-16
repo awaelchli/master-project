@@ -4,15 +4,15 @@ from torch.nn import Parameter
 from torch.autograd import Variable
 
 
-class MultiClassTranslationModel(nn.Module):
+class MultiClass1DTranslationModel(nn.Module):
 
-    def __init__(self, hidden=500, nlayers=3, dropout=0.0):
-        super(MultiClassTranslationModel, self).__init__()
+    def __init__(self, hidden=500, nlayers=3, num_features=1, classes=10, dropout=0.0):
+        super(MultiClass1DTranslationModel, self).__init__()
 
-        self.num_classes = 10
+        self.num_classes = classes
 
         # LSTM
-        self.feat_channels = 2
+        self.feat_channels = num_features
         lstm_input_size = self.feat_channels + 2
 
         self.hidden = hidden
@@ -99,13 +99,13 @@ class MultiClassTranslationModel(nn.Module):
         return params
 
 
-class BinaryTranslationModel(nn.Module):
+class Binary1DTranslationModel(nn.Module):
 
-    def __init__(self, hidden=500, nlayers=3, dropout=0.0):
-        super(BinaryTranslationModel, self).__init__()
+    def __init__(self, hidden=500, nlayers=3, num_features=1, dropout=0.0):
+        super(Binary1DTranslationModel, self).__init__()
 
         # LSTM
-        self.feat_channels = 2
+        self.feat_channels = num_features
         lstm_input_size = self.feat_channels + 2
 
         self.hidden = hidden

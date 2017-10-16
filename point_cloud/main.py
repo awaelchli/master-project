@@ -6,11 +6,13 @@ import time
 import torch
 
 from base import CHECKPOINT_FILENAME
-from fullpose import FullPose7D
+from binarypose1Dtranslation import BinaryPose1DTranslation
+from multiclass1Dtranslation import Multiclass1DTranslation
 
 OUT_ROOT_FOLDER = 'out'
 ARCHS = {
-    'pose7D': FullPose7D,
+    'binarypose1Dtranslation': BinaryPose1DTranslation,
+    'multiclass1Dtranslation': Multiclass1DTranslation,
 }
 
 
