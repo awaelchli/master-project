@@ -131,27 +131,25 @@ def animate_translation(init_camera_matrix, projection_matrix, points=None, fram
     return feature_tracks, poses, binary_poses
 
 
-def translation_for_classification(init_camera_matrix, projection_matrix, num_classes, points=None, frames=20, num_points=50, bounds=(0, 1)):
-    assert bounds[0] < bounds[1]
+def translation_for_classification(init_camera_matrix, projection_matrix, points=None, frames=20, num_points=50, step=0.1, p_turn=0):
     assert frames > 0 and num_points > 0
 
     if points is None:
         points = distribute_points_on_sphere(num_points)
 
-    rng = bounds[1] - bounds[0]
-    step = rng / num_classes
-
     def add_noise(s):
+        s = -s if random.uniform(0, 1) < p_turn else s
         return s + 0.1 * random.uniform(-s, s)
 
     feature_tracks = torch.zeros(frames, num_points, 2)
     c = init_camera_matrix
     current_translation = 0
-    translations = []
+    translations = torch.Tensor(frames)
 
     for i in range(frames):
         delta = add_noise(step)
-        current_translation = min(max(current_translation + delta, bounds[0]), bounds[1])
+
+        current_translation = current_translation + delta
 
         # Apply the new matrix after translation
         c = torch.mm(translation_matrix((delta, 0, 0)), c)
@@ -163,20 +161,15 @@ def translation_for_classification(init_camera_matrix, projection_matrix, num_cl
         feature_tracks[i, :, 0] = proj_points[0]
         feature_tracks[i, :, 1] = proj_points[1]
 
-        translations.append(current_translation)
-
-    t = torch.Tensor(translations)
-    classes = torch.floor((t - bounds[0]) * num_classes / (bounds[1] - bounds[0]))
-    classes[classes >= num_classes] = num_classes - 1
+        translations[i] = current_translation
 
     assert feature_tracks.size(0) == frames
     assert feature_tracks.size(1) == num_points
     assert feature_tracks.size(2) == 2
-    assert classes.size(0) == frames
 
     # Output shape for feature tracks: [frames, num_points, 2]
-    # Output shape for classes: [frames]
-    return feature_tracks, classes.long()
+    # Output shape for translations: [frames]
+    return feature_tracks, translations
 
 class Animator(object):
 
@@ -198,7 +191,7 @@ if __name__ == '__main__':
     p = projection_matrix(60, 1)
 
     #feature_tracks, _, _ = animate_translation(c, p, frames=10, num_points=100, max_step=0.1, p_turn=0.5)
-    feature_tracks, classes = translation_for_classification(c, p, num_classes=10, frames=100, num_points=8, max_step=0.1, bounds=(-0.5, 0.5), p_turn=0.5)
+    feature_tracks, classes = translation_for_classification(c, p, frames=100, num_points=8, step=0.1)
 
     print(classes)
 

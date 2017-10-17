@@ -80,18 +80,25 @@ class Multiclass1DTranslation(BaseExperiment):
         turn_probability = 0
 
         points = None#cloud.distribute_points_on_sphere(args.keypoints)
+        max_translation = 0
+        min_translation = 0
         for i in range(train_size):
             c = cloud.camera_matrix(position=(0, 0, 5), look_at=(0, 0, -10))
             p = cloud.projection_matrix(60, 1)
 
-            feature_tracks, classes = cloud.translation_for_classification(
+            feature_tracks, translations = cloud.translation_for_classification(
                 c, p,
-                num_classes=args.classes,
                 frames=args.sequence,
                 num_points=args.keypoints,
-                bounds=bounds,
+                step=max_step,
+                p_turn=turn_probability
             )
-            dataloader_train.append((feature_tracks, classes))
+            dataloader_train.append((feature_tracks, translations))
+            max_translation = max(torch.max(translations), max_translation)
+            min_translation = min(torch.min(translations), min_translation)
+
+        bounds = (min_translation, max_translation)
+        print('Bounds on training set: ', bounds)
 
         points = None#cloud.distribute_points_on_sphere(args.keypoints)
         for i in range(val_size):
@@ -100,12 +107,19 @@ class Multiclass1DTranslation(BaseExperiment):
 
             feature_tracks, classes = cloud.translation_for_classification(
                 c, p,
-                num_classes=args.classes,
                 frames=args.sequence,
                 num_points=args.keypoints,
-                bounds=bounds,
+                step=max_step,
+                p_turn=turn_probability
             )
             dataloader_val.append((feature_tracks, classes))
+
+        def classify(t):
+            classes = torch.floor((t - bounds[0]) * args.classes / (bounds[1] - bounds[0]))
+            classes[classes >= args.classes] = args.classes - 1
+            return classes.long()
+
+        self.classify = classify
 
         dataloader_test = dataloader_val
         return dataloader_train, dataloader_val, dataloader_test
@@ -125,7 +139,9 @@ class Multiclass1DTranslation(BaseExperiment):
         for i, (keypoints, poses) in enumerate(self.trainingset):
 
             input = self.to_variable(keypoints)
-            target = self.to_variable(poses[1:])
+            target = self.to_variable(self.classify(poses[1:]))
+
+            #print(target)
 
             # Forward
             self.optimizer.zero_grad()
@@ -185,7 +201,7 @@ class Multiclass1DTranslation(BaseExperiment):
         for i, (keypoints, poses) in enumerate(dataloader):
 
             input = self.to_variable(keypoints, volatile=True)
-            target = self.to_variable(poses[1:])
+            target = self.to_variable(self.classify(poses[1:]))
 
             output = self.model(input)
             loss = self.loss_function(output, target)
