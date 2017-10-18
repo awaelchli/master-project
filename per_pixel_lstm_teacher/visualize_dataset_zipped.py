@@ -3,7 +3,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 import os
 import shutil
-from GTAV import ZippedSequence, FOLDERS, Loop
+from GTAV_old import ZippedSequence, FOLDERS, Loop
 import time
 
 sequence = 60

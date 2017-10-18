@@ -6,10 +6,8 @@ import plots
 
 class FullPose7DModel(nn.Module):
 
-    def __init__(self, input_size, hidden=500, nlayers=3, pool_size=50):
+    def __init__(self, hidden=500, nlayers=3, pool_size=50):
         super(FullPose7DModel, self).__init__()
-
-        h, w = input_size[0], input_size[1]
 
         # Per-pixel feature extraction (padding)
         out_channels = 64

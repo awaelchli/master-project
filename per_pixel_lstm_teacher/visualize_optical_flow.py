@@ -5,7 +5,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from GTAV import Subsequence, FOLDERS
+from GTAV_old import Subsequence, FOLDERS
 from flownet.models.FlowNetS import flownets
 
 import matplotlib.pyplot as plt

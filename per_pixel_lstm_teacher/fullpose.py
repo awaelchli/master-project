@@ -1,16 +1,17 @@
+import sys
+sys.path.insert(0, 'utils/')
 import time
-from math import degrees
-import os
+from math import degrees, ceil
 
 import torch
-import torch.nn as nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.utils.data.sampler import BatchSampler
 from torchvision import transforms
-from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
 import plots
-from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
+#from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
+from GTAV import SequenceCollection, StridedSampler, FOLDERS
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 import loss_functions as lsf
 from model import FullPose7DModel
@@ -23,6 +24,8 @@ class FullPose7D(BaseExperiment):
         parser.add_argument('--max_size', type=int, nargs=3, default=[0, 0, 0],
                             help="""Clips training-, validation-, and testset at the given size. 
                             A zero signalizes that the whole dataset should be used.""")
+        parser.add_argument('--stride', type=int, default=1)
+        parser.add_argument('--pool', type=int, default=50)
         parser.add_argument('--sequence', type=int, default=10,
                             help='Length of sequence fed to the LSTM')
         parser.add_argument('--image_size', type=int, nargs=1, default=256,
@@ -37,15 +40,11 @@ class FullPose7D(BaseExperiment):
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
 
-        # Determine size of input images
-        _, (tmp, _, _) = next(enumerate(self.trainingset))
-        self.input_size = (tmp.size(3), tmp.size(4))
-
         # Model
         self.model = FullPose7DModel(
-            self.input_size,
             hidden=args.hidden,
             nlayers=args.layers,
+            pool_size=args.pool
         )
 
         if self.use_cuda:
@@ -77,198 +76,135 @@ class FullPose7D(BaseExperiment):
         self.train_logger.column('Validation Loss (translation)', '{:.4f}')
 
         self.print_info(self.model)
-        self.print_info('Input size: {} x {}'.format(self.input_size[0], self.input_size[1]))
-        _, c, h, w = self.model.flownet_output_size(self.input_size)
-        self.print_info('FlowNet output shape: {} x {} x {}'.format(c, h, w))
         self.print_info('Number of trainable parameters: {}'.format(self.num_parameters()))
-        self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
+        #self.print_info('Average time to load sample sequence: {:.4f} seconds'.format(self.load_benchmark()))
 
         self.gradient_logger = Logger(self.make_output_filename('gradient.log'))
         self.gradient_logger.column('Epoch', '{:d}')
         self.gradient_logger.column('Gradient Norm', '{:.4f}')
 
     def load_dataset(self, args):
-        traindir = FOLDERS['walking']['training']
-        valdir = FOLDERS['walking']['validation']
-        testdir = FOLDERS['walking']['test']
+        print('Preparing data...')
 
-        # Image pre-processing
+        train_dir = '../data/GTA V/walking/train/data'
+        test_dir = '../data/GTA V/walking/test/data'
+        val_dir = test_dir
+
+        h, w = 320, 448
+        # Transforms for image pre-processing
         transform = transforms.Compose([
-            #transforms.Scale(args.image_size),
-            transforms.Scale(320),
-            transforms.CenterCrop((320, 448)),
+            transforms.Scale(h),
+            transforms.CenterCrop((h, w)),
             transforms.ToTensor(),
         ])
 
-        # Sequence transform
-        seq_transform = None
-        #seq_transform = transforms.Compose([
-            #RandomSequenceReversal(),
-            #Loop(args.sequence - 10, args.sequence + 10),
-        #])
+        print('Features per frame: {:d}'.format(int(ceil(h / args.pool) * ceil(w / args.pool))))
 
-        zipped = True
-        print('Using zipped dataset: ', zipped)
-        if not zipped:
-            train_set = Subsequence(
-                data_folder=traindir['data'],
-                pose_folder=traindir['pose'],
-                sequence_length=args.sequence,
-                transform=transform,
-                max_size=args.max_size[0],
-                return_filename=True,
+        # Training data
+        train_collection = SequenceCollection(train_dir, transform)
+        train_dataloaders = []
+        for sequence in train_collection:
+            sampler = StridedSampler(sequence, stride=args.stride, max_size=args.max_size[0])
+            batch_sampler = BatchSampler(sampler, batch_size=args.sequence, drop_last=True)
+            loader = DataLoader(
+                dataset=sequence,
+                batch_sampler=batch_sampler,
+                pin_memory=False,
+                num_workers=args.workers
             )
+            train_dataloaders.append(loader)
 
-            val_set = Subsequence(
-                data_folder=valdir['data'],
-                pose_folder=valdir['pose'],
-                sequence_length=args.sequence,
-                transform=transform,
-                max_size=args.max_size[1],
-                return_filename=True,
+        # Test data
+        test_collection = SequenceCollection(test_dir, transform)
+        test_dataloaders = []
+        for sequence in test_collection:
+            sampler = StridedSampler(sequence, stride=args.stride, max_size=args.max_size[1])
+            batch_sampler = BatchSampler(sampler, batch_size=args.sequence, drop_last=True)
+            loader = DataLoader(
+                dataset=sequence,
+                batch_sampler=batch_sampler,
+                pin_memory=False,
+                num_workers=args.workers
             )
+            test_dataloaders.append(loader)
 
-            test_set = Subsequence(
-                data_folder=testdir['data'],
-                pose_folder=testdir['pose'],
-                sequence_length=args.sequence,
-                transform=transform,
-                max_size=args.max_size[2],
-                return_filename=True,
-            )
-        else:
-            train_set = concat_zip_dataset(
-                [
-                    #'../data/GTA V/walking/hard/train',
-                    '../data/GTA V/zipped/walking/hard/train',
-                    '../data/GTA V/zipped/walking/easy/train'
-                    #'../data/GTA V/walking/train',
-                    #'../data/GTA V/standing/train'
-                    #'../data_test'
-                ],
-                sequence_length=args.sequence,
-                image_transform=transform,
-                sequence_transform=seq_transform,
-                return_filename=True,
-                max_size=args.max_size[0],
-                stride=4,
-            )
+        # TODO: change in final version
+        val_dataloaders = test_dataloaders
 
-            val_set = concat_zip_dataset(
-                [
-                    #'../data/GTA V/walking/hard/test',
-                    '../data/GTA V/zipped/walking/hard/test',
-                    '../data/GTA V/zipped/walking/easy/test'
-                    #'../data/GTA V/walking/test',
-                    #'../data/GTA V/standing/test'
-                    #'../data_test'
-                ],
-                sequence_length=args.sequence,
-                image_transform=transform,
-                sequence_transform=None,
-                return_filename=True,
-                max_size=args.max_size[1],
-                stride=4,
-            )
-
-            test_set = val_set
-
-
-        dataloader_train = DataLoader(
-            train_set,
-            batch_size=1,
-            pin_memory=self.use_cuda,
-            shuffle=True,
-            num_workers=args.workers)
-
-        dataloader_val = DataLoader(
-            val_set,
-            batch_size=1,
-            pin_memory=self.use_cuda,
-            shuffle=False,
-            num_workers=args.workers)
-
-        dataloader_test = DataLoader(
-            test_set,
-            batch_size=1,
-            pin_memory=self.use_cuda,
-            shuffle=False,
-            num_workers=args.workers)
-
-        return dataloader_train, dataloader_val, dataloader_test
+        return train_dataloaders, val_dataloaders, test_dataloaders
 
     def train(self):
         training_loss = AverageMeter()
         rotation_loss = AverageMeter()
         translation_loss = AverageMeter()
-        forward_time = AverageMeter()
-        backward_time = AverageMeter()
-        loss_time = AverageMeter()
+        # forward_time = AverageMeter()
+        # backward_time = AverageMeter()
+        # loss_time = AverageMeter()
         gradient_norm = AverageMeter()
 
-        num_batches = len(self.trainingset)
-        first_epoch_loss = []
-
         epoch = len(self.training_loss) + 1
-        #self.adjust_learning_rate(epoch)
-
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
+        num_sequences = len(self.trainingset)
 
         self.model.train()
-        for i, (images, poses, _) in enumerate(self.trainingset):
+        for i, dataloader in enumerate(self.trainingset):
 
-            images.squeeze_(0)
-            poses.squeeze_(0)
+            num_batches = len(dataloader)
 
-            # Normalize scale of translation
-            poses[:, :3] /= self.scale
-
-            input = self.to_variable(images)
-            target = self.to_variable(poses)
-
-            self.optimizer.zero_grad()
-
-            prev_pose = Variable(torch.zeros(1, 7)).cuda()
+            # Prepare LSTM state
             state = None
-            outputs = Variable(torch.zeros(target.size(0), 7)).cuda()
-            for j in range(input.size(0)):
-                frame = input[j]
-                prediction, state = self.model(frame, prev_pose, state)
-                outputs[j] = prediction
-                # In training, feed the ground truth pose from the previous frame
-                prev_pose = target[j].view(1, -1)
 
-            outputs = self.normalize_output(outputs)
+            for j, (images, poses, filenames) in enumerate(dataloader):
 
-            # Loss function
-            # Ignore first output
-            loss, r_loss, t_loss = self.loss_function(outputs[1:], target[1:])
+                input = self.to_variable(images)
+                target = self.to_variable(poses)
 
-            # Backward
-            loss.backward()
+                self.optimizer.zero_grad()
 
-            grad_norm = self.gradient_norm()
-            self.optimizer.step()
+                prev_pose = Variable(torch.zeros(1, 7)).cuda()
+                outputs = Variable(torch.zeros(target.size(0), 7)).cuda()
+                for k in range(input.size(0)):
+                    frame = input[k]
+                    prediction, state = self.model(frame, prev_pose, state)
+                    outputs[k] = prediction
+                    # In training, feed the ground truth pose from the previous frame
+                    prev_pose = target[k].view(1, -1)
 
-            training_loss.update(loss.data[0])
-            rotation_loss.update(r_loss.data[0])
-            translation_loss.update(t_loss.data[0])
-            gradient_norm.update(grad_norm)
+                outputs = self.normalize_output(outputs)
 
-            # Print log info
-            if (i + 1) % self.print_freq == 0:
-                print('Sequence [{:d}/{:d}], '
-                      'Total Loss: {: .4f} ({: .4f}), '
-                      'R. Loss: {: .4f} ({: .4f}), '
-                      'T. Loss: {: .4f} ({: .4f}), '
-                      'Grad Norm: {: .4f}'
-                      .format(i + 1, num_batches,
-                              loss.data[0], training_loss.average,
-                              r_loss.data[0], rotation_loss.average,
-                              t_loss.data[0], translation_loss.average,
-                              grad_norm
-                              )
-                      )
+                # Loss function
+                # Ignore first output
+                loss, r_loss, t_loss = self.loss_function(outputs[1:], target[1:])
+
+                # Backward
+                loss.backward()
+
+                grad_norm = self.gradient_norm()
+                self.optimizer.step()
+
+                # Detach state from history
+                state = (Variable(state[0].data).cuda(), Variable(state[1].data).cuda())
+
+                training_loss.update(loss.data[0])
+                rotation_loss.update(r_loss.data[0])
+                translation_loss.update(t_loss.data[0])
+                gradient_norm.update(grad_norm)
+
+                # Print log info
+                if (j + 1) % self.print_freq == 0:
+                    print('Sequence [{:d}/{:d}], Batch [{:d}/{:d}], '
+                          'Total Loss: {: .4f} ({: .4f}), '
+                          'R. Loss: {: .4f} ({: .4f}), '
+                          'T. Loss: {: .4f} ({: .4f}), '
+                          'Grad Norm: {: .4f}'
+                          .format(i + 1, num_sequences,
+                                  j + 1, num_batches,
+                                  loss.data[0], training_loss.average,
+                                  r_loss.data[0], rotation_loss.average,
+                                  t_loss.data[0], translation_loss.average,
+                                  grad_norm
+                                  )
+                          )
 
         training_loss = training_loss.average
         self.training_loss.append(training_loss)
@@ -285,13 +221,12 @@ class FullPose7D(BaseExperiment):
             best_validation_loss = validation_loss
             torch.save(self.make_checkpoint(), self.make_output_filename(CHECKPOINT_BEST_FILENAME))
 
-
     def validate(self):
-        return self.test(dataloader=self.validationset)
+        return self.test(testset=self.validationset)
 
-    def test(self, dataloader=None):
-        if not dataloader:
-            dataloader = self.testset
+    def test(self, testset=None):
+        if not testset:
+            testset = self.testset
 
         avg_loss = AverageMeter()
         avg_rot_loss = AverageMeter()
@@ -302,53 +237,50 @@ class FullPose7D(BaseExperiment):
         rel_angle_error_over_time = []
 
         self.model.eval()
-        for i, (images, poses, filenames) in enumerate(dataloader):
+        for i, dataloader in enumerate(testset):
 
-            images.squeeze_(0)
-            poses.squeeze_(0)
-
-            # Normalize scale of translation
-            poses[:, :3] /= self.scale
-
-            input = self.to_variable(images, volatile=True)
-            target = self.to_variable(poses, volatile=True)
-
-            prev_pose = Variable(torch.zeros(1, 7)).cuda()
             state = None
-            outputs = Variable(torch.zeros(target.size(0), 7)).cuda()
-            for j in range(input.size(0)):
-                frame = input[j]
 
-                prediction, state = self.model(frame, prev_pose, state)
+            for j, (images, poses, filenames) in enumerate(dataloader):
 
-                outputs[j] = prediction
-                # In testing, feed the predicted pose from the previous frame
-                prev_pose = prediction
+                input = self.to_variable(images, volatile=True)
+                target = self.to_variable(poses, volatile=True)
 
-            outputs = self.normalize_output(outputs)
+                prev_pose = Variable(torch.zeros(1, 7)).cuda()
+                outputs = Variable(torch.zeros(target.size(0), 7)).cuda()
+                for k in range(input.size(0)):
+                    frame = input[k]
 
-            # Loss function
-            # Ignore first output
-            loss, r_loss, t_loss = self.loss_function(outputs[1:], target[1:])
+                    prediction, state = self.model(frame, prev_pose, state)
 
-            avg_loss.update(loss.data[0])
-            avg_rot_loss.update(r_loss.data[0])
-            avg_trans_loss.update(t_loss.data[0])
+                    outputs[k] = prediction
+                    # In testing, feed the predicted pose from the previous frame
+                    prev_pose = prediction
 
-            #print(filenames[0])
+                outputs = self.normalize_output(outputs)
 
-            # Visualize predicted path
-            # fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
-            # of1 = self.make_output_filename('path/{}--{:05}.png'.format(fn, i))
-            # of2 = self.make_output_filename('axis/{}--{:05}.png'.format(fn, i))
-            # p = output.data.cpu().numpy()
-            # t = target.data.cpu().numpy()
-            # visualize_predicted_path(p, t, of1, show_rot=False)
-            # plots.plot_xyz_error(p, t, of2)
-            #
-            # # Visualize keypoints
-            # filename = self.make_output_filename('keypoints/{:4d}.png'.format(i))
-            # plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
+                # Loss function
+                # Ignore first output
+                loss, r_loss, t_loss = self.loss_function(outputs[1:], target[1:])
+
+                avg_loss.update(loss.data[0])
+                avg_rot_loss.update(r_loss.data[0])
+                avg_trans_loss.update(t_loss.data[0])
+
+                #print(filenames[0])
+
+                # Visualize predicted path
+                # fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
+                # of1 = self.make_output_filename('path/{}--{:05}.png'.format(fn, i))
+                # of2 = self.make_output_filename('axis/{}--{:05}.png'.format(fn, i))
+                # p = output.data.cpu().numpy()
+                # t = target.data.cpu().numpy()
+                # visualize_predicted_path(p, t, of1, show_rot=False)
+                # plots.plot_xyz_error(p, t, of2)
+                #
+                # # Visualize keypoints
+                # filename = self.make_output_filename('keypoints/{:4d}.png'.format(i))
+                # plots.plot_extracted_keypoints(images, keypoints.cpu(), save=filename)
 
 
         # Average losses for rotation, translation and combined

@@ -3,7 +3,7 @@ import glob
 import os
 import os.path as path
 
-from GTAV import plot_camera_path_2D
+from GTAV_old import plot_camera_path_2D
 
 
 def get_text_files(folder):

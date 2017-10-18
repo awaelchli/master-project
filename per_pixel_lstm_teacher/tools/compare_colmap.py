@@ -1,4 +1,4 @@
-from GTAV import read_from_text_file, visualize_predicted_path
+from GTAV_old import read_from_text_file, visualize_predicted_path
 from tools.colmap_utils import read_colmap_predictions
 
 

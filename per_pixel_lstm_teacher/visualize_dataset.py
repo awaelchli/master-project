@@ -3,7 +3,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 import os
 import shutil
-from GTAV import Subsequence, FOLDERS
+from GTAV_old import Subsequence, FOLDERS
 import time
 
 traindir = FOLDERS['walking']['training']
