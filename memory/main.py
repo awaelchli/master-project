@@ -6,11 +6,6 @@ import torch.nn as nn
 import torch.optim
 from torch.autograd import Variable
 
-from training import AverageMeter
-
-sys.path.insert(0, 'utils/')
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden', type=int, default=10)
 parser.add_argument('--layers', type=int, default=1)
@@ -36,6 +31,7 @@ class Model(nn.Module):
             batch_first=True
         )
         self.fc = nn.Linear(hidden_size, 2)
+        self.init_weights()
 
     def forward(self, input, state=None):
         if not state:
@@ -53,6 +49,9 @@ class Model(nn.Module):
         state = (Variable(torch.zeros(1, self.lstm.num_layers, self.lstm.hidden_size)).cuda(),
                  Variable(torch.zeros(1, self.lstm.num_layers, self.lstm.hidden_size)).cuda())
         return state
+
+    def init_weights(self):
+        pass
 
 
 model = Model(args.hidden, args.layers)
@@ -131,6 +130,23 @@ def get_batch(n):
 def classify(output):
     return torch.max(output, 1)[1]
 
+
+class AverageMeter(object):
+    """ Computes and stores the average and current value """
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.sum = 0
+        self.count = 0
+
+    @property
+    def average(self):
+        return self.sum / self.count
+
+    def update(self, value):
+        self.sum += value
+        self.count += 1
 
 train()
 test()
