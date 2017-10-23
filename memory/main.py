@@ -94,6 +94,7 @@ def test():
     model.eval()
     for i, (batch, targets) in enumerate(dataset):
 
+        batch.volatile = True
         output, state = model.forward(batch.unsqueeze(0), state)
 
         accuracy = torch.sum(classify(output.data) == targets.data) / args.bptt
@@ -107,10 +108,10 @@ def get_dataset(sequence_length, bptt, look_back):
 
     for i in range(look_back, sequence_length, bptt):
 
-        batch = Variable(sequence[i: i + bptt])
-        targets = Variable(sequence[i - look_back: i + bptt - look_back])
+        batch = sequence[i: i + bptt].view(-1, 1)
+        targets = sequence[i - look_back: i + bptt - look_back].long()
 
-        yield batch.view(-1, 1), targets.long()
+        yield Variable(batch), Variable(targets)
 
 
 def get_sequence(length):
