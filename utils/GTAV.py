@@ -48,7 +48,7 @@ POSE_FILE_EXTENSION = 'txt'
 
 
 class StridedSampler(SequentialSampler):
-    """Samples elements sequentially, always in the same order, but with a given stride (skipping elements).
+    """ Samples elements sequentially, always in the same order, but with a given stride (skipping elements).
 
     Arguments:
         data_source (Dataset): dataset to sample from
