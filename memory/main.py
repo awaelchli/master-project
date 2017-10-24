@@ -42,7 +42,7 @@ class Model(nn.Module):
         return output, state
 
     def get_parameters(self):
-        params = list(self.lstm.parameters()) + list(self.parameters())
+        params = list(self.lstm.parameters()) + list(self.fc.parameters())
         return params
 
     def init_hidden_state(self):
