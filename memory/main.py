@@ -167,7 +167,10 @@ try:
     print()
     print('Training...')
     train()
+
 except KeyboardInterrupt:
     print('Training stopped.')
+
+finally:
     print('Testing...')
     test()
