@@ -79,9 +79,10 @@ def train():
 
         state = repack_state(state)
 
+        grad_norm = gradient_norm()
         accuracy = torch.sum(classify(output.data) == targets.data) / args.bptt
-        print('[{:d}/{:d}] Loss: {:.4f}, Accuracy: {:.4f}'.format(
-            i + 1, args.sequence // args.bptt, loss.data[0], accuracy)
+        print('[{:d}/{:d}] Loss: {:.4f}, Accuracy: {:.4f}, Grad. Norm: {:.4f}'.format(
+            i + 1, args.sequence // args.bptt, loss.data[0], accuracy, grad_norm)
         )
 
 
@@ -132,6 +133,18 @@ def classify(output):
     return torch.max(output, 1)[1]
 
 
+def gradient_norm():
+    params = model.get_parameters()
+    parameters = list(filter(lambda p: p.grad is not None, params))
+    total_norm = 0
+    for p in parameters:
+        param_norm = p.grad.data.norm(2)
+        total_norm += param_norm ** 2
+
+    total_norm = total_norm ** (1. / 2)
+    return total_norm
+
+
 class AverageMeter(object):
     """ Computes and stores the average and current value """
     def __init__(self):
@@ -149,5 +162,12 @@ class AverageMeter(object):
         self.sum += value
         self.count += 1
 
-train()
-test()
+
+try:
+    print()
+    print('Training...')
+    train()
+except KeyboardInterrupt:
+    print('Training stopped.')
+    print('Testing...')
+    test()
