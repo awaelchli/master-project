@@ -1,10 +1,12 @@
 import argparse
 import sys
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim
 from torch.autograd import Variable
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden', type=int, default=10)
@@ -51,7 +53,35 @@ class Model(nn.Module):
         return state
 
     def init_weights(self):
-        pass
+        for k in range(self.lstm.num_layers):
+            # Input->hidden transform
+            w_ih = self.lstm.all_weights[k][0]
+            w_ih.data.fill_(0)
+            w_ih.data[0] = 1
+
+            # Hidden->hidden transform
+            w_hh = self.lstm.all_weights[k][1]
+            eye = torch.eye(self.lstm.hidden_size, self.lstm.hidden_size).repeat(4, 1)
+            w_hh.data.copy_(eye)
+
+            # Biases
+            self.lstm.all_weights[k][2].data.fill_(0)
+            self.lstm.all_weights[k][3].data.fill_(0)
+
+        # # Final fc
+        # fc = self.fc.weight.data
+        # fc.fill_(0)
+        # fc[0, -1] = -1
+        # fc[1, -1] = 1
+        #
+        # self.fc.bias.data.fill_(0)
+        # self.fc.bias.data[0] = 1
+
+    def get_matrix(self):
+        w_ih = self.lstm.all_weights[0][0]
+        w_hh = self.lstm.all_weights[0][1]
+        fc = self.fc.weight
+        return w_ih, w_hh, fc
 
 
 model = Model(args.hidden, args.layers)
@@ -102,6 +132,19 @@ def test():
         avg_accuracy.update(accuracy)
 
     print('Accuracy on testset: {:.4f}'.format(avg_accuracy.average))
+
+    w_ih, w_hh, fc = model.get_matrix()
+    plt.clf()
+    plt.pcolor(np.flip(w_hh.data.cpu().numpy(), 0))
+    plt.colorbar()
+    plt.title('Hidden state transformation')
+    plt.savefig('hidden.svg')
+
+    plt.clf()
+    plt.pcolor(fc.data.cpu().numpy())
+    plt.colorbar()
+    plt.title('Output transformation')
+    plt.savefig('output.svg')
 
 
 def get_dataset(sequence_length, bptt, look_back):

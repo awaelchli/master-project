@@ -1,0 +1,1 @@
+python main.py --bptt 50 --look_back 5 --hidden 7 --layers 1 --sequence 100000 --lr 0.01
