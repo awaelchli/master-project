@@ -46,8 +46,8 @@ class Model(nn.Module):
         return params
 
     def init_hidden_state(self):
-        state = (Variable(torch.zeros(1, self.lstm.num_layers, self.lstm.hidden_size)).cuda(),
-                 Variable(torch.zeros(1, self.lstm.num_layers, self.lstm.hidden_size)).cuda())
+        state = (Variable(torch.zeros(self.lstm.num_layers, 1, self.lstm.hidden_size)).cuda(),
+                 Variable(torch.zeros(self.lstm.num_layers, 1, self.lstm.hidden_size)).cuda())
         return state
 
     def init_weights(self):
@@ -55,10 +55,10 @@ class Model(nn.Module):
 
 
 model = Model(args.hidden, args.layers)
+model.cuda()
+
 optimizer = torch.optim.Adam(model.get_parameters(), lr=args.lr)
 criterion = nn.CrossEntropyLoss()
-
-model.cuda()
 criterion.cuda()
 
 
@@ -106,7 +106,7 @@ def test():
 def get_dataset(sequence_length, bptt, look_back):
     sequence = get_sequence(sequence_length + look_back)
 
-    for i in range(look_back, sequence_length, bptt):
+    for i in range(look_back, sequence_length - bptt, bptt):
 
         batch = sequence[i: i + bptt].view(-1, 1)
         targets = sequence[i - look_back: i + bptt - look_back].long()
