@@ -10,6 +10,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
+from pose_evaluation import relative_euler_rotation_error
 
 import plots
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
@@ -326,8 +327,8 @@ class FullPose7D(BaseExperiment):
         avg_rot_loss = AverageMeter()
         avg_trans_loss = AverageMeter()
 
-        all_predictions = []
-        all_targets = []
+        last_frame_predictions = []
+        last_frame_targets = []
         rel_angle_error_over_time = []
 
         self.model.eval()
@@ -341,13 +342,13 @@ class FullPose7D(BaseExperiment):
 
             output = self.model(input)
 
-            #all_predictions.append(output.data)
-            #all_targets.append(target.data[1:])
+            last_frame_predictions.append(output.data[-1].view(1, -1))
+            last_frame_targets.append(target.data[-1].view(1, -1))
 
             # A few sequences are shorter, don't add them for averaging
-           # tmp = self.relative_rotation_angles2(output.data, target.data[1:])
+            #tmp = relative_euler_rotation_error(output.data[:, 3:], target.data[1:, 3:])
             #if len(tmp) == self.sequence_length - 1:
-             #   rel_angle_error_over_time.append(tmp)
+            #    rel_angle_error_over_time.append(tmp)
 
             loss, r_loss, t_loss = self.loss_function(output, target[1:])
             avg_loss.update(loss.data[0])
@@ -367,17 +368,18 @@ class FullPose7D(BaseExperiment):
         avg_rot_loss = avg_rot_loss.average
         avg_trans_loss = avg_trans_loss.average
 
-        #all_predictions = torch.cat(all_predictions, 0)
-        #all_targets = torch.cat(all_targets, 0)
+        last_frame_predictions = torch.cat(last_frame_predictions, 0).cpu()
+        last_frame_targets = torch.cat(last_frame_targets, 0).cpu()
+
         #rel_angle_error_over_time = torch.Tensor(rel_angle_error_over_time).mean(0).view(-1)
 
         # Relative rotation angle between estimated and target rotation
-        # rot_error_logger = self.make_logger('relative_rotation_angles.log')
-        # rot_error_logger.clear()
-        # rot_error_logger.column('Relative rotation angle between prediction and target', format='{:.4f}')
-        # pose_errors = self.relative_rotation_angles2(all_predictions, all_targets)
-        # for err in pose_errors:
-        #     rot_error_logger.log(err)
+        rot_error_logger = self.make_logger('relative_rotation_angles_last_frame.log')
+        rot_error_logger.clear()
+        rot_error_logger.column('Relative rotation angle between prediction and target of last frame', format='{:.4f}')
+        pose_errors = relative_euler_rotation_error(last_frame_predictions[:, 3:], last_frame_targets[:, 3:])
+        for err in pose_errors:
+            rot_error_logger.log(err)
 
         # The distribution of relative rotation angle
         #thresholds, cdf = self.error_distribution(torch.Tensor(pose_errors))
@@ -452,19 +454,6 @@ class FullPose7D(BaseExperiment):
     #     rel_angles = [quat2axangle(q)[1] for q in rel_q]
     #     rel_angles = [degrees(a) for a in rel_angles]
     #     return rel_angles
-
-    def relative_rotation_angles2(self, predictions, targets):
-        # Dimensions: [N, 7]
-        q1 = predictions[:, 3:]
-        q2 = targets[:, 3:]
-
-        # Normalize output quaternion
-        #q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
-        #q1 = q1 / q1_norm.expand_as(q1)
-
-        rel_angles = torch.acos(2 * (q1 * q2).sum(1) ** 2 - 1)
-
-        return [degrees(a) for a in rel_angles.view(-1)]
 
     def make_checkpoint(self):
         checkpoint = {
