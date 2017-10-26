@@ -6,13 +6,15 @@ import time
 import torch
 
 from base import CHECKPOINT_FILENAME
-from binarypose1Dtranslation import BinaryPose1DTranslation
-from multiclass1Dtranslation import Multiclass1DTranslation
+from fullpose import FullPose7D
+#from rotation_only import RotationOnly
+#import rotation_only_mean_flow as rot_mean
 
 OUT_ROOT_FOLDER = 'out'
 ARCHS = {
-    'binarypose1Dtranslation': BinaryPose1DTranslation,
-    'multiclass1Dtranslation': Multiclass1DTranslation,
+    'pose7D': FullPose7D,
+    #'rotation': RotationOnly,
+    #'rotation_mean': rot_mean.RotationOnly
 }
 
 

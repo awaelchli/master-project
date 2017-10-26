@@ -1,0 +1,21 @@
+# Adam, no adjust lr, L2 loss for rotation only, LSTM only with generated point cloud features
+# Training
+
+module load anaconda
+
+CUDA_VISIBLE_DEVICES=0 \
+python point_cloud_teacher/main.py multiclass1Dtranslation \
+--output gpu0_temp \
+--train \
+--cuda \
+--epochs 50 \
+--sequence 100 \
+--keypoints 50 \
+--features 10 \
+--classes 100 \
+--hidden 100 \
+--layers 2 \
+--lr 0.0001 \
+--workers 4 \
+--print_freq 1 \
+--max_size 100 10 10 \
