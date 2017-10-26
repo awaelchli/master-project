@@ -32,7 +32,7 @@ def relative_to_first_pose_matrix(matrices):
     rotations = [m[:, 0:3] for m in matrices]
     translations = [m[:, 3] for m in matrices]
 
-    rot1_inv = rotations[0].t() # For rotations: inverse = transpose
+    rot1_inv = rotations[0].t()  # For rotations: inverse = transpose
     t1 = translations[0]
 
     rel_matrices = []
@@ -50,19 +50,26 @@ def matrix_to_quaternion_pose_vector(matrix):
         The translation is copied from the last column of the matrix.
     """
     matrix = matrix.numpy()
-    quaternion = torch.from_numpy(mat2quat(matrix[:, 0 : 3])).float().view(1, 4)
+    quaternion = torch.from_numpy(mat2quat(matrix[:, 0:3])).float().view(1, 4)
     translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
     pose = torch.cat((translation, quaternion), 1)
     return pose
 
 
 def matrix_to_euler_pose_vector(matrix):
-    """ Convertes a 3 x 4 pose matrix to a 1 x 6 pose vector.
+    """ Converts a 3 x 4 pose matrix to a 1 x 6 pose vector.
         The first three elements of the pose vector are the translations, followed by three euler angles for the
         orientation.
     """
     matrix = matrix.numpy()
-    angles = torch.Tensor(mat2euler(matrix[:, 0: 3], axes='rxyz')).view(1, 3)
+    angles = torch.Tensor(mat2euler(matrix[:, 0:3], axes='rzxy')).view(1, 3)
     translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
     pose = torch.cat((translation, angles), 1)
     return pose
+
+
+def euler_to_quaternion(angles):
+    assert angles.size(1) == 3
+    quaternions = [euler2quat(a[0], a[1], a[2], axes='rzxy') for a in angles.numpy()]
+    quaternions = torch.Tensor(quaternions)
+    return quaternions
