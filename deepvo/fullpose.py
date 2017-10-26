@@ -430,9 +430,8 @@ class FullPose7D(BaseExperiment):
         loss2 = torch.norm(t1 - t2, 2, dim=1)
 
         loss = self.beta * loss1 + loss2
-        loss = loss.sum()
 
-        return loss, loss1, loss2
+        return loss.sum(), loss1.sum(), loss2.sum()
 
 
 
