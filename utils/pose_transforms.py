@@ -1,4 +1,4 @@
-from transforms3d.euler import euler2quat
+from transforms3d.euler import euler2quat, mat2euler
 from transforms3d.quaternions import rotate_vector, qinverse, qmult, mat2quat
 import numpy as np
 import torch
@@ -53,4 +53,16 @@ def matrix_to_quaternion_pose_vector(matrix):
     quaternion = torch.from_numpy(mat2quat(matrix[:, 0 : 3])).float().view(1, 4)
     translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
     pose = torch.cat((translation, quaternion), 1)
+    return pose
+
+
+def matrix_to_euler_pose_vector(matrix):
+    """ Convertes a 3 x 4 pose matrix to a 1 x 6 pose vector.
+        The first three elements of the pose vector are the translations, followed by three euler angles for the
+        orientation.
+    """
+    matrix = matrix.numpy()
+    angles = torch.Tensor(mat2euler(matrix[:, 0: 3], axes='rxyz')).view(1, 3)
+    translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
+    pose = torch.cat((translation, angles), 1)
     return pose
