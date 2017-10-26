@@ -96,6 +96,9 @@ class SequenceCollection(object):
 
 
 class Sequence(Dataset):
+    """ A dataset from a folder of images representing a long video sequence.
+        The folder is also expected to contain a text file with camera pose data and timestamps.
+    """
 
     def __init__(self, folder, transform=None):
         self.folder = folder
