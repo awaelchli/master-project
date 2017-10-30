@@ -11,12 +11,12 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
 from pose_evaluation import relative_euler_rotation_error
+from torch.nn.parallel import data_parallel
 
 import plots
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
-from KITTI import Subsequence, FOLDERS, SEQUENCES
-
+from KITTI import Subsequence, FOLDERS, SEQUENCES, visualize_predicted_path
 
 class FullPose7DModel(nn.Module):
 
@@ -68,6 +68,8 @@ class FullPose7DModel(nn.Module):
 
     def forward(self, input):
         # Input shape: [sequence, channels, h, w]
+        input.squeeze_(0)
+
         n = input.size(0)
         first = input[:n-1]
         second = input[1:]
@@ -121,13 +123,15 @@ class FullPose7D(BaseExperiment):
                             help='Hidden size of the LSTM')
         parser.add_argument('--layers', type=int, default=3,
                             help='Number of layers in the LSTM')
+        parser.add_argument('--gpus', type=int, default=1)
 
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
 
         # Determine size of input images
-        _, (tmp, _) = next(enumerate(self.trainingset))
+        _, (tmp, _, _) = next(enumerate(self.trainingset))
         self.input_size = (tmp.size(3), tmp.size(4))
+        self.num_gpus = args.gpus
 
         # Model
         self.model = FullPose7DModel(
@@ -205,24 +209,30 @@ class FullPose7D(BaseExperiment):
 
         dataloader_train = DataLoader(
             train_set,
-            batch_size=1,
-            pin_memory=self.use_cuda,
+            batch_size=args.gpus,
+            pin_memory=False,
             shuffle=True,
-            num_workers=args.workers)
+            num_workers=args.workers,
+            drop_last=True
+        )
 
         dataloader_val = DataLoader(
             val_set,
             batch_size=1,
-            pin_memory=self.use_cuda,
+            pin_memory=False,
             shuffle=False,
-            num_workers=args.workers)
+            num_workers=args.workers,
+            drop_last=True
+        )
 
         dataloader_test = DataLoader(
             test_set,
             batch_size=1,
-            pin_memory=self.use_cuda,
+            pin_memory=False,
             shuffle=False,
-            num_workers=args.workers)
+            num_workers=args.workers,
+            drop_last=True
+        )
 
         return dataloader_train, dataloader_val, dataloader_test
 
@@ -234,6 +244,7 @@ class FullPose7D(BaseExperiment):
         backward_time = AverageMeter()
         loss_time = AverageMeter()
         gradient_norm = AverageMeter()
+        epoch_start = time.time()
 
         num_batches = len(self.trainingset)
         first_epoch_loss = []
@@ -243,11 +254,14 @@ class FullPose7D(BaseExperiment):
 
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
+        self.model.lstm.flatten_parameters()
         self.model.train()
-        for i, (images, poses) in enumerate(self.trainingset):
+        for i, (images, poses, _) in enumerate(self.trainingset):
 
-            images.squeeze_(0)
-            poses.squeeze_(0)
+            #images.squeeze_(0)
+            #poses.squeeze_(0)
+
+            #print(poses[0, :5, :])
 
             input = self.to_variable(images)
             target = self.to_variable(poses)
@@ -255,19 +269,22 @@ class FullPose7D(BaseExperiment):
             self.optimizer.zero_grad()
 
             # Forward
-            start = time.time()
-            output = self.model(input)
-            forward_time.update(time.time() - start)
+            #start = time.time()
+            output = data_parallel(self.model, input, device_ids=range(self.num_gpus))
+            output = torch.stack(output.chunk(self.num_gpus, 0))
+            #forward_time.update(time.time() - start)
 
             # Loss function
-            start = time.time()
-            loss, r_loss, t_loss = self.loss_function(output, target[1:])
-            loss_time.update(time.time() - start)
+            #start = time.time()
+            loss, r_loss, t_loss = self.loss_function(output, target[:, 1:])
+            #loss_time.update(time.time() - start)
 
             # Backward
-            start = time.time()
+            #start = time.time()
             loss.backward()
-            backward_time.update(time.time() - start)
+            #backward_time.update(time.time() - start)
+
+            #torch.nn.utils.clip_grad_norm(list(self.model.lstm.parameters()), 200)
 
             grad_norm = self.gradient_norm()
             self.optimizer.step()
@@ -312,9 +329,12 @@ class FullPose7D(BaseExperiment):
             torch.save(self.make_checkpoint(), self.make_output_filename(CHECKPOINT_BEST_FILENAME))
 
         if epoch == 1:
-            self.print_info('Average time for forward operation: {:.4f} seconds'.format(forward_time.average))
-            self.print_info('Average time for backward operation: {:.4f} seconds'.format(backward_time.average))
-            self.print_info('Average time for loss computation: {:.4f} seconds'.format(loss_time.average))
+            #self.print_info('Average time for forward operation: {:.4f} seconds'.format(forward_time.average))
+            #self.print_info('Average time for backward operation: {:.4f} seconds'.format(backward_time.average))
+            #self.print_info('Average time for loss computation: {:.4f} seconds'.format(loss_time.average))
+            s = 'Time for first epoch: {:.4f} minutes'.format((time.time() - epoch_start) / 60)
+            print(s)
+            self.print_info(s)
 
     def validate(self):
         return self.test(dataloader=self.validationset)
@@ -332,9 +352,9 @@ class FullPose7D(BaseExperiment):
         rel_angle_error_over_time = []
 
         self.model.eval()
-        for i, (images, poses) in enumerate(dataloader):
+        for i, (images, poses, filenames) in enumerate(dataloader):
 
-            images.squeeze_(0)
+            #images.squeeze_(0)
             poses.squeeze_(0)
 
             input = self.to_variable(images, volatile=True)
@@ -350,7 +370,7 @@ class FullPose7D(BaseExperiment):
             #if len(tmp) == self.sequence_length - 1:
             #    rel_angle_error_over_time.append(tmp)
 
-            loss, r_loss, t_loss = self.loss_function(output, target[1:])
+            loss, r_loss, t_loss = self.loss_function(output.unsqueeze(0), target[1:].unsqueeze(0))
             avg_loss.update(loss.data[0])
             avg_rot_loss.update(r_loss.data[0])
             avg_trans_loss.update(t_loss.data[0])
@@ -358,10 +378,16 @@ class FullPose7D(BaseExperiment):
             #print(filenames[0])
 
             # Visualize predicted path
-            #fn = filenames[0][0].replace(os.path.sep, '--').replace('..', '')
-            #of = self.make_output_filename('{}--{:05}.png'.format(fn, i))
-            #visualize_predicted_path(output.data.cpu().numpy(), target.data[1:].cpu().numpy(), of, show_rot=False)
+            fn = filenames[0][0].replace(os.path.sep, '$$').replace('..', '')
+            of = self.make_output_filename('path/a-{}--{:05}.png'.format(fn, i))
+            of2 = self.make_output_filename('path/b-{}--{:05}.png'.format(fn, i))
+            out_cpu = output.data.cpu().numpy()
+            tar_cpu = target.data[1:].cpu().numpy()
+            visualize_predicted_path(out_cpu, tar_cpu, of)
+            plots.plot_xyz_error(out_cpu, tar_cpu, of2)
 
+        #print(last_frame_predictions[:5])
+        #print(last_frame_targets[:5])
 
         # Average losses for rotation, translation and combined
         avg_loss = avg_loss.average
@@ -382,16 +408,16 @@ class FullPose7D(BaseExperiment):
             rot_error_logger.log(err)
 
         # The distribution of relative rotation angle
-        #thresholds, cdf = self.error_distribution(torch.Tensor(pose_errors))
-        #plots.plot_error_distribution(thresholds, cdf, self.make_output_filename('rotation_error_distribution.pdf'))
+        thresholds, cdf = self.error_distribution(torch.Tensor(pose_errors))
+        plots.plot_error_distribution(thresholds, cdf, self.make_output_filename('rotation_error_distribution_last_frame.pdf'))
         # self.test_logger.clear()
         # self.test_logger.print('Cumulative distribution of rotation error:')
         # self.test_logger.print('Threshold: ' + ', '.join([str(t) for t in thresholds]))
         # self.test_logger.print('Fraction:  ' + ', '.join([str(p) for p in cdf]))
         # self.test_logger.print()
-        # self.test_logger.print('Average combined loss on testset: {:.4f}'.format(avg_loss))
-        # self.test_logger.print('Average rotation loss on testset: {:.4f}'.format(avg_rot_loss))
-        # self.test_logger.print('Average translation loss on testset: {:.4f}'.format(avg_trans_loss))
+        self.test_logger.print('Average combined loss on testset: {:.4f}'.format(avg_loss))
+        self.test_logger.print('Average rotation loss on testset: {:.4f}'.format(avg_rot_loss))
+        self.test_logger.print('Average translation loss on testset: {:.4f}'.format(avg_trans_loss))
         #
         # plots.plot_sequence_error(list(rel_angle_error_over_time), self.make_output_filename('average_rotation_error_over_time.pdf'))
         # self.test_logger.clear()
@@ -402,18 +428,19 @@ class FullPose7D(BaseExperiment):
         return avg_loss, avg_rot_loss, avg_trans_loss
 
     def loss_function(self, output, target):
-        # Dimensions: [sequence_length, 6]
-        sequence_length = output.size(0)
+        # Dimensions: [batch, sequence_length, 6]
+        sequence_length = output.size(1)
+        bs = output.size(0)
 
         #print(output)
         #print(target)
 
-        t1 = output[:, :3]
-        t2 = target[:, :3]
-        e1 = output[:, 3:]
-        e2 = target[:, 3:]
+        t1 = output[:, :, :3]
+        t2 = target[:, :, :3]
+        e1 = output[:, :, 3:]
+        e2 = target[:, :, 3:]
 
-        assert e1.size(1) == e2.size(1) == 3
+        assert e1.size(2) == e2.size(2) == 3
 
 
         c = torch.nn.MSELoss()
@@ -422,18 +449,18 @@ class FullPose7D(BaseExperiment):
         #loss1 = torch.norm(q1 - q2, 1, dim=1)
         #loss1 = 1 - (q1 * q2).sum(1) ** 2
         #loss1 = loss1.sum() / sequence_length
-        loss1 = torch.norm(e1 - e2, 2, dim=1)
+        loss1 = torch.norm(e1 - e2, 2, dim=2)
 
 
         # Loss for translation
         #t_diff = torch.norm(t1 - t2, 1, dim=1)
         #loss2 = t_diff
         #loss2 = loss2.sum() / sequence_length
-        loss2 = torch.norm(t1 - t2, 2, dim=1)
+        loss2 = torch.norm(t1 - t2, 2, dim=2)
 
         loss = self.beta * loss1 + loss2
 
-        return loss.sum(), loss1.sum(), loss2.sum()
+        return loss.sum() / bs, loss1.sum() / bs, loss2.sum() / bs
 
 
 

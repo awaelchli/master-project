@@ -6,6 +6,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 from pose_transforms import relative_to_first_pose_matrix, matrix_to_euler_pose_vector
+import matplotlib.pyplot as plt
 
 FOLDERS = {
     'color': '../data/KITTI/color/sequences',
@@ -67,6 +68,7 @@ class Subsequence(Dataset):
     def __getitem__(self, idx):
         sequence_sample = self.index[idx]
         images = [s.get_image(self.transform).unsqueeze_(0) for s in sequence_sample]
+        filenames = [s.file for s in sequence_sample]
 
         matrix_poses = [s.get_pose_matrix() for s in sequence_sample]
         matrix_poses = relative_to_first_pose_matrix(matrix_poses)
@@ -75,7 +77,7 @@ class Subsequence(Dataset):
 
         image_sequence = torch.cat(tuple(images), 0)
         pose_sequence = torch.cat(tuple(poses_6d), 0)
-        return image_sequence, pose_sequence
+        return image_sequence, pose_sequence, filenames
 
 
 def read_pose_strings(pose_file):
@@ -161,6 +163,41 @@ class ImageSample(object):
 
     def get_pose_matrix(self):
         return self.pose_matrix
+
+
+def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
+    assert 0 < resolution <= 1
+    step = int(1 / resolution)
+
+    positions1 = predictions[::step, :3]
+    positions2 = targets[::step, :3]
+
+    x1, y1, z1 = positions1[:, 0], positions1[:, 1], positions1[:, 2]
+    x2, y2, z2 = positions2[:, 0], positions2[:, 1], positions2[:, 2]
+
+    plt.clf()
+
+    plt.subplot(121)
+    plt.plot(x1, z1, 'bo-', label='Prediction')
+    plt.plot(x2, z2, 'ro-', label='Ground Truth')
+
+    plt.legend()
+    plt.ylabel('z')
+    plt.xlabel('x')
+    plt.axis('equal')
+    plt.title('Bird view')
+
+    plt.subplot(122)
+    plt.plot(z1, y1, 'bo-', label='Prediction')
+    plt.plot(z2, y2, 'ro-', label='Ground Truth')
+
+    plt.legend()
+    plt.ylabel('y')
+    plt.xlabel('z')
+    plt.axis('equal')
+    plt.title('Side view (height)')
+
+    plt.savefig(output_file, bbox_inches='tight')
 
 
 
