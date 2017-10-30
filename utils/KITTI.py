@@ -25,9 +25,9 @@ FOLDERS = {
 }
 
 SEQUENCES = {
-    'training': [0, 1, 2, 5, 6, 7, 8, 9],
-    'validation': [4],
-    'test': [3, 10]
+    'training': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    'validation': [10],
+    'test': [10]
 }
 
 IMAGE_EXTENSION = 'png'
