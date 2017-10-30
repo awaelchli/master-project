@@ -18,6 +18,7 @@ from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
 from KITTI import Subsequence, FOLDERS, SEQUENCES, visualize_predicted_path
 
+
 class FullPose7DModel(nn.Module):
 
     def __init__(self, input_size, hidden=500, nlayers=3, fix_flownet=True):
@@ -67,7 +68,7 @@ class FullPose7DModel(nn.Module):
         return out.size(0), out.size(1), out.size(2), out.size(3)
 
     def forward(self, input):
-        # Input shape: [sequence, channels, h, w]
+        # Input shape: [1, sequence, channels, h, w]
         input.squeeze_(0)
 
         n = input.size(0)
@@ -461,26 +462,6 @@ class FullPose7D(BaseExperiment):
         loss = self.beta * loss1 + loss2
 
         return loss.sum() / bs, loss1.sum() / bs, loss2.sum() / bs
-
-
-
-    # def relative_rotation_angles(self, predictions, targets):
-    #     # Dimensions: [N, 7]
-    #     q1 = predictions[:, 3:]
-    #
-    #     # Normalize output quaternion
-    #     #q1_norm = torch.norm(q1, 2, dim=1, keepdim=True)
-    #     #q1 = q1 / q1_norm.expand_as(q1)
-    #
-    #     # Convert to numpy
-    #     q1 = q1.cpu().numpy()
-    #     q2 = targets[:, 3:].cpu().numpy()
-    #
-    #     # Compute the relative rotation
-    #     rel_q = [qmult(qinverse(r1), r2) for r1, r2 in zip(q1, q2)]
-    #     rel_angles = [quat2axangle(q)[1] for q in rel_q]
-    #     rel_angles = [degrees(a) for a in rel_angles]
-    #     return rel_angles
 
     def make_checkpoint(self):
         checkpoint = {
