@@ -62,7 +62,7 @@ def matrix_to_euler_pose_vector(matrix):
         orientation.
     """
     matrix = matrix.numpy()
-    angles = torch.Tensor(mat2euler(matrix[:, 0:3], axes='rzxy')).view(1, 3)
+    angles = torch.Tensor(mat2euler(matrix[:, 0:3], axes='rxyz')).view(1, 3)
     translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
     pose = torch.cat((translation, angles), 1)
     return pose
@@ -70,6 +70,6 @@ def matrix_to_euler_pose_vector(matrix):
 
 def euler_to_quaternion(angles):
     assert angles.size(1) == 3
-    quaternions = [euler2quat(a[0], a[1], a[2], axes='rzxy') for a in angles.numpy()]
+    quaternions = [euler2quat(a[0], a[1], a[2], axes='rxyz') for a in angles.numpy()]
     quaternions = torch.Tensor(quaternions)
     return quaternions
