@@ -11,7 +11,8 @@ from torchvision import transforms
 
 import plots
 #from GTAV import Subsequence, visualize_predicted_path, concat_zip_dataset, Loop, FOLDERS
-from GTAV import SequenceCollection, StridedSampler, FOLDERS
+from GTAV import SequenceCollection, FOLDERS
+from sampler import StridedSampler
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 import loss_functions as lsf
 from model import FullPose7DModel
