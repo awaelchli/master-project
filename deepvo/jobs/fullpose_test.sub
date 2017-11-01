@@ -2,13 +2,15 @@
 
 # Testing
 python deepvo/main.py pose7D \
---input deepVO_test1 \
---output deepVO_test1/test \
+--input xyz_all_seq_VIPER \
+--output xyz_all_seq_VIPER/test10epochs \
 --test \
 --cuda \
---sequence 20 \
+--sequence 25 \
 --hidden 1000 \
 --layers 2 \
 --workers 12 \
 --print_freq 1 \
-
+--max_size 0 0 0 \
+--dataset VIPER \
+#--checkpoint checkpoint-best.pth.tar \
