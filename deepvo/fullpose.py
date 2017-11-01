@@ -16,12 +16,12 @@ from torch.nn.parallel import data_parallel
 import plots
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from flownet.models.FlowNetS import flownets
-from KITTI import Subsequence, FOLDERS, SEQUENCES, visualize_predicted_path
+import KITTI, VIPER
 
 
 class FullPose7DModel(nn.Module):
 
-    def __init__(self, input_size, hidden=500, nlayers=3, fix_flownet=True):
+    def __init__(self, input_size, hidden=500, nlayers=3, dropout=0, fix_flownet=True):
         super(FullPose7DModel, self).__init__()
 
         flownet = flownets('../data/Pretrained Models/flownets_pytorch.pth')
@@ -50,10 +50,11 @@ class FullPose7DModel(nn.Module):
             hidden_size=self.hidden,
             num_layers=self.nlayers,
             batch_first=True,
-            dropout=0
         )
 
+        self.drop = nn.Dropout(dropout)
         self.fc = nn.Linear(self.hidden, 6)
+
         self.init_weights()
 
     def init_weights(self):
@@ -92,14 +93,17 @@ class FullPose7DModel(nn.Module):
         init = (h0, c0)
         outputs, _ = self.lstm(pairs.view(1, n - 1, -1), init)
 
+        outputs = self.drop(outputs)
         predictions = self.fc(outputs.squeeze(0))
 
         return predictions
 
     def train(self, mode=True):
+        super(FullPose7DModel, self).train(mode)
         self.lstm.train(mode)
 
     def eval(self):
+        super(FullPose7DModel, self).eval()
         self.lstm.eval()
 
     def get_parameters(self):
@@ -125,6 +129,9 @@ class FullPose7D(BaseExperiment):
         parser.add_argument('--layers', type=int, default=3,
                             help='Number of layers in the LSTM')
         parser.add_argument('--gpus', type=int, default=1)
+        parser.add_argument('--overlap', type=int, default=0)
+        parser.add_argument('--dataset', type=str, default='KITTI', choices=['KITTI', 'VIPER'])
+        parser.add_argument('--dropout', type=float, default=0.0)
 
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
@@ -138,7 +145,8 @@ class FullPose7D(BaseExperiment):
         self.model = FullPose7DModel(
             self.input_size,
             hidden=args.hidden,
-            nlayers=args.layers
+            nlayers=args.layers,
+            dropout=args.dropout,
         )
 
         if self.use_cuda:
@@ -189,23 +197,51 @@ class FullPose7D(BaseExperiment):
             transforms.ToTensor(),
         ])
 
-        train_set = Subsequence(
-            sequence_length=args.sequence,
-            transform=transform,
-            sequence_numbers=SEQUENCES['training']
-        )
+        if args.dataset == 'KITTI':
+            self.dataset = KITTI
+            train_set = KITTI.Subsequence(
+                sequence_length=args.sequence,
+                overlap=args.overlap,
+                transform=transform,
+                sequence_numbers=KITTI.SEQUENCES['training']
+            )
 
-        val_set = Subsequence(
-            sequence_length=args.sequence,
-            transform=transform,
-            sequence_numbers=SEQUENCES['validation']
-        )
+            val_set = KITTI.Subsequence(
+                sequence_length=args.sequence,
+                overlap=0,
+                transform=transform,
+                sequence_numbers=KITTI.SEQUENCES['validation']
+            )
 
-        test_set = Subsequence(
-            sequence_length=args.sequence,
-            transform=transform,
-            sequence_numbers=SEQUENCES['test']
-        )
+            test_set = KITTI.Subsequence(
+                sequence_length=args.sequence,
+                overlap=0,
+                transform=transform,
+                sequence_numbers=KITTI.SEQUENCES['test']
+            )
+
+        elif args.dataset == 'VIPER':
+            self.dataset = VIPER
+            train_set = VIPER.Subsequence(
+                folder=VIPER.FOLDERS['train'],
+                sequence_length=args.sequence,
+                overlap=args.overlap,
+                transform=transform,
+                max_size=args.max_size[0]
+            )
+
+            val_set = VIPER.Subsequence(
+                folder=VIPER.FOLDERS['val'],
+                sequence_length=args.sequence,
+                overlap=0,
+                transform=transform,
+                max_size=args.max_size[1]
+            )
+
+            # Ground truth not available for test folder
+            test_set = val_set
+        else:
+            raise RuntimeError('unkown dataset: {}'.format(args.dataset))
 
 
         dataloader_train = DataLoader(
@@ -257,7 +293,7 @@ class FullPose7D(BaseExperiment):
 
         self.model.lstm.flatten_parameters()
         self.model.train()
-        for i, (images, poses, _) in enumerate(self.trainingset):
+        for i, (images, poses, fn) in enumerate(self.trainingset):
 
             #images.squeeze_(0)
             #poses.squeeze_(0)
@@ -310,6 +346,8 @@ class FullPose7D(BaseExperiment):
                               )
                       )
 
+            if loss.data[0] > 500:
+                self.print_info('\n\nHIGH: {}\n\n'.format(fn[0]))
             # if epoch == 1:
             #     first_epoch_loss.append(loss.data[0])
             #     plots.plot_epoch_loss(first_epoch_loss, save=self.make_output_filename('first_epoch_loss.pdf'))
@@ -384,8 +422,11 @@ class FullPose7D(BaseExperiment):
             of2 = self.make_output_filename('path/b-{}--{:05}.png'.format(fn, i))
             out_cpu = output.data.cpu().numpy()
             tar_cpu = target.data[1:].cpu().numpy()
-            visualize_predicted_path(out_cpu, tar_cpu, of)
+            self.dataset.visualize_predicted_path(out_cpu, tar_cpu, of)
             plots.plot_xyz_error(out_cpu, tar_cpu, of2)
+
+            if loss.data[0] > 500:
+                print('\n\nHIGH LOSS: {:.4f}, at {}\n\n'.format(loss.data[0], filenames))
 
         #print(last_frame_predictions[:5])
         #print(last_frame_targets[:5])
