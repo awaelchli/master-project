@@ -1,12 +1,12 @@
 import glob
 import os.path as path
 
+import matplotlib.pyplot as plt
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
 from pose_transforms import relative_to_first_pose_matrix, matrix_to_euler_pose_vector
-import matplotlib.pyplot as plt
 
 FOLDERS = {
     'color': '../data/KITTI/color/sequences',
@@ -31,7 +31,7 @@ SEQUENCES = {
 }
 
 IMAGE_EXTENSION = 'png'
-FILE_POSE_EXTENSION = 'txt'
+POSE_FILE_EXTENSION = 'txt'
 
 
 def get_root_folder(grayscale=False):
@@ -55,12 +55,15 @@ def get_stereo_subfolder(grayscale=False, eye=0):
 
 class Subsequence(Dataset):
 
-    def __init__(self, sequence_length, transform=None, grayscale=False, eye=0, sequence_numbers=list(range(0, 10))):
+    def __init__(self, sequence_length, overlap=0, transform=None, grayscale=False, eye=0, sequence_numbers=list(range(0, 10))):
         self.transform = transform
         self.is_grayscale = grayscale
         self.eye = eye
         self.sequence_length = sequence_length
-        self.index = build_index(sequence_length, sequence_numbers, grayscale, eye)
+        self.overlap = overlap
+
+        assert 0 <= overlap < sequence_length
+        self.index = build_index(sequence_length, overlap, sequence_numbers, grayscale, eye)
 
     def __len__(self):
         return len(self.index)
@@ -86,19 +89,6 @@ def read_pose_strings(pose_file):
     return lines
 
 
-def read_matrices(pose_file):
-    with open(pose_file, 'r') as f:
-        lines = f.readlines()
-
-    matrices = []
-    for line in lines:
-        vector = torch.Tensor([float(s) for s in line.split()])
-        matrix = vector.view(3, 4)
-        matrices.append(matrix)
-
-    return matrices
-
-
 def sequence_number_to_string(number):
     return '{:02d}'.format(number)
 
@@ -111,10 +101,10 @@ def get_image_search_path(sequence_name, is_grayscale, eye):
 
 
 def get_pose_filename(sequence_name):
-    return path.join(get_pose_folder(), '{}.{}'.format(sequence_name, FILE_POSE_EXTENSION))
+    return path.join(get_pose_folder(), '{}.{}'.format(sequence_name, POSE_FILE_EXTENSION))
 
 
-def index_sequence(chunk_size, sequence_number, is_grayscale, eye):
+def index_sequence(chunk_size, overlap, sequence_number, is_grayscale, eye):
     """ Returns a list of image sample chunks for a given KITTI sequence """
 
     sequence_name = sequence_number_to_string(sequence_number)
@@ -124,7 +114,7 @@ def index_sequence(chunk_size, sequence_number, is_grayscale, eye):
 
     print('Sequence {}: {:d} files found.'.format(sequence_name, len(filenames)))
 
-    sequence_beginnings = range(0, len(filenames), chunk_size)
+    sequence_beginnings = range(0, len(filenames), chunk_size - overlap)
     sequence_beginnings = sequence_beginnings[0: len(sequence_beginnings) - 1]
 
     pose_matrices = read_matrices(get_pose_filename(sequence_name))
@@ -141,11 +131,24 @@ def index_sequence(chunk_size, sequence_number, is_grayscale, eye):
     return chunks
 
 
-def build_index(chunk_size, sequence_numbers, grayscale=False, eye=0):
+def build_index(chunk_size, overlap, sequence_numbers, grayscale=False, eye=0):
     chunks = []
     for number in sequence_numbers:
-        chunks.extend(index_sequence(chunk_size, number, grayscale, eye))
+        chunks.extend(index_sequence(chunk_size, overlap, number, grayscale, eye))
     return chunks
+
+
+def read_matrices(pose_file):
+    with open(pose_file, 'r') as f:
+        lines = f.readlines()
+
+    matrices = []
+    for line in lines:
+        vector = torch.Tensor([float(s) for s in line.split()])
+        matrix = vector.view(3, 4)
+        matrices.append(matrix)
+
+    return matrices
 
 
 class ImageSample(object):
