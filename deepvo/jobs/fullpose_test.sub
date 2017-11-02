@@ -2,8 +2,8 @@
 
 # Testing
 python deepvo/main.py pose7D \
---input xyz_all_seq_VIPER \
---output xyz_all_seq_VIPER/test10epochs \
+--input xyz_all_seq_VIPER_dropout \
+--output xyz_all_seq_VIPER_dropout/test_full \
 --test \
 --cuda \
 --sequence 25 \
