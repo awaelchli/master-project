@@ -15,6 +15,12 @@ FOLDERS = {
     'test': '../data/VIPER/test/',
 }
 
+BLACK_LIST = {
+    'train': ['045', '048', '049'],
+    'val': ['043', '042', '029'],
+    'test': []
+}
+
 IMAGE_EXTENSION = 'jpg'
 POSE_FILE_EXTENSION = 'txt'
 IMAGE_SUBFOLDER = 'img'
@@ -58,6 +64,12 @@ class Subsequence(Dataset):
     def get_sequence_names(self):
         dirs = os.listdir(os.path.join(self.folder, IMAGE_SUBFOLDER))
         dirs.sort()
+
+        # Remove items from blacklist
+        for key in BLACK_LIST.keys():
+            if key in self.folder:
+                dirs = [d for d in dirs if d not in BLACK_LIST[key]]
+
         return dirs
 
     def get_image_search_path(self, sequence_name):
