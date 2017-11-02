@@ -121,3 +121,29 @@ def plot_error_distribution(t, cdf, save='error_distribution.pdf'):
 
     if save:
         plt.savefig(save, bbox_inches='tight')
+
+
+def plot_translation_error_per_meter(x, errors, save=None):
+    plt.clf()
+    plt.plot(x, errors, 'b')
+
+    plt.ylabel('Average Translation Error [m]')
+    plt.xlabel('Distance [m]')
+
+    plt.xlim(min(x), max(x))
+
+    if save:
+        plt.savefig(save, bbox_inches='tight')
+
+
+def plot_rotation_error_per_meter(x, errors, save=None):
+    plt.clf()
+    plt.plot(x, errors, 'b')
+
+    plt.ylabel('Average Relative Rotation Error [deg]')
+    plt.xlabel('Distance [m]')
+
+    plt.xlim(min(x), max(x))
+
+    if save:
+        plt.savefig(save, bbox_inches='tight')
