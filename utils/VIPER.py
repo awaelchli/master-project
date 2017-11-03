@@ -29,11 +29,13 @@ POSE_SUBFOLDER = 'poses'
 
 class Subsequence(Dataset):
 
-    def __init__(self, folder, sequence_length, overlap=0, transform=None, max_size=None):
+    def __init__(self, folder, sequence_length, overlap=0, transform=None, max_size=None, sequence_name=None, relative_pose=True):
         self.folder = folder
         self.sequence_length = sequence_length
         self.overlap = overlap
         self.transform = transform
+        self.sequence_name = sequence_name
+        self.relative_pose = relative_pose
 
         assert 0 <= overlap < sequence_length
         self.index = self.build_index()
@@ -42,7 +44,6 @@ class Subsequence(Dataset):
             # Clip dataset
             assert 0 < max_size < len(self.index)
             self.index = self.index[:max_size]
-
 
     def __len__(self):
         return len(self.index)
@@ -53,7 +54,9 @@ class Subsequence(Dataset):
         filenames = [s.file for s in sequence_sample]
 
         matrix_poses = [s.get_pose_matrix() for s in sequence_sample]
-        matrix_poses = relative_to_first_pose_matrix(matrix_poses)
+        if self.relative_pose:
+            matrix_poses = relative_to_first_pose_matrix(matrix_poses)
+
         #poses_6d = [matrix_to_quaternion_pose_vector(m) for m in matrix_poses]
         poses_6d = [matrix_to_euler_pose_vector(m) for m in matrix_poses]
 
@@ -62,13 +65,20 @@ class Subsequence(Dataset):
         return image_sequence, pose_sequence, filenames
 
     def get_sequence_names(self):
-        dirs = os.listdir(os.path.join(self.folder, IMAGE_SUBFOLDER))
-        dirs.sort()
+        if self.sequence_name:
+            # A specific sequence is requested
+            full_path = os.path.join(self.folder, IMAGE_SUBFOLDER, self.sequence_name)
+            assert os.path.exists(full_path), 'Requested sequence does not exist: {}'.format(dir)
+            dirs = [self.sequence_name]
+        else:
+            # All sequences are requested
+            dirs = os.listdir(os.path.join(self.folder, IMAGE_SUBFOLDER))
+            dirs.sort()
 
-        # Remove items from blacklist
-        for key in BLACK_LIST.keys():
-            if key in self.folder:
-                dirs = [d for d in dirs if d not in BLACK_LIST[key]]
+            # Remove items from blacklist
+            for key in BLACK_LIST.keys():
+                if key in self.folder:
+                    dirs = [d for d in dirs if d not in BLACK_LIST[key]]
 
         return dirs
 
