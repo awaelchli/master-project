@@ -11,24 +11,24 @@ def plot_xyz_error(predictions, targets, output_file):
     plt.clf()
 
     plt.subplot(311)
-    plt.plot(x1, 'bo-', label='Prediction')
     plt.plot(x2, 'ro-', label='Ground Truth')
+    plt.plot(x1, 'bo-', label='Prediction')
 
     plt.legend()
     plt.ylabel('x')
     plt.xlabel('Time')
 
     plt.subplot(312)
-    plt.plot(y1, 'bo-', label='Prediction')
     plt.plot(y2, 'ro-', label='Ground Truth')
+    plt.plot(y1, 'bo-', label='Prediction')
 
     plt.legend()
     plt.ylabel('y')
     plt.xlabel('Time')
 
     plt.subplot(313)
-    plt.plot(z1, 'bo-', label='Prediction')
     plt.plot(z2, 'ro-', label='Ground Truth')
+    plt.plot(z1, 'bo-', label='Prediction')
 
     plt.legend()
     plt.ylabel('z')

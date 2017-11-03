@@ -159,8 +159,8 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     plt.clf()
 
     plt.subplot(121)
-    plt.plot(x1, z1, 'bo-', label='Prediction')
     plt.plot(x2, z2, 'ro-', label='Ground Truth')
+    plt.plot(x1, z1, 'bo-', label='Prediction')
 
     plt.legend()
     plt.ylabel('z')
@@ -169,8 +169,9 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     plt.title('Bird view')
 
     plt.subplot(122)
-    plt.plot(z1, y1, 'bo-', label='Prediction')
+
     plt.plot(z2, y2, 'ro-', label='Ground Truth')
+    plt.plot(z1, y1, 'bo-', label='Prediction')
 
     plt.legend()
     plt.ylabel('y')
