@@ -13,6 +13,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--classes', type=int, default=2)
 parser.add_argument('--hidden', type=int, default=10)
 parser.add_argument('--layers', type=int, default=1)
 parser.add_argument('--look_back', type=int, default=5)
@@ -27,7 +28,7 @@ class Model(nn.Module):
         At each time step, the model reads one input symbol and outputs a symbol from the past.
         It is trained to remember the input at a fixed number of time steps back in time.
     """
-    def __init__(self, hidden_size, num_layers):
+    def __init__(self, hidden_size, num_layers, num_classes):
         super(Model, self).__init__()
 
         self.lstm = nn.LSTM(
@@ -36,8 +37,8 @@ class Model(nn.Module):
             hidden_size=hidden_size,
             batch_first=True
         )
-        self.fc = nn.Linear(hidden_size, 2)
-        self.init_weights()
+        self.fc = nn.Linear(hidden_size, num_classes)
+        #self.init_weights()
 
     def forward(self, input, state=None):
         if not state:
@@ -56,30 +57,30 @@ class Model(nn.Module):
                  Variable(torch.zeros(self.lstm.num_layers, 1, self.lstm.hidden_size)).cuda())
         return state
 
-    def init_weights(self):
-        for k in range(self.lstm.num_layers):
-            # Input->hidden transform
-            w_ih = self.lstm.all_weights[k][0]
-            w_ih.data.fill_(0)
-            w_ih.data[0] = 1
-
-            # Hidden->hidden transform
-            w_hh = self.lstm.all_weights[k][1]
-            eye = torch.eye(self.lstm.hidden_size, self.lstm.hidden_size).repeat(4, 1)
-            w_hh.data.copy_(eye)
-
-            # Biases
-            self.lstm.all_weights[k][2].data.fill_(0)
-            self.lstm.all_weights[k][3].data.fill_(0)
-
-        # # Final fc
-        # fc = self.fc.weight.data
-        # fc.fill_(0)
-        # fc[0, -1] = -1
-        # fc[1, -1] = 1
-        #
-        # self.fc.bias.data.fill_(0)
-        # self.fc.bias.data[0] = 1
+    # def init_weights(self):
+    #     for k in range(self.lstm.num_layers):
+    #         # Input->hidden transform
+    #         w_ih = self.lstm.all_weights[k][0]
+    #         w_ih.data.fill_(0)
+    #         w_ih.data[0] = 1
+    #
+    #         # Hidden->hidden transform
+    #         w_hh = self.lstm.all_weights[k][1]
+    #         eye = torch.eye(self.lstm.hidden_size, self.lstm.hidden_size).repeat(4, 1)
+    #         w_hh.data.copy_(eye)
+    #
+    #         # Biases
+    #         self.lstm.all_weights[k][2].data.fill_(0)
+    #         self.lstm.all_weights[k][3].data.fill_(0)
+    #
+    #     # # Final fc
+    #     # fc = self.fc.weight.data
+    #     # fc.fill_(0)
+    #     # fc[0, -1] = -1
+    #     # fc[1, -1] = 1
+    #     #
+    #     # self.fc.bias.data.fill_(0)
+    #     # self.fc.bias.data[0] = 1
 
     def get_matrix(self):
         w_ih = self.lstm.all_weights[0][0]
@@ -88,7 +89,7 @@ class Model(nn.Module):
         return w_ih, w_hh, fc
 
 
-model = Model(args.hidden, args.layers)
+model = Model(args.hidden, args.layers, args.classes)
 model.cuda()
 
 optimizer = torch.optim.Adam(model.get_parameters(), lr=args.lr)
@@ -98,7 +99,7 @@ criterion.cuda()
 
 def train():
 
-    dataset = get_dataset(args.sequence, args.bptt, args.look_back)
+    dataset = get_dataset(args.sequence, args.bptt, args.look_back, args.classes)
     state = None
 
     model.train()
@@ -122,7 +123,7 @@ def train():
 
 def test():
 
-    dataset = get_dataset(args.sequence, args.bptt, args.look_back)
+    dataset = get_dataset(args.sequence, args.bptt, args.look_back, args.classes)
     state = None
     avg_accuracy = AverageMeter()
 
@@ -151,8 +152,8 @@ def test():
     plt.savefig('output.svg')
 
 
-def get_dataset(sequence_length, bptt, look_back):
-    sequence = get_sequence(sequence_length + look_back)
+def get_dataset(sequence_length, bptt, look_back, num_classes):
+    sequence = get_sequence(sequence_length + look_back, num_classes)
 
     for i in range(look_back, sequence_length - bptt, bptt):
 
@@ -162,8 +163,8 @@ def get_dataset(sequence_length, bptt, look_back):
         yield Variable(batch), Variable(targets)
 
 
-def get_sequence(length):
-    sequence = torch.rand(length) < 0.5
+def get_sequence(length, num_classes):
+    sequence = torch.from_numpy(np.random.randint(num_classes, size=length))
     return sequence.float().cuda()
 
 
