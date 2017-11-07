@@ -8,6 +8,10 @@ import torch.optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 
+# To re-produce results
+torch.manual_seed(0)
+np.random.seed(0)
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden', type=int, default=10)
 parser.add_argument('--layers', type=int, default=1)
