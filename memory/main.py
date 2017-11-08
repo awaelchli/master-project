@@ -13,6 +13,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--type', type=str, choices=['c', 'r'], default='c')
 parser.add_argument('--classes', type=int, default=2)
 parser.add_argument('--hidden', type=int, default=10)
 parser.add_argument('--layers', type=int, default=1)
@@ -23,13 +24,13 @@ parser.add_argument('--lr', type=float, default=0.01)
 args = parser.parse_args()
 
 
-class Model(nn.Module):
+class ClassificationModel(nn.Module):
     """ The model consists of two parts: An LSTM and a fully-connected layer.
         At each time step, the model reads one input symbol and outputs a symbol from the past.
         It is trained to remember the input at a fixed number of time steps back in time.
     """
     def __init__(self, hidden_size, num_layers, num_classes):
-        super(Model, self).__init__()
+        super(ClassificationModel, self).__init__()
 
         self.lstm = nn.LSTM(
             input_size=1,
@@ -82,19 +83,58 @@ class Model(nn.Module):
     #     # self.fc.bias.data.fill_(0)
     #     # self.fc.bias.data[0] = 1
 
-    def get_matrix(self):
-        w_ih = self.lstm.all_weights[0][0]
-        w_hh = self.lstm.all_weights[0][1]
-        fc = self.fc.weight
-        return w_ih, w_hh, fc
+    # def get_matrix(self):
+    #     w_ih = self.lstm.all_weights[0][0]
+    #     w_hh = self.lstm.all_weights[0][1]
+    #     fc = self.fc.weight
+    #     return w_ih, w_hh, fc
 
 
-model = Model(args.hidden, args.layers, args.classes)
+class RegressionModel(nn.Module):
+    """
+    Version for Regression
+    """
+    def __init__(self, hidden_size, num_layers):
+        super(RegressionModel, self).__init__()
+
+        self.lstm = nn.LSTM(
+            input_size=1,
+            num_layers=num_layers,
+            hidden_size=hidden_size,
+            batch_first=True
+        )
+        self.fc = nn.Linear(hidden_size, 1)
+
+    def forward(self, input, state=None):
+        if not state:
+            state = self.init_hidden_state()
+
+        output, state = self.lstm(input, state)
+        output = self.fc(output.view(-1, self.lstm.hidden_size))
+        return output, state
+
+    def get_parameters(self):
+        params = list(self.lstm.parameters()) + list(self.fc.parameters())
+        return params
+
+    def init_hidden_state(self):
+        state = (Variable(torch.zeros(self.lstm.num_layers, 1, self.lstm.hidden_size)).cuda(),
+                 Variable(torch.zeros(self.lstm.num_layers, 1, self.lstm.hidden_size)).cuda())
+        return state
+
+
+if args.type == 'c':
+    model = ClassificationModel(args.hidden, args.layers, args.classes)
+    criterion = nn.CrossEntropyLoss()
+elif args.type == 'r':
+    model = RegressionModel(args.hidden, args.layers)
+    criterion = nn.MSELoss()
+else:
+    raise RuntimeError('Select classification or regression.')
+
 model.cuda()
-
-optimizer = torch.optim.Adam(model.get_parameters(), lr=args.lr)
-criterion = nn.CrossEntropyLoss()
 criterion.cuda()
+optimizer = torch.optim.Adam(model.get_parameters(), lr=args.lr)
 
 
 def train():
@@ -106,6 +146,9 @@ def train():
     for i, (batch, targets) in enumerate(dataset):
         optimizer.zero_grad()
 
+        if args.type == 'c':
+            targets = targets.long()
+
         output, state = model.forward(batch.unsqueeze(0), state)
 
         loss = criterion(output, targets)
@@ -115,7 +158,13 @@ def train():
         state = repack_state(state)
 
         grad_norm = gradient_norm()
-        accuracy = torch.sum(classify(output.data) == targets.data) / args.bptt
+
+        accuracy = 0
+        if args.type == 'c':
+            accuracy = torch.sum(classify(output.data) == targets.data) / args.bptt
+        if args.type == 'r':
+            accuracy = torch.sum(classify_regression_output(output.data.view(-1)) == targets.data.long()) / args.bptt
+
         print('[{:d}/{:d}] Loss: {:.4f}, Accuracy: {:.4f}, Grad. Norm: {:.4f}'.format(
             i + 1, args.sequence // args.bptt, loss.data[0], accuracy, grad_norm)
         )
@@ -130,26 +179,34 @@ def test():
     model.eval()
     for i, (batch, targets) in enumerate(dataset):
 
+        if args.type == 'c':
+            targets = targets.long()
+
         batch.volatile = True
         output, state = model.forward(batch.unsqueeze(0), state)
 
-        accuracy = torch.sum(classify(output.data) == targets.data) / args.bptt
+        accuracy = 0
+        if args.type == 'c':
+            accuracy = torch.sum(classify(output.data) == targets.data) / args.bptt
+        if args.type == 'r':
+            accuracy = torch.sum(classify_regression_output(output.data.view(-1)) == targets.data.long()) / args.bptt
+
         avg_accuracy.update(accuracy)
 
     print('Accuracy on testset: {:.4f}'.format(avg_accuracy.average))
 
-    w_ih, w_hh, fc = model.get_matrix()
-    plt.clf()
-    plt.pcolor(np.flip(w_hh.data.cpu().numpy(), 0))
-    plt.colorbar()
-    plt.title('Hidden state transformation')
-    plt.savefig('hidden.svg')
-
-    plt.clf()
-    plt.pcolor(fc.data.cpu().numpy())
-    plt.colorbar()
-    plt.title('Output transformation')
-    plt.savefig('output.svg')
+    # w_ih, w_hh, fc = model.get_matrix()
+    # plt.clf()
+    # plt.pcolor(np.flip(w_hh.data.cpu().numpy(), 0))
+    # plt.colorbar()
+    # plt.title('Hidden state transformation')
+    # plt.savefig('hidden.svg')
+    #
+    # plt.clf()
+    # plt.pcolor(fc.data.cpu().numpy())
+    # plt.colorbar()
+    # plt.title('Output transformation')
+    # plt.savefig('output.svg')
 
 
 def get_dataset(sequence_length, bptt, look_back, num_classes):
@@ -158,7 +215,10 @@ def get_dataset(sequence_length, bptt, look_back, num_classes):
     for i in range(look_back, sequence_length - bptt, bptt):
 
         batch = sequence[i: i + bptt].view(-1, 1)
-        targets = sequence[i - look_back: i + bptt - look_back].long()
+        targets = sequence[i - look_back: i + bptt - look_back]
+
+        # if False:
+        #     batch = encode_sequence(batch, num_classes)
 
         yield Variable(batch), Variable(targets)
 
@@ -166,6 +226,16 @@ def get_dataset(sequence_length, bptt, look_back, num_classes):
 def get_sequence(length, num_classes):
     sequence = torch.from_numpy(np.random.randint(num_classes, size=length))
     return sequence.float().cuda()
+
+
+# def encode_sequence(sequence, num_classes):
+#     # Code as one-hot vector
+#     onehots = torch.LongTensor(sequence.size(0), num_classes).fill_(0).cuda()
+#     for i in range(sequence.size(0)):
+#         j = int(sequence[i, 0])
+#         onehots[i, j] = 1
+#
+#     return onehots.float()
 
 
 def repack_state(state):
@@ -179,6 +249,10 @@ def get_batch(n):
 
 def classify(output):
     return torch.max(output, 1)[1]
+
+
+def classify_regression_output(output):
+    return torch.round(output).long()
 
 
 def gradient_norm():
