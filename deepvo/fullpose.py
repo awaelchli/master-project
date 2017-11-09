@@ -45,6 +45,7 @@ class FullPose7D(BaseExperiment):
         parser.add_argument('--overlap', type=int, default=0)
         parser.add_argument('--dataset', type=str, default='KITTI', choices=['KITTI', 'VIPER'])
         parser.add_argument('--dropout', type=float, default=0.0)
+        parser.add_argument('--random_truncate', type=int, default=0)
 
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
@@ -53,6 +54,7 @@ class FullPose7D(BaseExperiment):
         _, (tmp, _, _) = next(enumerate(self.trainingset))
         self.input_size = (tmp.size(3), tmp.size(4))
         self.num_gpus = args.gpus
+        self.random_truncate = args.random_truncate
 
         # Model
         self.model = FullPose7DModel(
@@ -197,13 +199,19 @@ class FullPose7D(BaseExperiment):
         self.model.train()
         for i, (images, poses, _) in enumerate(self.trainingset):
 
+            if self.random_truncate:
+                # Discard randomly sized tail of sequence
+                clip = random.randint(self.sequence_length - self.random_truncate, self.sequence_length)
+                images = images[:, :clip, :, :]
+                poses = poses[:, :clip, :]
+
             input = self.to_variable(images)
             target = self.to_variable(poses)
 
             self.optimizer.zero_grad()
 
             # Forward
-            output = data_parallel(self.model, input, device_ids=range(self.num_gpus))
+            output, _ = data_parallel(self.model, input, device_ids=range(self.num_gpus))
             output = torch.stack(output.chunk(self.num_gpus, 0))
 
             # Loss function
