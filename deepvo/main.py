@@ -123,7 +123,7 @@ if __name__ == '__main__':
             elapsed_epoch = time.time() - start_epoch_time
             # Save latest checkpoint + copy with labeled with epoch
             experiment.save_checkpoint(experiment.make_checkpoint())
-            shutil.copy(experiment.checkpoint_file, experiment.make_output_filename('checkpoint-epoch-{:03d}.pth.tar'.format(epoch)))
+            shutil.copy(experiment.make_input_filename(CHECKPOINT_FILENAME), experiment.make_output_filename('checkpoint-epoch-{:03d}.pth.tar'.format(epoch)))
             experiment.plot_performance()
             print('Elapsed time for epoch: {:.4f} hours'.format(elapsed_epoch / 3600))
 

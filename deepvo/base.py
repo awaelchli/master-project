@@ -64,14 +64,16 @@ class BaseExperiment:
     def load_checkpoint(self):
         checkpoint = None
         if os.path.isfile(self.checkpoint_file):
+            print('Loading checkpoint {}'.format(self.checkpoint_file))
             checkpoint = torch.load(self.checkpoint_file)
         else:
-            print('No checkpoint found at {}'.format(self.checkpoint_file))
+            raise RuntimeError('No checkpoint found at {}'.format(self.checkpoint_file))
         return checkpoint
 
     def save_checkpoint(self, state):
-        print('Saving checkpoint ...')
-        torch.save(state, self.checkpoint_file)
+        file = self.make_output_filename(CHECKPOINT_FILENAME)
+        print('Saving checkpoint to {}'.format(file))
+        torch.save(state, file)
 
     def make_checkpoint(self):
         return None
