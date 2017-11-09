@@ -39,15 +39,15 @@ class BaseExperiment:
 
     @property
     def trainingset_size(self):
-        return len(self.trainingset) * self.trainingset.batch_size
+        return len(self.trainingset) * self.trainingset.batch_size if self.trainingset else 0
 
     @property
     def testset_size(self):
-        return len(self.testset) * self.testset.batch_size
+        return len(self.testset) * self.testset.batch_size if self.testset else 0
 
     @property
     def validationset_size(self):
-        return len(self.validationset) * self.validationset.batch_size
+        return len(self.validationset) * self.validationset.batch_size if self.validationset else 0
 
     def train(self):
         pass
