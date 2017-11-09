@@ -5,6 +5,7 @@ from model import FullPose7DModel
 sys.path.insert(0, 'utils/')
 import time
 import os
+import random
 
 import torch
 import torch.nn as nn
@@ -17,6 +18,10 @@ from torch.nn.parallel import data_parallel
 import plots
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 import KITTI, VIPER
+
+# To re-produce results
+torch.manual_seed(0)
+random.seed(0)
 
 
 class FullPose7D(BaseExperiment):
