@@ -8,8 +8,6 @@ import os
 import random
 
 import torch
-import torch.nn as nn
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from pose_evaluation import relative_euler_rotation_error, error_distribution, translation_error_per_meters, measure_distance_along_path, relative_rotation_error_per_meters_from_euler_pose
