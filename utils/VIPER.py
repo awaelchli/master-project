@@ -156,6 +156,8 @@ class ImageSample(object):
 def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     assert 0 < resolution <= 1
     step = int(1 / resolution)
+    marker_freq = int(0.1 * len(predictions))
+    ms = 5
 
     positions1 = predictions[::step, :3]
     positions2 = targets[::step, :3]
@@ -167,23 +169,24 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     z2 = -z2
 
     plt.clf()
+    fig = plt.gcf()
+    fig.suptitle('Marker every {:d} frames'.format(marker_freq))
 
     plt.subplot(121)
-    plt.plot(x2, z2, 'ro-', label='Ground Truth')
-    plt.plot(x1, z1, 'bo-', label='Prediction')
+    plt.plot(x2, z2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
+    plt.plot(x1, z1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
 
-    plt.legend()
+    #plt.legend()
     plt.ylabel('z')
     plt.xlabel('x')
     plt.axis('equal')
     plt.title('Bird view')
 
     plt.subplot(122)
+    plt.plot(z2, y2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
+    plt.plot(z1, y1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
 
-    plt.plot(z2, y2, 'ro-', label='Ground Truth')
-    plt.plot(z1, y1, 'bo-', label='Prediction')
-
-    plt.legend()
+    plt.legend(loc=2)
     plt.ylabel('y')
     plt.xlabel('z')
     plt.axis('equal')
