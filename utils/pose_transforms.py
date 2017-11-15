@@ -1,4 +1,4 @@
-from transforms3d.euler import euler2quat, mat2euler
+from transforms3d.euler import euler2quat, mat2euler, euler2mat
 from transforms3d.quaternions import rotate_vector, qinverse, qmult, mat2quat
 import numpy as np
 import torch
@@ -68,8 +68,66 @@ def matrix_to_euler_pose_vector(matrix):
     return pose
 
 
+def euler_pose_vector_to_matrix(pose):
+    """
+    :param pose: 1 x 6 torch vector, (translation, angles)
+    :return: 3 x 4 pose matrix (rotation, translation)
+    """
+    t = pose[:, :3]
+    angles = pose[:, 3:].view(-1).numpy()
+    rot = torch.from_numpy(euler2mat(angles[0], angles[1], angles[2], axes='rxyz')).float()
+    matrix = torch.cat((rot, t.view(3, 1)), 1)
+    return matrix
+
+
 def euler_to_quaternion(angles):
     assert angles.size(1) == 3
     quaternions = [euler2quat(a[0], a[1], a[2], axes='rxyz') for a in angles.numpy()]
     quaternions = torch.Tensor(quaternions)
     return quaternions
+
+
+def relative_previous_pose_matrix(matrices):
+    """ Makes all pose matrices in the list relative to the previous pose.
+        Each matrix in the list is expected to be a 3 x 4 torch tensor encoding rotation in the first 3 x 3 block
+        and translation in the last column.
+        Given a pair of matrices, the formulas to convert the poses is as follows:
+
+        Given: R(1->world), R(2->world), t1, t2
+
+        R(2->1) = R(world->1) * R(2->world)
+                = R(1->world)^(-1) * R(2->world)
+
+        t(2->1) = R(1->world)^(-1) * (t2 - t1)
+    """
+    rotations = [m[:, 0:3] for m in matrices]
+    translations = [m[:, 3] for m in matrices]
+
+    rel_matrices = []
+    r_prev, t_prev = rotations[0], translations[0]
+    for r, t in zip(rotations, translations):
+        r_rel = torch.mm(r_prev.t(), r)
+        t_rel = torch.mv(r_prev.t(), t - t_prev)
+        rel_matrices.append(torch.cat((r_rel, t_rel), 1))
+        r_prev = r
+        t_prev = t
+
+    return rel_matrices
+
+
+def relative_previous_pose_to_relative_first_matrix(matrices):
+    """
+    """
+    rotations = [m[:, 0:3] for m in matrices]
+    translations = [m[:, 3] for m in matrices]
+
+    rel_matrices = []
+    r_prev, t_prev = rotations[0], translations[0]
+    for r, t in zip(rotations, translations):
+        r_rel = torch.mm(r_prev, r)
+        t_rel = torch.mv(r_prev, t) + t_prev
+        rel_matrices.append(torch.cat((r_rel, t_rel), 1))
+        r_prev = r_rel
+        t_prev = t_rel
+
+    return rel_matrices
