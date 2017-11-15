@@ -55,12 +55,13 @@ def get_stereo_subfolder(grayscale=False, eye=0):
 
 class Subsequence(Dataset):
 
-    def __init__(self, sequence_length, overlap=0, transform=None, grayscale=False, eye=0, sequence_numbers=list(range(0, 10))):
+    def __init__(self, sequence_length, overlap=0, transform=None, grayscale=False, eye=0, sequence_numbers=list(range(0, 10)), relative_pose=True):
         self.transform = transform
         self.is_grayscale = grayscale
         self.eye = eye
         self.sequence_length = sequence_length
         self.overlap = overlap
+        self.relative_pose = relative_pose
 
         assert 0 <= overlap < sequence_length
         self.index = build_index(sequence_length, overlap, sequence_numbers, grayscale, eye)
@@ -74,7 +75,8 @@ class Subsequence(Dataset):
         filenames = [s.file for s in sequence_sample]
 
         matrix_poses = [s.get_pose_matrix() for s in sequence_sample]
-        matrix_poses = relative_to_first_pose_matrix(matrix_poses)
+        if self.relative_pose:
+            matrix_poses = relative_to_first_pose_matrix(matrix_poses)
         #poses_6d = [matrix_to_quaternion_pose_vector(m) for m in matrix_poses]
         poses_6d = [matrix_to_euler_pose_vector(m) for m in matrix_poses]
 
