@@ -8,6 +8,11 @@ from models import MultiClass1DTranslationModel
 import torch.nn.parallel
 import random
 
+# To re-produce results
+torch.manual_seed(0)
+random.seed(0)
+
+
 class Multiclass1DTranslation(BaseExperiment):
 
     @staticmethod

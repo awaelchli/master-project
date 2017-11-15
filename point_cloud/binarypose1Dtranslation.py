@@ -7,6 +7,9 @@ from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
 from models import Binary1DTranslationModel
 import torch.nn.parallel
 
+# To re-produce results
+torch.manual_seed(0)
+
 
 class BinaryPose1DTranslation(BaseExperiment):
 
