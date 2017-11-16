@@ -349,9 +349,9 @@ class FullPose7D(BaseExperiment):
         # Loss w.r.t. global
         losses = [self.loss_function(o.unsqueeze(0), t.unsqueeze(0)) for (o, t) in zip(all_converted_outputs, all_original_targets)]
         mean_losses = torch.Tensor(losses).mean(0)
-        print('avg loss', mean_losses[0])
-        print('avg rot', mean_losses[1])
-        print('avg trans', mean_losses[2])
+        self.test_logger.print('Average combined loss on testset (global pose): {:.4f}'.format(mean_losses[0]))
+        self.test_logger.print('Average rotation loss on testset (global pose): {:.4f}'.format(mean_losses[1]))
+        self.test_logger.print('Average translation loss on testset (global pose): {:.4f}'.format(mean_losses[2]))
 
         return avg_loss, avg_rot_loss, avg_trans_loss
 
