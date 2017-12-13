@@ -170,11 +170,15 @@ class ImageSample(object):
         return self.pose_matrix
 
 
-def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
+def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, marker_freq=None):
     assert 0 < resolution <= 1
     step = int(1 / resolution)
-    marker_freq = int(0.1 * len(predictions))
+    marker_freq = max(int(0.1 * len(predictions)), 1) if marker_freq is None else marker_freq
     ms = 5
+
+    folder, name = path.split(output_file)
+    fname1 = path.join(folder, 'bird-' + name)
+    fname2 = path.join(folder, 'both-' + name)
 
     positions1 = predictions[::step, :3]
     positions2 = targets[::step, :3]
@@ -183,9 +187,21 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     x2, y2, z2 = positions2[:, 0], positions2[:, 1], positions2[:, 2]
 
     plt.clf()
-    fig = plt.gcf()
-    fig.suptitle('Marker every {:d} frames'.format(marker_freq))
+    # fig = plt.gcf()
+    # fig.suptitle('Marker every {:d} frames'.format(marker_freq))
+    plt.plot(x2, z2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
+    plt.plot(x1, z1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
 
+    # plt.legend()
+    plt.ylabel('z')
+    plt.xlabel('x')
+    plt.axis('equal')
+    plt.title("Bird's-eye view")
+
+    plt.legend(loc=2)
+    plt.savefig(fname1, bbox_inches='tight')
+
+    plt.clf()
     plt.subplot(121)
     plt.plot(x2, z2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
     plt.plot(x1, z1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
@@ -194,7 +210,7 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     plt.ylabel('z')
     plt.xlabel('x')
     plt.axis('equal')
-    plt.title('Bird view')
+    plt.title("Bird's-eye view")
 
     plt.subplot(122)
     plt.plot(z2, y2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
@@ -206,7 +222,7 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     plt.axis('equal')
     plt.title('Side view (height)')
 
-    plt.savefig(output_file, bbox_inches='tight')
+    plt.savefig(fname2, bbox_inches='tight')
 
 
 

@@ -46,13 +46,13 @@ class FullSequenceTest(FullPose7D, BaseExperiment):
         if args.dataset == 'KITTI':
             self.dataset = KITTI
 
-            # test_set = KITTI.Subsequence(
-            #     sequence_length=args.sequence,
-            #     overlap=0,
-            #     transform=transform,
-            #     sequence_numbers=KITTI.SEQUENCES['test']
-            # )
-            test_set = None
+            test_set = KITTI.Subsequence(
+                sequence_length=args.sequence,
+                overlap=0,
+                transform=transform,
+                sequence_numbers=[int(args.sequence_name)],
+                relative_pose=False,
+            )
 
         elif args.dataset == 'VIPER':
             self.dataset = VIPER

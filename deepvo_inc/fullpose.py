@@ -16,7 +16,7 @@ import pose_transforms
 
 import plots
 from base import BaseExperiment, AverageMeter, Logger, CHECKPOINT_BEST_FILENAME
-import KITTI, VIPER
+import KITTI, VIPER, GTAV2
 
 # To re-produce results
 torch.manual_seed(0)
@@ -42,7 +42,7 @@ class FullPose7D(BaseExperiment):
                             help='Number of layers in the LSTM')
         parser.add_argument('--gpus', type=int, default=1)
         parser.add_argument('--overlap', type=int, default=0)
-        parser.add_argument('--dataset', type=str, default='KITTI', choices=['KITTI', 'VIPER'])
+        parser.add_argument('--dataset', type=str, default='KITTI', choices=['KITTI', 'VIPER', 'GTA'])
         parser.add_argument('--dropout', type=float, default=0.0)
         parser.add_argument('--random_truncate', type=int, default=0)
 
@@ -156,6 +156,36 @@ class FullPose7D(BaseExperiment):
 
             # Ground truth not available for test folder
             test_set = val_set
+
+        elif args.dataset == 'GTA':
+            self.dataset = GTAV2
+            train_set = GTAV2.Subsequence(
+                folder=GTAV2.FOLDERS['train'],
+                sequence_length=args.sequence,
+                overlap=args.overlap,
+                transform=transform,
+                max_size=args.max_size[0],
+                relative_pose=True
+            )
+
+            val_set = GTAV2.Subsequence(
+                folder=GTAV2.FOLDERS['val'],
+                sequence_length=args.sequence,
+                overlap=0,
+                transform=transform,
+                max_size=args.max_size[1],
+                relative_pose=True
+            )
+
+            test_set = GTAV2.Subsequence(
+                folder=GTAV2.FOLDERS['test'],
+                sequence_length=args.sequence,
+                overlap=0,
+                transform=transform,
+                max_size=args.max_size[1],
+                relative_pose=True
+            )
+
         else:
             raise RuntimeError('Unkown dataset: {}'.format(args.dataset))
 

@@ -2,14 +2,13 @@
 
 # Training
 python deepvo/main.py pose7D \
---input xyz_all_seq_VIPER_dropout \
---output xyz_all_seq_VIPER_dropout_sequence_50_resume_train \
+--output xyz_all_seq_long_overlap80_dropout \
 --train \
---resume \
 --cuda \
 --epochs 100 \
---sequence 50 \
---overlap 0 \
+--sequence 100 \
+--overlap 80 \
+--random_truncate 0 \
 --hidden 1000 \
 --layers 2 \
 --lr 0.001 \
@@ -17,6 +16,6 @@ python deepvo/main.py pose7D \
 --workers 12 \
 --print_freq 1 \
 --gpus 1 \
---dataset VIPER \
+--dataset KITTI \
 --max_size 0 100 0 \
 --dropout 0.5 \

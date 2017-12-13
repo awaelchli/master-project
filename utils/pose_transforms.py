@@ -1,5 +1,5 @@
 from transforms3d.euler import euler2quat, mat2euler, euler2mat
-from transforms3d.quaternions import rotate_vector, qinverse, qmult, mat2quat
+from transforms3d.quaternions import rotate_vector, qinverse, qmult, mat2quat, quat2mat
 import numpy as np
 import torch
 
@@ -56,26 +56,38 @@ def matrix_to_quaternion_pose_vector(matrix):
     return pose
 
 
-def matrix_to_euler_pose_vector(matrix):
+def matrix_to_euler_pose_vector(matrix, mode='rxyz'):
     """ Converts a 3 x 4 pose matrix to a 1 x 6 pose vector.
         The first three elements of the pose vector are the translations, followed by three euler angles for the
         orientation.
     """
     matrix = matrix.numpy()
-    angles = torch.Tensor(mat2euler(matrix[:, 0:3], axes='rxyz')).view(1, 3)
+    angles = torch.Tensor(mat2euler(matrix[:, 0:3], axes=mode)).view(1, 3)
     translation = torch.from_numpy(matrix[:, 3]).contiguous().float().view(1, 3)
     pose = torch.cat((translation, angles), 1)
     return pose
 
 
-def euler_pose_vector_to_matrix(pose):
+def euler_pose_vector_to_matrix(pose, mode='rxyz'):
     """
     :param pose: 1 x 6 torch vector, (translation, angles)
     :return: 3 x 4 pose matrix (rotation, translation)
     """
     t = pose[:, :3]
     angles = pose[:, 3:].view(-1).numpy()
-    rot = torch.from_numpy(euler2mat(angles[0], angles[1], angles[2], axes='rxyz')).float()
+    rot = torch.from_numpy(euler2mat(angles[0], angles[1], angles[2], axes=mode)).float()
+    matrix = torch.cat((rot, t.view(3, 1)), 1)
+    return matrix
+
+
+def quaternion_pose_vector_to_matrix(pose, mode='rxyz'):
+    """
+    :param pose: 1 x 7 torch vector, (translation, quaternion)
+    :return: 3 x 4 pose matrix (rotation, translation)
+    """
+    t = pose[:, :3]
+    q = pose[:, 3:].view(-1).numpy()
+    rot = torch.from_numpy(quat2mat(q)).float()
     matrix = torch.cat((rot, t.view(3, 1)), 1)
     return matrix
 

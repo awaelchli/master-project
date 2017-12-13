@@ -5,6 +5,7 @@ import os.path as path
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
+from urllib3.util import retry
 
 from pose_transforms import relative_to_first_pose_matrix, matrix_to_euler_pose_vector
 import matplotlib.pyplot as plt
@@ -29,13 +30,14 @@ POSE_SUBFOLDER = 'poses'
 
 class Subsequence(Dataset):
 
-    def __init__(self, folder, sequence_length, overlap=0, transform=None, max_size=None, sequence_name=None, relative_pose=True):
+    def __init__(self, folder, sequence_length, overlap=0, transform=None, max_size=None, sequence_name=None, relative_pose=True, return_sequence_label=False):
         self.folder = folder
         self.sequence_length = sequence_length
         self.overlap = overlap
         self.transform = transform
         self.sequence_name = sequence_name
         self.relative_pose = relative_pose
+        self.return_sequence_label = return_sequence_label
 
         assert 0 <= overlap < sequence_length
         self.index = self.build_index()
@@ -62,7 +64,11 @@ class Subsequence(Dataset):
 
         image_sequence = torch.cat(tuple(images), 0)
         pose_sequence = torch.cat(tuple(poses_6d), 0)
-        return image_sequence, pose_sequence, filenames
+
+        if self.return_sequence_label:
+            return image_sequence, pose_sequence, filenames, sequence_sample[-1].sequence_label
+        else:
+            return image_sequence, pose_sequence, filenames
 
     def get_sequence_names(self):
         if self.sequence_name:
@@ -153,11 +159,15 @@ class ImageSample(object):
         return self.pose_matrix
 
 
-def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
+def visualize_predicted_path(predictions, targets, output_file, resolution=1.0, marker_freq=None):
     assert 0 < resolution <= 1
     step = int(1 / resolution)
-    marker_freq = int(0.1 * len(predictions))
+    marker_freq = max(int(0.1 * len(predictions)), 1) if marker_freq is None else marker_freq
     ms = 5
+
+    folder, name = path.split(output_file)
+    fname1 = path.join(folder, 'bird-' + name)
+    fname2 = path.join(folder, 'both-' + name)
 
     positions1 = predictions[::step, :3]
     positions2 = targets[::step, :3]
@@ -169,8 +179,24 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     z2 = -z2
 
     plt.clf()
-    fig = plt.gcf()
-    fig.suptitle('Marker every {:d} frames'.format(marker_freq))
+    #fig = plt.gcf()
+    #fig.suptitle('Marker every {:d} frames'.format(marker_freq))
+
+    plt.plot(x2, z2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
+    plt.plot(x1, z1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
+    plt.ylabel('z')
+    plt.xlabel('x')
+    plt.axis('equal')
+    plt.title("Bird's-eye view")
+
+    plt.legend(loc=2)
+    plt.savefig(fname1, bbox_inches='tight')
+
+
+
+    plt.clf()
+    #fig = plt.gcf()
+    #fig.suptitle('Marker every {:d} frames'.format(marker_freq))
 
     plt.subplot(121)
     plt.plot(x2, z2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
@@ -180,7 +206,7 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     plt.ylabel('z')
     plt.xlabel('x')
     plt.axis('equal')
-    plt.title('Bird view')
+    plt.title("Bird's-eye view")
 
     plt.subplot(122)
     plt.plot(z2, y2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
@@ -192,20 +218,5 @@ def visualize_predicted_path(predictions, targets, output_file, resolution=1.0):
     plt.axis('equal')
     plt.title('Side view (height)')
 
-    plt.savefig(output_file, bbox_inches='tight')
+    plt.savefig(fname2, bbox_inches='tight')
 
-
-# from torchvision.transforms import ToTensor
-# t = ToTensor()
-#
-# s = Subsequence('/media/adrian/Data/adrian/Datasets/VIPER/train', 10, overlap=2, transform=t)
-# print(s)
-#
-# from torch.utils.data.dataloader import DataLoader
-#
-#
-# d = DataLoader(s)
-#
-# for i, (a, b, c) in enumerate(d):
-#     if i < 10:
-#         print(b)

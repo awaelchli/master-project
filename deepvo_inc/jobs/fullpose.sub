@@ -2,7 +2,7 @@
 
 # Training
 python deepvo_inc/main.py pose7D \
---output xyz_all_seq_short_incremental_dropout \
+--output xyz_all_seq_short_incremental_dropout_nolstm \
 --train \
 --cuda \
 --epochs 100 \

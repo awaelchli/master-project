@@ -8,12 +8,14 @@ import torch
 from base import CHECKPOINT_FILENAME
 from fullpose import FullPose7D
 from sequence_test import FullSequenceTest
+from sequence_test_video import FullSequenceTestVideo
 
 
 OUT_ROOT_FOLDER = 'out'
 ARCHS = {
     'pose7D': FullPose7D,
     'sequencetest': FullSequenceTest,
+    'sequencetestvideo': FullSequenceTestVideo,
 }
 
 

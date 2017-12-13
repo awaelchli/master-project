@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Testing
+python deepvo_inc_quaternion/main.py pose7D \
+--input xyz_all_seq_short_incremental_dropout \
+--output xyz_all_seq_short_incremental_dropout/test_full_100_epoch43 \
+--test \
+--cuda \
+--sequence 100 \
+--hidden 1000 \
+--layers 2 \
+--workers 12 \
+--print_freq 1 \
+--max_size 0 0 0 \
+--dataset KITTI \
+--checkpoint checkpoint-epoch-043.pth.tar \

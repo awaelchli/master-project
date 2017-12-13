@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Testing
+python deepvo_inc_quaternion/main.py pose7D \
+--input xyz_incremental_gta \
+--output xyz_incremental_gta/test \
+--test \
+--cuda \
+--sequence 100 \
+--hidden 1000 \
+--layers 2 \
+--workers 12 \
+--print_freq 1 \
+--max_size 0 0 0 \
+--dataset GTA \
+#--checkpoint checkpoint-epoch-043.pth.tar \

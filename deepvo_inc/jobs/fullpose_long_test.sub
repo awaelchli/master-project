@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Testing
+python deepvo_inc/main.py pose7D \
+--input xyz_all_seq_short_incremental_VIPER \
+--output xyz_all_seq_short_incremental_VIPER/test_full_100_2 \
+--test \
+--cuda \
+--sequence 100 \
+--hidden 1000 \
+--layers 2 \
+--workers 12 \
+--print_freq 1 \
+--max_size 0 0 0 \
+--dataset VIPER \
+#--checkpoint checkpoint-epoch-051.pth.tar \

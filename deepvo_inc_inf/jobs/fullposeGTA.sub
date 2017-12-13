@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Training
+python deepvo_inc_inf/main.py pose7D \
+--output xyz_incremental_gta \
+--train \
+--resume \
+--cuda \
+--epochs 100 \
+--sequence 100 \
+--overlap 0 \
+--random_truncate 0 \
+--hidden 1000 \
+--layers 2 \
+--lr 0.001 \
+--beta 10 \
+--workers 12 \
+--print_freq 1 \
+--gpus 1 \
+--dataset GTA \
+--max_size 0 50 0 \
+--dropout 0.5 \

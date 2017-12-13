@@ -2,15 +2,15 @@
 
 # Testing
 python deepvo/main.py pose7D \
---input xyz_all_seq_VIPER_dropout \
---output xyz_all_seq_VIPER_dropout/test_full \
+--input xyz_all_seq_KITTI_dropout_grow_sequence \
+--output xyz_all_seq_KITTI_dropout_grow_sequence/test100_epoch100 \
 --test \
 --cuda \
---sequence 25 \
+--sequence 100 \
 --hidden 1000 \
 --layers 2 \
 --workers 12 \
 --print_freq 1 \
 --max_size 0 0 0 \
---dataset VIPER \
-#--checkpoint checkpoint-best.pth.tar \
+--dataset KITTI \
+--checkpoint checkpoint-epoch-100.pth.tar \

@@ -53,6 +53,7 @@ class FullPose7D(BaseExperiment):
         self.input_size = (tmp.size(3), tmp.size(4))
         self.num_gpus = args.gpus
         self.random_truncate = args.random_truncate
+        self.args = args
 
         # Model
         self.model = FullPose7DModel(
@@ -188,11 +189,16 @@ class FullPose7D(BaseExperiment):
         translation_loss = AverageMeter()
         gradient_norm = AverageMeter()
         epoch_start = time.time()
-
-        num_batches = len(self.trainingset)
         epoch = len(self.training_loss) + 1
         best_validation_loss = float('inf') if not self.validation_loss else min(self.validation_loss)
 
+        if False:
+            # Load new dataset with increased sequence length
+            self.args.sequence += 1
+            self.sequence_length = self.args.sequence
+            self._trainingset, self._validationset, self._testset = self.load_dataset(self.args)
+
+        num_batches = len(self.trainingset)
         self.model.lstm.flatten_parameters()
         self.model.train()
         for i, (images, poses, _) in enumerate(self.trainingset):

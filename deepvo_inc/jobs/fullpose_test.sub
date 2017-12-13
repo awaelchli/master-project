@@ -2,8 +2,8 @@
 
 # Testing
 python deepvo_inc/main.py pose7D \
---input xyz_all_seq_short_incremental \
---output xyz_all_seq_short_incremental/test_full \
+--input xyz_all_seq_short_incremental_dropout \
+--output xyz_all_seq_short_incremental_dropout/test_full_100_epoch43 \
 --test \
 --cuda \
 --sequence 100 \
@@ -13,4 +13,4 @@ python deepvo_inc/main.py pose7D \
 --print_freq 1 \
 --max_size 0 0 0 \
 --dataset KITTI \
-#--checkpoint checkpoint-epoch-086.pth.tar \
+--checkpoint checkpoint-epoch-043.pth.tar \

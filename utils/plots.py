@@ -5,32 +5,35 @@ def plot_xyz_error(predictions, targets, output_file):
     positions1 = predictions[:, :3]
     positions2 = targets[:, :3]
 
+    marker_freq = int(0.1 * len(predictions))
+    ms = 5
+
     x1, y1, z1 = positions1[:, 0], positions1[:, 1], positions1[:, 2]
     x2, y2, z2 = positions2[:, 0], positions2[:, 1], positions2[:, 2]
 
     plt.clf()
 
     plt.subplot(311)
-    plt.plot(x2, 'ro-', label='Ground Truth')
-    plt.plot(x1, 'bo-', label='Prediction')
+    plt.plot(x2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
+    plt.plot(x1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
 
-    plt.legend()
+    #plt.legend()
     plt.ylabel('x')
     plt.xlabel('Time')
 
     plt.subplot(312)
-    plt.plot(y2, 'ro-', label='Ground Truth')
-    plt.plot(y1, 'bo-', label='Prediction')
+    plt.plot(y2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
+    plt.plot(y1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
 
-    plt.legend()
+    #plt.legend()
     plt.ylabel('y')
     plt.xlabel('Time')
 
     plt.subplot(313)
-    plt.plot(z2, 'ro-', label='Ground Truth')
-    plt.plot(z1, 'bo-', label='Prediction')
+    plt.plot(z2, 'ro-', label='Ground Truth', markevery=marker_freq, markersize=ms)
+    plt.plot(z1, 'bo-', label='Prediction', markevery=marker_freq, markersize=ms)
 
-    plt.legend()
+    plt.legend(loc=3)
     plt.ylabel('z')
     plt.xlabel('Time')
 
