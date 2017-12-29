@@ -2,12 +2,12 @@
 
 # Training
 python deepvo_inc_quaternion/main.py pose7D \
---output xyz_all_seq_short_incremental_GTA_quat \
+--output xyz_all_seq_short_incremental_GTA_quat_stride3 \
 --train \
---resume \
 --cuda \
 --epochs 100 \
---sequence 100 \
+--sequence 300 \
+--datastride 3 \
 --overlap 0 \
 --random_truncate 0 \
 --hidden 1000 \
@@ -18,5 +18,5 @@ python deepvo_inc_quaternion/main.py pose7D \
 --print_freq 1 \
 --gpus 1 \
 --dataset GTA \
---max_size 0 100 0 \
+--max_size 0 0 0 \
 --dropout 0 \

@@ -45,6 +45,7 @@ class FullPose7D(BaseExperiment):
         parser.add_argument('--dataset', type=str, default='KITTI', choices=['KITTI', 'VIPER', 'GTA'])
         parser.add_argument('--dropout', type=float, default=0.0)
         parser.add_argument('--random_truncate', type=int, default=0)
+        parser.add_argument('--datastride', type=int, default=1)
 
     def __init__(self, in_folder, out_folder, args):
         super(FullPose7D, self).__init__(in_folder, out_folder, args)
@@ -55,6 +56,8 @@ class FullPose7D(BaseExperiment):
         self.num_gpus = args.gpus
         self.random_truncate = args.random_truncate
         self.args = args
+
+        self.datastride = args.datastride
 
         # Model
         self.model = FullPose7DModel(
@@ -165,7 +168,7 @@ class FullPose7D(BaseExperiment):
                 overlap=args.overlap,
                 transform=transform,
                 max_size=args.max_size[0],
-                relative_pose=True
+                relative_pose=True,
             )
 
             val_set = GTAV2.Subsequence(
@@ -174,7 +177,7 @@ class FullPose7D(BaseExperiment):
                 overlap=0,
                 transform=transform,
                 max_size=args.max_size[1],
-                relative_pose=True
+                relative_pose=True,
             )
 
             test_set = GTAV2.Subsequence(
@@ -183,7 +186,7 @@ class FullPose7D(BaseExperiment):
                 overlap=0,
                 transform=transform,
                 max_size=args.max_size[1],
-                relative_pose=True
+                relative_pose=True,
             )
 
         else:
@@ -238,6 +241,10 @@ class FullPose7D(BaseExperiment):
         self.model.lstm.flatten_parameters()
         self.model.train()
         for i, (images, poses, _) in enumerate(self.trainingset):
+
+            # stride
+            images = images[:, ::self.datastride]
+            poses = poses[:, ::self.datastride]
 
             #if i > 1:
             #   break

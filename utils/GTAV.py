@@ -158,4 +158,3 @@ def read_from_text_file(file):
     poses = np.array([[float(x) for x in line[2:8]] for line in lines])
 
     return times, poses
-

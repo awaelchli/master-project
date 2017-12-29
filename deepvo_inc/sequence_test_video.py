@@ -2,6 +2,7 @@ from base import BaseExperiment
 from fullpose import FullPose7D
 import KITTI
 import VIPER
+import GTAV2
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from model import FullPose7DModel
@@ -18,7 +19,7 @@ class FullSequenceTestVideo(FullPose7D, BaseExperiment):
         parser.add_argument('--sequence', type=int, default=10)
         parser.add_argument('--hidden', type=int, default=500)
         parser.add_argument('--layers', type=int, default=3)
-        parser.add_argument('--dataset', type=str, default='KITTI', choices=['KITTI', 'VIPER'])
+        parser.add_argument('--dataset', type=str, default='KITTI', choices=['KITTI', 'VIPER', 'GTA'])
         parser.add_argument('--sequence_name', type=str, default='001')
 
     def __init__(self, in_folder, out_folder, args):
@@ -61,6 +62,22 @@ class FullSequenceTestVideo(FullPose7D, BaseExperiment):
 
             val_set = VIPER.Subsequence(
                 folder=VIPER.FOLDERS['val'],
+                sequence_length=args.sequence,
+                overlap=0,
+                transform=transform,
+                max_size=args.max_size[1],
+                sequence_name=args.sequence_name,
+                relative_pose=False,
+            )
+
+            # Ground truth not available for test folder
+            test_set = val_set
+
+        elif args.dataset == 'GTAV':
+            self.dataset = GTAV2
+
+            val_set = GTAV2.Subsequence(
+                folder=GTAV2.FOLDERS['val'],
                 sequence_length=args.sequence,
                 overlap=0,
                 transform=transform,

@@ -80,7 +80,7 @@ class Multiclass1DTranslation(BaseExperiment):
         dataloader_val = []
         dataloader_test = []
 
-        max_step = 0.1
+        max_step = 0.2
         bounds = (0, 1)
         turn_probability = 0
 

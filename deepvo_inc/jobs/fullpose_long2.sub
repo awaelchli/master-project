@@ -2,14 +2,14 @@
 
 # Training
 python deepvo_inc/main.py pose7D \
---output xyz_all_seq_short_incremental_VIPER_less_params \
+--output xyz_all_seq_short_incremental_VIPER_less_params2 \
 --train \
 --cuda \
 --epochs 100 \
 --sequence 100 \
 --overlap 0 \
 --random_truncate 0 \
---hidden 500 \
+--hidden 1000 \
 --layers 1 \
 --lr 0.001 \
 --beta 10 \

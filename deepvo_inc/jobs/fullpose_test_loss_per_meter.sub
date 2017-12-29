@@ -1,9 +1,12 @@
 #!/bin/bash
 
+
+
+
 # Testing a single long sequence (KITTI/VIPER)
-python deepvo_inc_no_lstm/main.py sequencetest \
---input xyz_all_seq_short_incremental_dropout_nolstm \
---output xyz_all_seq_short_incremental_dropout_nolstm/long_sequence_10_thesis_loss_per_meter \
+python deepvo_inc/main.py sequencetest \
+--input xyz_all_seq_short_incremental_dropout \
+--output xyz_all_seq_short_incremental_dropout/long_sequence_10_thesis_loss_per_meter \
 --test \
 --cuda \
 --sequence 100 \

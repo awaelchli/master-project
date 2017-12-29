@@ -76,7 +76,7 @@ def rel_rotation_angle_along_path_from_euler(predictions, targets):
     return rel_angles
 
 
-def translation_error_per_meters(positions, targets, start=0.0, stop=100.0, step=1.0):
+def translation_error_per_meters(positions, targets, start=0.0, stop=100.0, step=1.0, err_func=translation_error_along_path, dist=None):
     """
     :param positions: m x n x 3 torch tensor, where m is the batch size and n is the sequence length
     :param targets: same shape as positions
@@ -90,8 +90,8 @@ def translation_error_per_meters(positions, targets, start=0.0, stop=100.0, step
     m = positions.size(0)
     n = positions.size(1)
 
-    distance = measure_distance_along_path(targets)
-    errors = translation_error_along_path(positions, targets)
+    distance = measure_distance_along_path(targets) if dist is None else dist
+    errors = err_func(positions, targets)
 
     eval_points = torch.arange(start, stop, step)
     err_per_meter = torch.zeros(m, len(eval_points))
@@ -118,7 +118,7 @@ def translation_error_per_meters(positions, targets, start=0.0, stop=100.0, step
     return eval_points, err_per_meter
 
 
-def relative_rotation_error_per_meters_from_euler_pose(predictions, targets, start=0.0, stop=100.0, step=1.0):
+def relative_rotation_error_per_meters_from_euler_pose(predictions, targets, start=0.0, stop=100.0, step=1.0, err_func=rel_rotation_angle_along_path_from_euler, dist=None):
     """
     :param positions: m x n x 6 torch tensor, where m is the batch size and n is the sequence length
     :param targets: same shape as positions
@@ -132,8 +132,8 @@ def relative_rotation_error_per_meters_from_euler_pose(predictions, targets, sta
     m = predictions.size(0)
     n = predictions.size(1)
 
-    distance = measure_distance_along_path(targets[:, :, :3])
-    errors = rel_rotation_angle_along_path_from_euler(predictions[:, :, 3:], targets[:, :, 3:])
+    distance = measure_distance_along_path(targets[:, :, :3]) if dist is None else dist
+    errors = err_func(predictions[:, :, 3:], targets[:, :, 3:])
 
     eval_points = torch.arange(start, stop, step)
     err_per_meter = torch.zeros(m, len(eval_points))

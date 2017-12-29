@@ -46,6 +46,7 @@ class MultiClass1DTranslationModel(nn.Module):
 
         # Each keypoint has a random (unique) identity, constant over time
         random_features = Variable(torch.rand(1, num_points, feat_channels).repeat(n, 1, 1)).cuda()
+        #random_features.data.fill_(1)
 
         # Concatenate along channels
         lstm_input_tensor = torch.cat((random_features, input), 2)

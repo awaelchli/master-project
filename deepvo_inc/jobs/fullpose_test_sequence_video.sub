@@ -2,8 +2,8 @@
 
 # Testing a single long sequence (KITTI/VIPER)
 python deepvo_inc/main.py sequencetestvideo \
---input xyz_all_seq_short_incremental_dropout \
---output xyz_all_seq_short_incremental_dropout/long_sequence_10_video \
+--input xyz_all_seq_short_incremental_VIPER \
+--output xyz_all_seq_short_incremental_VIPER/long_sequence_34_video \
 --test \
 --cuda \
 --sequence 100 \
@@ -12,6 +12,6 @@ python deepvo_inc/main.py sequencetestvideo \
 --workers 12 \
 --print_freq 1 \
 --max_size 0 0 0 \
---dataset KITTI \
---sequence_name 10 \
+--dataset VIPER \
+--sequence_name 034 \
 #--checkpoint checkpoint-epoch-043.pth.tar \

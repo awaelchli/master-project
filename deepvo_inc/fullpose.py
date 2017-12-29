@@ -356,6 +356,9 @@ class FullPose7D(BaseExperiment):
         avg_rot_loss = avg_rot_loss.average
         avg_trans_loss = avg_trans_loss.average
 
+        all_outputs_tensor = torch.stack(all_outputs)
+        all_targets_tensor = torch.stack(all_targets)
+
         # Convert incremental pose back to relative pose
         all_converted_outputs = torch.stack([self.convert_pose_to_global(output) for output in all_outputs])
 
@@ -367,6 +370,10 @@ class FullPose7D(BaseExperiment):
         # Translation- and rotation error per meter
         self.plot_translation_error_per_meter(all_converted_outputs, all_original_targets)
         self.plot_rotation_error_per_meter(all_converted_outputs, all_original_targets)
+
+        # Translation- and rotation loss per meter (incremental)
+        self.plot_translation_loss_per_meter(all_outputs_tensor, all_targets_tensor, all_targets_global=all_original_targets)
+        self.plot_rotation_loss_per_meter(all_outputs_tensor, all_targets_tensor, all_targets_global=all_original_targets)
 
         # Losses on testset
         self.test_logger.print('Average combined loss on testset: {:.4f}'.format(avg_loss))
@@ -383,7 +390,30 @@ class FullPose7D(BaseExperiment):
         self.test_logger.print('Average rotation loss on testset (global pose): {:.4f}'.format(mean_losses[1]))
         self.test_logger.print('Average translation loss on testset (global pose): {:.4f}'.format(mean_losses[2]))
 
+
+
+        # avg. incremental errors
+        all_targets_cat = torch.cat(tuple(all_targets), 0)
+        all_outputs_cat = torch.cat(tuple(all_outputs), 0)
+        avg_error, t, error_distr = self.avg_rotation_error_incremental(all_outputs_cat.cpu(), all_targets_cat)
+        avg_t_error = self.avg_translation_error_incremental(all_outputs_cat.cpu(), all_targets_cat)
+        #avg_rel_rot, avg_rel_transl = self.avg_incremental_rotation_translation_in_sequence(all_targets)
+        #rmse_t = self.rmse_translation_error_incremental(all_outputs.cpu(), all_targets_inc)
+        #rmse_r = self.rmse_euler_error_incremental(all_outputs.cpu(), all_targets_inc)
+        self.test_logger.print('Avg. incremental error (m): {}'.format(avg_t_error))
+        self.test_logger.print('Avg. incremental error (deg): {}'.format(avg_error))
+
         return avg_loss, avg_rot_loss, avg_trans_loss
+
+    def avg_translation_error_incremental(self, inc_outputs, inc_targets):
+        avg_t_error = torch.sum(torch.norm(inc_outputs[:, :3] - inc_targets[:, :3], p=2, dim=1)) / len(inc_targets)
+        return avg_t_error
+
+    def avg_rotation_error_incremental(self, inc_outputs, inc_targets):
+        errors = relative_euler_rotation_error(inc_outputs[:, 3:], inc_targets[:, 3:])
+        t, error_distr = error_distribution(torch.Tensor(errors), 0, 1, 0.01)
+        avg_error = sum(errors) / len(errors)
+        return avg_error, t, error_distr
 
     def loss_function(self, output, target, average=True):
         # Dimensions: [batch, sequence_length, 6]
@@ -397,6 +427,28 @@ class FullPose7D(BaseExperiment):
 
         loss1 = torch.norm(e1 - e2, 2, dim=2)
         loss2 = torch.norm(t1 - t2, 2, dim=2)
+
+        loss = self.beta * loss1 + loss2
+
+        if average:
+            loss = loss.sum() / bs
+            loss1 = loss1.sum() / bs
+            loss2 = loss2.sum() / bs
+
+        return loss, loss1, loss2
+
+    def loss_function_squared(self, output, target, average=True):
+        # Dimensions: [batch, sequence_length, 6]
+        bs = output.size(0)
+        t1 = output[:, :, :3]
+        t2 = target[:, :, :3]
+        e1 = output[:, :, 3:]
+        e2 = target[:, :, 3:]
+
+        assert e1.size(2) == e2.size(2) == 3
+
+        loss1 = torch.norm(e1 - e2, 2, dim=2) ** 2
+        loss2 = torch.norm(t1 - t2, 2, dim=2) ** 2
 
         loss = self.beta * loss1 + loss2
 
@@ -487,6 +539,50 @@ class FullPose7D(BaseExperiment):
         poses = [pose_transforms.matrix_to_euler_pose_vector(m) for m in matrices]
         poses = torch.cat(tuple(poses), 0)
         return poses
+
+    def plot_translation_loss_per_meter(self, all_outputs, all_targets, all_targets_global):
+        all_outputs = all_outputs.cpu()[:, :, :3]
+        all_targets = all_targets.cpu()[:, :, :3]
+
+        dists = measure_distance_along_path(all_targets_global[:, :, :3])
+        longest_distance = max(dists[:, -1])
+
+        def t_err_func(o, t):
+            z = torch.zeros(o.size(0), o.size(1), 3)
+            _, _, err_t = self.loss_function(torch.cat((o, z), 2), torch.cat((t, z), 2), average=False)
+            return err_t
+
+        increments, errors = translation_error_per_meters(all_outputs, all_targets, 0, longest_distance, 1, err_func=t_err_func, dist=dists)
+        errors = errors.numpy()
+        increments = increments.numpy()
+        plots.plot_translation_error_per_meter(increments, errors, self.make_output_filename('translation_loss_per_meter.svg'))
+
+        self.test_logger.print('Average Translation loss per meters')
+        self.test_logger.print('Distance [m]: ' + ', '.join([str(t) for t in increments]))
+        self.test_logger.print('Translation loss:  ' + ', '.join([str(p) for p in errors]))
+        self.test_logger.print()
+
+    def plot_rotation_loss_per_meter(self, all_outputs, all_targets, all_targets_global):
+        all_outputs = all_outputs.cpu()
+        all_targets = all_targets.cpu()
+
+        dists = measure_distance_along_path(all_targets_global[:, :, :3])
+        longest_distance = max(dists[:, -1])
+
+        def r_err_func(o, t):
+            z = torch.zeros(o.size(0), o.size(1), 3)
+            _, err_r, _ = self.loss_function(torch.cat((z, o), 2), torch.cat((z, t), 2), average=False)
+            return err_r
+
+        increments, errors = relative_rotation_error_per_meters_from_euler_pose(all_outputs, all_targets, 0, longest_distance, 1, err_func=r_err_func, dist=dists)
+        errors = errors.numpy()
+        increments = increments.numpy()
+        plots.plot_rotation_error_per_meter(increments, errors, self.make_output_filename('rotation_loss_per_meter.svg'))
+
+        self.test_logger.print('Average Rotation loss per meters')
+        self.test_logger.print('Distance [m]: ' + ', '.join([str(t) for t in increments]))
+        self.test_logger.print('Rotation loss:  ' + ', '.join([str(p) for p in errors]))
+        self.test_logger.print()
 
     def make_checkpoint(self):
         checkpoint = {

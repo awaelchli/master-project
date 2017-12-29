@@ -3,7 +3,7 @@
 # Testing
 python deepvo_inc_inf/main.py pose7D \
 --input xyz_all_seq_incremental_inf_VIPER_no_rel2 \
---output xyz_all_seq_incremental_inf_VIPER_no_rel2/test_full_100_epoch_58 \
+--output xyz_all_seq_incremental_inf_VIPER_no_rel2/test_full_100_epoch_100 \
 --test \
 --cuda \
 --sequence 100 \
@@ -13,4 +13,4 @@ python deepvo_inc_inf/main.py pose7D \
 --print_freq 1 \
 --max_size 0 0 0 \
 --dataset VIPER \
---checkpoint checkpoint-epoch-058.pth.tar \
+--checkpoint checkpoint-epoch-100.pth.tar \

@@ -2,8 +2,8 @@
 
 # Testing
 python deepvo_inc/main.py pose7D \
---input xyz_all_seq_short_incremental_dropout \
---output xyz_all_seq_short_incremental_dropout/test_full_100_epoch43 \
+--input xyz_all_seq_short_incremental \
+--output xyz_all_seq_short_incremental/test_full_100_epoch43_rel_errs \
 --test \
 --cuda \
 --sequence 100 \

@@ -3,7 +3,7 @@
 # Testing a single long sequence (KITTI/VIPER)
 python deepvo_inc/main.py sequencetest \
 --input xyz_all_seq_short_incremental_dropout \
---output xyz_all_seq_short_incremental_dropout/long_sequence_011_on_VIPER \
+--output xyz_all_seq_short_incremental_dropout/long_sequence_10_thesis_rel_errors \
 --test \
 --cuda \
 --sequence 100 \
@@ -12,6 +12,6 @@ python deepvo_inc/main.py sequencetest \
 --workers 12 \
 --print_freq 1 \
 --max_size 0 0 0 \
---dataset VIPER \
---sequence_name 011 \
---checkpoint checkpoint-epoch-043.pth.tar \
+--dataset KITTI \
+--sequence_name 10 \
+#--checkpoint checkpoint-epoch-043.pth.tar \

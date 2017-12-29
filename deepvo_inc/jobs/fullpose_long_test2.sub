@@ -2,12 +2,12 @@
 
 # Testing
 python deepvo_inc/main.py pose7D \
---input xyz_all_seq_short_incremental_VIPER_less_params \
---output xyz_all_seq_short_incremental_VIPER_less_params/test_full_100_thesis \
+--input xyz_all_seq_short_incremental_VIPER_less_params2 \
+--output xyz_all_seq_short_incremental_VIPER_less_params2/test_full_100_thesis \
 --test \
 --cuda \
 --sequence 100 \
---hidden 500 \
+--hidden 1000 \
 --layers 1 \
 --workers 12 \
 --print_freq 1 \

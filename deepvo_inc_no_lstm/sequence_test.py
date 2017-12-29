@@ -34,6 +34,7 @@ class FullSequenceTest(FullPose7D, BaseExperiment):
         )
 
         self.model.cuda()
+        self.beta = 1
 
     def load_dataset(self, args):
         # Image pre-processing
@@ -109,12 +110,19 @@ class FullSequenceTest(FullPose7D, BaseExperiment):
             all_filenames.extend(filenames)
 
         all_outputs = torch.cat(all_outputs)
-        all_outputs = torch.cat((torch.zeros(1, 6).cuda(), all_outputs))
+        #all_outputs = torch.cat((torch.zeros(1, 6).cuda(), all_outputs))
         all_targets = torch.cat(all_targets)
 
         all_outputs = self.convert_pose_to_global(all_outputs.cpu())
 
         self.visualize_paths(all_outputs.unsqueeze(0), all_targets.unsqueeze(0), [all_filenames])
+
+
+        o = all_outputs.cuda().unsqueeze(0)
+        t = all_targets.cuda().unsqueeze(0)
+
+        self.plot_rotation_loss_per_meter(o, t)
+        self.plot_translation_loss_per_meter(o, t)
 
 
     def restore_from_checkpoint(self, checkpoint):

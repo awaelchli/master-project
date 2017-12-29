@@ -2,8 +2,8 @@
 
 # Testing
 python deepvo_inc_quaternion/main.py pose7D \
---input xyz_all_seq_short_incremental_dropout \
---output xyz_all_seq_short_incremental_dropout/test_full_100_epoch43 \
+--input xyz_all_seq_short_incremental_VIPER_quat \
+--output xyz_all_seq_short_incremental_VIPER_quat/test_full_100_epoch54 \
 --test \
 --cuda \
 --sequence 100 \
@@ -12,5 +12,5 @@ python deepvo_inc_quaternion/main.py pose7D \
 --workers 12 \
 --print_freq 1 \
 --max_size 0 0 0 \
---dataset KITTI \
---checkpoint checkpoint-epoch-043.pth.tar \
+--dataset VIPER \
+--checkpoint checkpoint-epoch-054.pth.tar \

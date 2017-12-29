@@ -1,13 +1,15 @@
 import glob
 import os
 import os.path as path
+import math
 
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from urllib3.util import retry
 
-from pose_transforms import relative_to_first_pose_matrix, matrix_to_euler_pose_vector
+from pose_transforms import relative_to_first_pose_matrix, matrix_to_euler_pose_vector, matrix_to_quaternion_pose_vector
+from pose_evaluation import relative_quaternion_rotation_error
 import matplotlib.pyplot as plt
 
 FOLDERS = {
@@ -124,6 +126,44 @@ class Subsequence(Dataset):
             chunks.append(chunk)
 
         return chunks
+
+    def print_statistics(self):
+        sequence_names = self.get_sequence_names()
+        all_rotation_angles = []
+        all_translation_norms = []
+
+        for name in sequence_names:
+            matrices = read_matrices(self.get_pose_filename(name))
+            quaternion_pose_vecs = [matrix_to_quaternion_pose_vector(m) for m in matrices]
+            quaternion_pose_vecs = torch.cat(quaternion_pose_vecs, 0)
+            positions = quaternion_pose_vecs[:, :3]
+            quats = quaternion_pose_vecs[:, 3:]
+
+            quats1 = quats[:-1, :]
+            quats2 = quats[1:, :]
+
+            positions1 = positions[:-1, :]
+            positions2 = positions[1:, :]
+
+            translation_norms = torch.norm(positions1 - positions2, p=2, dim=1)
+            rotation_angles = relative_quaternion_rotation_error(quats1, quats2)
+
+            all_rotation_angles += rotation_angles
+            all_translation_norms += list(translation_norms)
+
+        #print(sum(math.isnan(x) for x in all_rotation_angles))
+
+        avg_rotation = sum([x for x in all_rotation_angles if not math.isnan(x)]) / len(all_rotation_angles)
+        avg_translation = sum(all_translation_norms) / len(all_translation_norms)
+
+        max_rotation = max(all_rotation_angles)
+        max_translation = max(all_translation_norms)
+
+        min_rotation = min(all_rotation_angles)
+        min_translation = min(all_translation_norms)
+
+        print('Rotation angle between consecutive frames (AVG / MIN / MAX): {:.4f} / {:.4f} / {:.4f} degrees'.format(avg_rotation, min_rotation, max_rotation))
+        print('Distance travelled between consecutive frames (AVG / MIN / MAX): {:.4f} / {:.4f} / {:.4f} meters'.format(avg_translation, min_translation, max_translation))
 
 
 def read_matrices(pose_file):

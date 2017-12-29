@@ -2,8 +2,8 @@
 
 # Testing
 python deepvo_inc_no_lstm/main.py pose7D \
---input xyz_all_seq_short_incremental_dropout_nolstm \
---output xyz_all_seq_short_incremental_dropout_nolstm/test_full_100_epoch100 \
+--input xyz_all_seq_short_incremental_dropout_nolstm_VIPER \
+--output xyz_all_seq_short_incremental_dropout_nolstm_VIPER/test_full_100_epoch100_thesis \
 --test \
 --cuda \
 --sequence 100 \
@@ -12,5 +12,5 @@ python deepvo_inc_no_lstm/main.py pose7D \
 --workers 12 \
 --print_freq 1 \
 --max_size 0 0 0 \
---dataset KITTI \
+--dataset VIPER \
 #--checkpoint checkpoint-epoch-043.pth.tar \

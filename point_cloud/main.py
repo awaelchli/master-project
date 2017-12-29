@@ -4,6 +4,7 @@ import shutil
 import time
 
 import torch
+import numpy as np
 
 from base import CHECKPOINT_FILENAME
 from binarypose1Dtranslation import BinaryPose1DTranslation
